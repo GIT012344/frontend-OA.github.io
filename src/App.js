@@ -92,9 +92,9 @@ const ExportButton = styled.button`
   &:hover {
     transform: translateY(-1px);
     box-shadow: ${(props) =>
-      props.primary
-        ? "0 8px 20px rgba(71, 85, 105, 0.25)"
-        : "0 4px 12px rgba(0, 0, 0, 0.08)"};
+    props.primary
+      ? "0 8px 20px rgba(71, 85, 105, 0.25)"
+      : "0 4px 12px rgba(0, 0, 0, 0.08)"};
   }
 
   &:active {
@@ -106,9 +106,9 @@ const ExportButton = styled.button`
     width: 16px;
     height: 16px;
     background-image: ${(props) =>
-      props.primary
-        ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`
-        : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`};
+    props.primary
+      ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`
+      : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`};
     background-size: contain;
     background-repeat: no-repeat;
   }
@@ -141,7 +141,7 @@ const StatCard = styled.div`
     right: 0;
     height: 3px;
     background: ${(props) =>
-      props.accent || "linear-gradient(90deg, #64748b, #94a3b8)"};
+    props.accent || "linear-gradient(90deg, #64748b, #94a3b8)"};
     opacity: 0.8;
   }
 
@@ -230,20 +230,20 @@ const TableRow = styled.tr`
 
   &:nth-child(even) {
     background-color: ${(props) =>
-      props.$bgColor ? props.$bgColor : "rgba(248, 250, 252, 0.5)"};
+    props.$bgColor ? props.$bgColor : "rgba(248, 250, 252, 0.5)"};
   }
 
   &:hover {
     background-color: ${(props) =>
-      props.$bgColor
-        ? props.$bgColor === "#ffebee"
-          ? "#ffcdd2"
-          : props.$bgColor === "#fff3e0"
+    props.$bgColor
+      ? props.$bgColor === "#ffebee"
+        ? "#ffcdd2"
+        : props.$bgColor === "#fff3e0"
           ? "#ffe0b2"
           : props.$bgColor === "#fffde7"
-          ? "#fff59d"
-          : "rgba(241, 245, 249, 0.8)"
-        : "rgba(241, 245, 249, 0.8)"};
+            ? "#fff59d"
+            : "rgba(241, 245, 249, 0.8)"
+      : "rgba(241, 245, 249, 0.8)"};
     transform: scale(1.001);
   }
 `;
@@ -1035,7 +1035,7 @@ const ToggleButton = styled.button`
     background-size: contain;
     background-repeat: no-repeat;
     transform: ${(props) =>
-      props.$collapsed ? "rotate(180deg)" : "rotate(0deg)"};
+    props.$collapsed ? "rotate(180deg)" : "rotate(0deg)"};
     transition: transform 0.2s ease;
   }
 `;
@@ -1075,10 +1075,10 @@ const RankBadge = styled.span`
     props.rank === 1
       ? "#f59e0b"
       : props.rank === 2
-      ? "#94a3b8"
-      : props.rank === 3
-      ? "#b45309"
-      : "#e2e8f0"};
+        ? "#94a3b8"
+        : props.rank === 3
+          ? "#b45309"
+          : "#e2e8f0"};
   color: ${(props) => (props.rank <= 3 ? "white" : "#475569")};
   font-weight: 600;
   margin-right: 12px;
@@ -1177,7 +1177,7 @@ function App() {
     const fetchData = async () => {
       try {
         const response = await axios.get(
-          "https://backend-git.onrender.com/api/data",
+          "https://backend-oa-pqy2.onrender.com/api/data",
           {
             withCredentials: true
           }
@@ -1196,7 +1196,7 @@ function App() {
   const syncData = async () => {
     try {
       const response = await axios.get(
-        "https://backend-git.onrender.com/sync-tickets",
+        "https://backend-oa-pqy2.onrender.com/sync-tickets",
         {
           timeout: 10000,
           headers: {
@@ -1256,7 +1256,7 @@ function App() {
   useEffect(() => {
     const sync = () => {
       axios
-        .get("https://backend-git.onrender.com/sync-tickets")
+        .get("https://backend-oa-pqy2.onrender.com/sync-tickets")
         .then((response) => {
           console.log("✅ Synced from Google Sheets");
           setLastSync(new Date());
@@ -1264,7 +1264,7 @@ function App() {
           const newData = Array.isArray(response?.data) ? response.data : [];
 
           axios
-            .post("https://backend-git.onrender.com/clear-textboxes")
+            .post("https://backend-oa-pqy2.onrender.com/clear-textboxes")
             .then((res) => {
               if (res.data.cleared_count > 0) {
                 console.log(`✅ Cleared ${res.data.cleared_count} textboxes`);
@@ -1322,7 +1322,7 @@ function App() {
     const fetchEmailRankings = async () => {
       try {
         const response = await axios.get(
-          "https://backend-git.onrender.com/api/email-rankings",
+          "https://backend-oa-pqy2.onrender.com/api/email-rankings",
           {
             timeout: 10000,
             headers: {
@@ -1346,34 +1346,10 @@ function App() {
     fetchEmailRankings();
   }, [data]);
 
-  const fetchNotifications = async () => {
-    try {
-      const response = await axios.get(
-        "https://backend-git.onrender.com/api/notifications",
-        {
-          timeout: 10000,
-          headers: {
-            "Content-Type": "application/json",
-          },
-          withCredentials: true,
-        }
-      );
-
-      if (response.data && Array.isArray(response.data)) {
-        setNotifications(response.data);
-        const unread = response.data.some((notification) => !notification.read);
-        setHasUnread(unread);
-      }
-    } catch (err) {
-      console.error("Error fetching notifications:", err);
-      setNotifications([]);
-    }
-  };
-
   useEffect(() => {
     const fetchNotifications = () => {
       axios
-        .get("https://backend-git.onrender.com/api/notifications")
+        .get("https://backend-oa-pqy2.onrender.com/api/notifications")
         .then((res) => {
           setNotifications(res.data);
           // Check if there are any unread notifications
@@ -1393,7 +1369,7 @@ function App() {
     if (!startDate) return;
 
     axios
-      .get("https://backend-git.onrender.com/api/data-by-date", {
+      .get("https://backend-oa-pqy2.onrender.com/api/data-by-date", {
         params: { date: startDate },
       })
       .then((res) => {
@@ -1414,7 +1390,7 @@ function App() {
     setTypeFilter("all");
 
     axios
-      .get("https://backend-git.onrender.com/api/data")
+      .get("https://backend-oa-pqy2.onrender.com/api/data")
       .then((res) => setData(Array.isArray(res.data) ? res.data : []))
       .catch((err) => {
         console.error(err);
@@ -1426,7 +1402,7 @@ function App() {
     if (id) {
       // Mark single notification as read
       axios
-        .post("https://backend-git.onrender.com/mark-notification-read", {
+        .post("https://backend-oa-pqy2.onrender.com/mark-notification-read", {
           id,
         })
         .then(() => {
@@ -1439,7 +1415,7 @@ function App() {
       // Mark all notifications as read
       axios
         .post(
-          "https://backend-git.onrender.com/mark-all-notifications-read"
+          "https://backend-oa-pqy2.onrender.com/mark-all-notifications-read"
         )
         .then(() => {
           setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
@@ -1450,26 +1426,26 @@ function App() {
   // Filter data based on search and filters
   const filteredData = Array.isArray(data)
     ? data.filter((row) => {
-        // Search filter
-        const matchesSearch =
-          searchTerm === "" ||
-          row["อีเมล"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          row["ชื่อ"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          row["เบอร์ติดต่อ"]
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          row["แผนก"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          row["Ticket ID"]?.toString().includes(searchTerm);
+      // Search filter
+      const matchesSearch =
+        searchTerm === "" ||
+        row["อีเมล"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row["ชื่อ"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row["เบอร์ติดต่อ"]
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        row["แผนก"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row["Ticket ID"]?.toString().includes(searchTerm);
 
-        // Status filter
-        const matchesStatus =
-          statusFilter === "all" || row["สถานะ"] === statusFilter;
+      // Status filter
+      const matchesStatus =
+        statusFilter === "all" || row["สถานะ"] === statusFilter;
 
-        // Type filter
-        const matchesType = typeFilter === "all" || row["Type"] === typeFilter;
+      // Type filter
+      const matchesType = typeFilter === "all" || row["Type"] === typeFilter;
 
-        return matchesSearch && matchesStatus && matchesType;
-      })
+      return matchesSearch && matchesStatus && matchesType;
+    })
     : [];
 
   // Get unique types for filter dropdown
@@ -1479,7 +1455,7 @@ function App() {
   const handleStatusChange = (ticketId, newStatus) => {
     axios
       .post(
-        "https://backend-git.onrender.com/update-status",
+        "https://backend-oa-pqy2.onrender.com/update-status",
         {
           ticket_id: ticketId,
           status: newStatus,
@@ -1518,7 +1494,7 @@ function App() {
   const deleteNotification = async (id) => {
     try {
       await axios.post(
-        "https://backend-git.onrender.com/delete-notification",
+        "https://backend-oa-pqy2.onrender.com/delete-notification",
         { id }
       );
       setNotifications(notifications.filter((n) => n.id !== id));
@@ -1530,7 +1506,7 @@ function App() {
   const handleDeleteTicket = (ticketId) => {
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?")) {
       axios
-        .post("https://backend-git.onrender.com/delete-ticket", {
+        .post("https://backend-oa-pqy2.onrender.com/delete-ticket", {
           ticket_id: ticketId,
         })
         .then(() => {
@@ -1554,7 +1530,7 @@ function App() {
       try {
         // ลบข้อความทั้งหมดในตาราง messages ที่เกี่ยวข้องกับ ticket_id นี้
         await axios.post(
-          "https://backend-git.onrender.com/api/messages/delete",
+          "https://backend-oa-pqy2.onrender.com/api/messages/delete",
           {
             ticket_id: selectedUser,
           },
@@ -1570,7 +1546,7 @@ function App() {
 
         // อัปเดต textbox ในตาราง tickets เป็นค่าว่าง
         await axios.post(
-          "https://backend-git.onrender.com/update-textbox",
+          "https://backend-oa-pqy2.onrender.com/update-textbox",
           {
             ticket_id: selectedUser,
             textbox: "",
@@ -1598,7 +1574,7 @@ function App() {
 
       try {
         const response = await axios.get(
-          "https://backend-git.onrender.com/api/messages",
+          "https://backend-oa-pqy2.onrender.com/api/messages",
           {
             params: { ticket_id: selectedUser },
             timeout: 10000,
@@ -1618,7 +1594,7 @@ function App() {
         // ทำเครื่องหมายว่าข้อความถูกอ่านแล้ว
         if (response.data && response.data.length > 0) {
           await axios.post(
-            "https://backend-git.onrender.com/api/messages/mark-read",
+            "https://backend-oa-pqy2.onrender.com/api/messages/mark-read",
             {
               ticket_id: selectedUser,
               admin_id: adminId,
@@ -1655,7 +1631,7 @@ function App() {
 
       try {
         const response = await axios.post(
-          "https://backend-git.onrender.com/send-announcement",
+          "https://backend-oa-pqy2.onrender.com/send-announcement",
           { message: chatMessage },
           { headers: { "Content-Type": "application/json" } }
         );
@@ -1687,7 +1663,7 @@ function App() {
     try {
       // 1. อัปเดต Textbox
       await axios.post(
-        "https://backend-git.onrender.com/update-textbox",
+        "https://backend-oa-pqy2.onrender.com/update-textbox",
         {
           ticket_id: selectedUser,
           textbox: chatMessage,
@@ -1701,7 +1677,7 @@ function App() {
 
       // 2. เพิ่มข้อความใหม่ในระบบ messages
       const messageResponse = await axios.post(
-        "https://backend-git.onrender.com/api/messages",
+        "https://backend-oa-pqy2.onrender.com/api/messages",
         {
           ticket_id: selectedUser,
           admin_id: adminId,
@@ -1729,7 +1705,7 @@ function App() {
 
       // 4. Clear the textbox in the database
       await axios.post(
-        "https://backend-git.onrender.com/update-textbox",
+        "https://backend-oa-pqy2.onrender.com/update-textbox",
         {
           ticket_id: selectedUser,
           textbox: "",
@@ -1757,7 +1733,7 @@ function App() {
 
     try {
       const response = await axios.post(
-        "https://backend-git.onrender.com/refresh-messages",
+        "https://backend-oa-pqy2.onrender.com/refresh-messages",
         {
           ticket_id: selectedUser,
           admin_id: adminId,
@@ -1933,7 +1909,11 @@ function App() {
             <Title>Ticket Management System</Title>
             <SyncIndicator>{formatLastSync()}</SyncIndicator>
             <HeaderSection>
-              <div></div>
+              <div>
+                <ExportButton onClick={syncData} style={{ marginRight: '12px' }}>
+                  Sync Data
+                </ExportButton>
+              </div>
               <ExportSection>
                 <NotificationBell
                   hasUnread={hasUnread}
@@ -1959,12 +1939,12 @@ function App() {
                     status === "Pending"
                       ? "linear-gradient(90deg, #ef4444, #f87171)"
                       : status === "Scheduled"
-                      ? "linear-gradient(90deg, #06b6d4, #67e8f9)"
-                      : status === "In Progress"
-                      ? "linear-gradient(90deg, #f59e0b, #fbbf24)"
-                      : status === "Waiting"
-                      ? "linear-gradient(90deg, #8b5cf6, #a78bfa)"
-                      : "linear-gradient(90deg, #10b981, #34d399)"
+                        ? "linear-gradient(90deg, #06b6d4, #67e8f9)"
+                        : status === "In Progress"
+                          ? "linear-gradient(90deg, #f59e0b, #fbbf24)"
+                          : status === "Waiting"
+                            ? "linear-gradient(90deg, #8b5cf6, #a78bfa)"
+                            : "linear-gradient(90deg, #10b981, #34d399)"
                   }
                 >
                   <StatTitle>{status}</StatTitle>
@@ -2420,8 +2400,8 @@ function App() {
                 >
                   <NotificationContent>
                     {notification.message &&
-                    typeof notification.message === "string" &&
-                    notification.message.includes("New message from") ? (
+                      typeof notification.message === "string" &&
+                      notification.message.includes("New message from") ? (
                       <>
                         <div
                           style={{ fontWeight: "bold", marginBottom: "4px" }}
