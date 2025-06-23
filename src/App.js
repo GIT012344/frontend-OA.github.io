@@ -1420,7 +1420,22 @@ function App() {
         });
     }
   };
-  // Filter data based on search and filters
+
+  const playNotificationSound = () => {
+    try {
+      const audio = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3");
+      audio.play().catch(e => {
+        console.error("Audio play error:", e);
+        // Fallback to browser's default notification sound
+        const fallbackAudio = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3");
+        fallbackAudio.play();
+      });
+    } catch (e) {
+      console.error("Audio initialization error:", e);
+    }
+  };
+
+
   const filteredData = Array.isArray(data)
     ? data.filter((row) => {
       // Search filter
@@ -1449,21 +1464,24 @@ function App() {
   const uniqueTypes = [...new Set(data.map((item) => item["Type"] || "None"))];
 
   // อัปเดตสถานะ
-  const handleStatusChange = (ticketId, newStatus) => {
-    axios
-      .post(
+  const handleStatusChange = async (ticketId, newStatus) => {
+    try {
+      const response = await axios.post(
         "https://backend-oa-pqy2.onrender.com/update-status",
         {
           ticket_id: ticketId,
-          status: newStatus,
+          status: newStatus
         },
         {
+          withCredentials: true,
           headers: {
             "Content-Type": "application/json",
-          },
+            "Accept": "application/json"
+          }
         }
-      )
-      .then(() => {
+      );
+  
+      if (response.data && response.data.success) {
         console.log("✅ Status updated");
         setData((prevData) =>
           prevData.map((item) =>
@@ -1472,8 +1490,14 @@ function App() {
               : item
           )
         );
-      })
-      .catch((err) => console.error("❌ Failed to update status:", err));
+      } else {
+        console.error("Failed to update status:", response.data);
+      }
+    } catch (err) {
+      console.error("❌ Failed to update status:", err);
+      // แสดง error ที่เป็นมิตรกับผู้ใช้
+      alert("ไม่สามารถอัปเดตสถานะได้ โปรดลองอีกครั้งหรือตรวจสอบการเชื่อมต่อ");
+    }
   };
 
   // Handle user selection
