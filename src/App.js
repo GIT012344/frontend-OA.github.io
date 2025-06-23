@@ -1131,6 +1131,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarHover, setSidebarHover] = useState(false);
 
+
   const dashboardRef = useRef(null);
   const listRef = useRef(null);
   const chatRef = useRef(null);
@@ -1550,42 +1551,17 @@ function App() {
 
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบประวัติการสนทนาทั้งหมด?")) {
       try {
-        // ลบข้อความทั้งหมดในตาราง messages ที่เกี่ยวข้องกับ ticket_id นี้
         await axios.post(
           "https://backend-oa-pqy2.onrender.com/api/messages/delete",
           {
             ticket_id: selectedUser,
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
           }
         );
 
-        // อัปเดต state เพื่อลบข้อความออกจาก UI
         setMessages([]);
-
-        // อัปเดต textbox ในตาราง tickets เป็นค่าว่าง
-        await axios.post(
-          "https://backend-oa-pqy2.onrender.comupdate-textbox",
-          {
-            ticket_id: selectedUser,
-            textbox: "",
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        // อัปเดต local state
-        setChatMessage("");
         alert("ลบประวัติการสนทนาสำเร็จ");
       } catch (err) {
-        console.error("❌ Failed to clear messages:", err);
-        alert("เกิดข้อผิดพลาดในการลบประวัติการสนทนา");
+        console.error("Failed to clear messages:", err);
       }
     }
   };
@@ -1599,40 +1575,23 @@ function App() {
           "https://backend-oa-pqy2.onrender.com/api/messages",
           {
             params: { ticket_id: selectedUser },
-            timeout: 10000,
-            headers: {
-              "Content-Type": "application/json",
-            },
-            withCredentials: true,
           }
         );
 
-        if (response.data && Array.isArray(response.data)) {
+        if (response.data) {
           setMessages(response.data);
-        } else {
-          setMessages([]);
         }
 
         // ทำเครื่องหมายว่าข้อความถูกอ่านแล้ว
-        if (response.data && response.data.length > 0) {
-          await axios.post(
-            "https://backend-oa-pqy2.onrender.com/api/messages/mark-read",
-            {
-              ticket_id: selectedUser,
-              admin_id: adminId,
-            },
-            {
-              timeout: 10000,
-              headers: {
-                "Content-Type": "application/json",
-              },
-              withCredentials: true,
-            }
-          );
-        }
+        await axios.post(
+          "https://backend-oa-pqy2.onrender.com/api/messages/mark-read",
+          {
+            ticket_id: selectedUser,
+            admin_id: adminId,
+          }
+        );
       } catch (err) {
         console.error("Failed to load messages:", err);
-        setMessages([]);
       }
     };
 
@@ -1642,75 +1601,43 @@ function App() {
   const handleChatSubmit = async () => {
     if (!selectedUser || !chatMessage.trim()) return;
 
+    // กรณีส่งประกาศ
     if (selectedUser === "announcement") {
-      if (
-        !window.confirm(
-          "คุณแน่ใจหรือไม่ว่าต้องการส่งประกาศนี้ไปยังสมาชิกทั้งหมด?"
-        )
-      ) {
+      if (!window.confirm("คุณแน่ใจหรือไม่ว่าต้องการส่งประกาศนี้ไปยังสมาชิกทั้งหมด?")) {
         return;
       }
 
       try {
         const response = await axios.post(
           "https://backend-oa-pqy2.onrender.com/send-announcement",
-          { message: chatMessage },
-          { headers: { "Content-Type": "application/json" } }
+          { message: chatMessage }
         );
 
         if (response.data.success) {
           alert(`ส่งประกาศสำเร็จไปยัง ${response.data.recipient_count} คน`);
           setChatMessage("");
-
-          setNotifications((prev) => [
-            {
-              id: Date.now(),
-              message: `ประกาศใหม่: ${chatMessage}`,
-              timestamp: new Date().toISOString(),
-              read: false,
-            },
-            ...prev,
-          ]);
-          setHasUnread(true);
-        } else {
-          alert("เกิดข้อผิดพลาดในการส่งประกาศ");
         }
       } catch (err) {
-        console.error("❌ Failed to send announcement:", err);
-        alert("เกิดข้อผิดพลาดในการส่งประกาศ");
+        console.error("Failed to send announcement:", err);
       }
       return;
     }
 
+    // กรณีส่งข้อความปกติ
     try {
-      // 1. อัปเดต Textbox
-      await axios.post(
-        "https://backend-oa-pqy2.onrender.com/update-textbox",
-        {
-          ticket_id: selectedUser,
-          textbox: chatMessage,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      // 2. เพิ่มข้อความใหม่ในระบบ messages
+      // ส่งข้อความ
       const messageResponse = await axios.post(
         "https://backend-oa-pqy2.onrender.com/api/messages",
         {
           ticket_id: selectedUser,
           admin_id: adminId,
-          sender_name: "Admin",
+          sender_name: "Admin", // หรือดึงชื่อจากระบบ
           message: chatMessage,
           is_admin_message: true,
         }
       );
 
-      setChatMessage("");
-
+      // อัปเดต state ข้อความ
       setMessages((prev) => [
         ...prev,
         {
@@ -1725,22 +1652,9 @@ function App() {
         },
       ]);
 
-      // 4. Clear the textbox in the database
-      await axios.post(
-        "https://backend-oa-pqy2.onrender.com/update-textbox",
-        {
-          ticket_id: selectedUser,
-          textbox: "",
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      setChatMessage("");
     } catch (err) {
-      console.error("❌ Failed to send message:", err);
-      alert("เกิดข้อผิดพลาดในการส่งข้อความ");
+      console.error("Failed to send message:", err);
     }
   };
 
@@ -2283,24 +2197,9 @@ function App() {
           <div ref={chatRef}>
             <ChatContainer>
               <ChatHeader>
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "12px" }}
-                >
-                  <ChatTitle>Admin</ChatTitle>
-                  <button
-                    onClick={handleRefreshChat}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      padding: "6px",
-                      borderRadius: "50%",
-                      transition: "all 0.2s ease",
-                    }}
-                    title="Refresh Chat"
-                  >
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <ChatTitle>Admin Chat</ChatTitle>
+                  <button onClick={handleRefreshChat} title="Refresh Chat">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="20"
@@ -2309,8 +2208,6 @@ function App() {
                       fill="none"
                       stroke="#64748b"
                       strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
                     >
                       <path d="M21.5 2v6h-6M2.5 22v-6h6M22 11.5A10 10 0 0 0 9.004 3.5M2 12.5a10 10 0 0 0 13 8.5" />
                     </svg>
@@ -2320,24 +2217,14 @@ function App() {
               </ChatHeader>
 
               <UserSelectContainer>
-                <UserSelect value={selectedUser} onChange={handleUserSelect}>
+                <UserSelect value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)}>
                   <option value="">-- Select User --</option>
-                  <option value="announcement">
-                    📢 Announcement to All Members
-                  </option>
+                  <option value="announcement">📢 Announcement to All Members</option>
                   {data
                     .filter((row) => row["Type"] === "Information")
-                    .reduce((unique, row) => {
-                      if (
-                        !unique.some((item) => item["อีเมล"] === row["อีเมล"])
-                      ) {
-                        unique.push(row);
-                      }
-                      return unique;
-                    }, [])
                     .map((row) => (
                       <option key={row["Ticket ID"]} value={row["Ticket ID"]}>
-                        {row["อีเมล"] || "None"} ({row["ชื่อ"] || "No Name"})
+                        {row["อีเมล"]} ({row["ชื่อ"]})
                       </option>
                     ))}
                 </UserSelect>
@@ -2353,6 +2240,7 @@ function App() {
                   </Message>
                 ))}
               </MessagesContainer>
+
               {selectedUser && (
                 <InputContainer>
                   <InputWrapper>
@@ -2364,12 +2252,16 @@ function App() {
                           ? "Type your announcement here..."
                           : "Type your message here..."
                       }
+                      onKeyPress={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleChatSubmit();
+                        }
+                      }}
                     />
                     <ClearButton onClick={handleClearChat}>Clear</ClearButton>
                     <SendButton onClick={handleChatSubmit}>
-                      {selectedUser === "announcement"
-                        ? "Send Announcement"
-                        : "Send"}
+                      {selectedUser === "announcement" ? "Send Announcement" : "Send"}
                     </SendButton>
                   </InputWrapper>
                 </InputContainer>
