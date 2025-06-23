@@ -92,9 +92,9 @@ const ExportButton = styled.button`
   &:hover {
     transform: translateY(-1px);
     box-shadow: ${(props) =>
-      props.primary
-        ? "0 8px 20px rgba(71, 85, 105, 0.25)"
-        : "0 4px 12px rgba(0, 0, 0, 0.08)"};
+    props.primary
+      ? "0 8px 20px rgba(71, 85, 105, 0.25)"
+      : "0 4px 12px rgba(0, 0, 0, 0.08)"};
   }
 
   &:active {
@@ -106,9 +106,9 @@ const ExportButton = styled.button`
     width: 16px;
     height: 16px;
     background-image: ${(props) =>
-      props.primary
-        ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`
-        : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`};
+    props.primary
+      ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`
+      : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`};
     background-size: contain;
     background-repeat: no-repeat;
   }
@@ -141,7 +141,7 @@ const StatCard = styled.div`
     right: 0;
     height: 3px;
     background: ${(props) =>
-      props.accent || "linear-gradient(90deg, #64748b, #94a3b8)"};
+    props.accent || "linear-gradient(90deg, #64748b, #94a3b8)"};
     opacity: 0.8;
   }
 
@@ -230,20 +230,20 @@ const TableRow = styled.tr`
 
   &:nth-child(even) {
     background-color: ${(props) =>
-      props.$bgColor ? props.$bgColor : "rgba(248, 250, 252, 0.5)"};
+    props.$bgColor ? props.$bgColor : "rgba(248, 250, 252, 0.5)"};
   }
 
   &:hover {
     background-color: ${(props) =>
-      props.$bgColor
-        ? props.$bgColor === "#ffebee"
-          ? "#ffcdd2"
-          : props.$bgColor === "#fff3e0"
+    props.$bgColor
+      ? props.$bgColor === "#ffebee"
+        ? "#ffcdd2"
+        : props.$bgColor === "#fff3e0"
           ? "#ffe0b2"
           : props.$bgColor === "#fffde7"
-          ? "#fff59d"
-          : "rgba(241, 245, 249, 0.8)"
-        : "rgba(241, 245, 249, 0.8)"};
+            ? "#fff59d"
+            : "rgba(241, 245, 249, 0.8)"
+      : "rgba(241, 245, 249, 0.8)"};
     transform: scale(1.001);
   }
 `;
@@ -1035,7 +1035,7 @@ const ToggleButton = styled.button`
     background-size: contain;
     background-repeat: no-repeat;
     transform: ${(props) =>
-      props.$collapsed ? "rotate(180deg)" : "rotate(0deg)"};
+    props.$collapsed ? "rotate(180deg)" : "rotate(0deg)"};
     transition: transform 0.2s ease;
   }
 `;
@@ -1075,10 +1075,10 @@ const RankBadge = styled.span`
     props.rank === 1
       ? "#f59e0b"
       : props.rank === 2
-      ? "#94a3b8"
-      : props.rank === 3
-      ? "#b45309"
-      : "#e2e8f0"};
+        ? "#94a3b8"
+        : props.rank === 3
+          ? "#b45309"
+          : "#e2e8f0"};
   color: ${(props) => (props.rank <= 3 ? "white" : "#475569")};
   font-weight: 600;
   margin-right: 12px;
@@ -1300,9 +1300,8 @@ function App() {
               setNotifications((prev) => [...textboxUpdates, ...prev]);
               setHasUnread(true);
 
-              // Play notification sound
-              const audio = new Audio("/notification.mp3");
-              audio.play().catch((e) => console.log("Audio play failed:", e));
+              const audio = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3");
+              audio.play().catch(e => console.log("Audio play failed:", e));
             }
 
             return newData;
@@ -1450,26 +1449,26 @@ function App() {
   // Filter data based on search and filters
   const filteredData = Array.isArray(data)
     ? data.filter((row) => {
-        // Search filter
-        const matchesSearch =
-          searchTerm === "" ||
-          row["อีเมล"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          row["ชื่อ"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          row["เบอร์ติดต่อ"]
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          row["แผนก"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          row["Ticket ID"]?.toString().includes(searchTerm);
+      // Search filter
+      const matchesSearch =
+        searchTerm === "" ||
+        row["อีเมล"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row["ชื่อ"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row["เบอร์ติดต่อ"]
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        row["แผนก"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row["Ticket ID"]?.toString().includes(searchTerm);
 
-        // Status filter
-        const matchesStatus =
-          statusFilter === "all" || row["สถานะ"] === statusFilter;
+      // Status filter
+      const matchesStatus =
+        statusFilter === "all" || row["สถานะ"] === statusFilter;
 
-        // Type filter
-        const matchesType = typeFilter === "all" || row["Type"] === typeFilter;
+      // Type filter
+      const matchesType = typeFilter === "all" || row["Type"] === typeFilter;
 
-        return matchesSearch && matchesStatus && matchesType;
-      })
+      return matchesSearch && matchesStatus && matchesType;
+    })
     : [];
 
   // Get unique types for filter dropdown
@@ -1644,102 +1643,45 @@ function App() {
   const handleChatSubmit = async () => {
     if (!selectedUser || !chatMessage.trim()) return;
 
-    if (selectedUser === "announcement") {
-      if (
-        !window.confirm(
-          "คุณแน่ใจหรือไม่ว่าต้องการส่งประกาศนี้ไปยังสมาชิกทั้งหมด?"
-        )
-      ) {
-        return;
-      }
-
-      try {
-        const response = await axios.post(
-          "https://backend-oa-pqy2.onrender.com/send-announcement",
-          { message: chatMessage },
-          { headers: { "Content-Type": "application/json" } }
-        );
-
-        if (response.data.success) {
-          alert(`ส่งประกาศสำเร็จไปยัง ${response.data.recipient_count} คน`);
-          setChatMessage("");
-
-          setNotifications((prev) => [
-            {
-              id: Date.now(),
-              message: `ประกาศใหม่: ${chatMessage}`,
-              timestamp: new Date().toISOString(),
-              read: false,
-            },
-            ...prev,
-          ]);
-          setHasUnread(true);
-        } else {
-          alert("เกิดข้อผิดพลาดในการส่งประกาศ");
-        }
-      } catch (err) {
-        console.error("❌ Failed to send announcement:", err);
-        alert("เกิดข้อผิดพลาดในการส่งประกาศ");
-      }
-      return;
-    }
-
     try {
-      // 1. อัปเดต Textbox
-      await axios.post(
-        "https://backend-oa-pqy2.onrender.com/update-textbox",
-        {
-          ticket_id: selectedUser,
-          textbox: chatMessage,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      // 2. เพิ่มข้อความใหม่ในระบบ messages
-      const messageResponse = await axios.post(
+      // ส่งข้อความไปยัง backend
+      const response = await axios.post(
         "https://backend-oa-pqy2.onrender.com/api/messages",
         {
           ticket_id: selectedUser,
           admin_id: adminId,
-          sender_name: "Admin",
+          sender_name: "Admin", // ระบุว่าเป็น admin
           message: chatMessage,
-          is_admin_message: true,
+          is_admin_message: true
         }
       );
 
-      setChatMessage("");
-
-      setMessages((prev) => [
+      // อัปเดต state ข้อความ
+      setMessages(prev => [
         ...prev,
         {
-          id: messageResponse.data.id,
+          id: response.data.id,
           ticket_id: selectedUser,
           admin_id: adminId,
           sender_name: "Admin",
           message: chatMessage,
-          timestamp: messageResponse.data.timestamp,
+          timestamp: new Date().toISOString(),
           is_read: true,
-          is_admin_message: true,
-        },
+          is_admin_message: true
+        }
       ]);
 
-      // 4. Clear the textbox in the database
+      setChatMessage(""); // ล้าง input หลังส่ง
+
+      // อัปเดต textbox ในตาราง tickets เป็นค่าว่าง
       await axios.post(
         "https://backend-oa-pqy2.onrender.com/update-textbox",
         {
           ticket_id: selectedUser,
-          textbox: "",
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
+          textbox: ""
         }
       );
+
     } catch (err) {
       console.error("❌ Failed to send message:", err);
       alert("เกิดข้อผิดพลาดในการส่งข้อความ");
@@ -1959,12 +1901,12 @@ function App() {
                     status === "Pending"
                       ? "linear-gradient(90deg, #ef4444, #f87171)"
                       : status === "Scheduled"
-                      ? "linear-gradient(90deg, #06b6d4, #67e8f9)"
-                      : status === "In Progress"
-                      ? "linear-gradient(90deg, #f59e0b, #fbbf24)"
-                      : status === "Waiting"
-                      ? "linear-gradient(90deg, #8b5cf6, #a78bfa)"
-                      : "linear-gradient(90deg, #10b981, #34d399)"
+                        ? "linear-gradient(90deg, #06b6d4, #67e8f9)"
+                        : status === "In Progress"
+                          ? "linear-gradient(90deg, #f59e0b, #fbbf24)"
+                          : status === "Waiting"
+                            ? "linear-gradient(90deg, #8b5cf6, #a78bfa)"
+                            : "linear-gradient(90deg, #10b981, #34d399)"
                   }
                 >
                   <StatTitle>{status}</StatTitle>
@@ -2347,7 +2289,9 @@ function App() {
               <MessagesContainer>
                 {messages.map((msg) => (
                   <Message key={msg.id} isAI={!msg.is_admin_message}>
-                    <div style={{ fontWeight: "bold" }}>{msg.sender_name}</div>
+                    <div style={{ fontWeight: "bold" }}>
+                      {msg.is_admin_message ? "Admin" : msg.sender_name}
+                    </div>
                     {msg.message}
                     <MessageTime isAI={!msg.is_admin_message}>
                       {new Date(msg.timestamp).toLocaleTimeString()}
@@ -2420,8 +2364,8 @@ function App() {
                 >
                   <NotificationContent>
                     {notification.message &&
-                    typeof notification.message === "string" &&
-                    notification.message.includes("New message from") ? (
+                      typeof notification.message === "string" &&
+                      notification.message.includes("New message from") ? (
                       <>
                         <div
                           style={{ fontWeight: "bold", marginBottom: "4px" }}
