@@ -1198,18 +1198,24 @@ function App() {
           timeout: 10000,
           headers: {
             "Content-Type": "application/json",
+            "X-API-KEY": "https://script.google.com/macros/s/AKfycbzjF4FD4JuHqnuw1Kd1Et8--u8JNUn3s5SzDUakMmN8F0_Zha6U9JAOeF6Z2BHyDOVhsg/exec"
           },
           withCredentials: true,
         }
       );
-
+  
       if (response.data && Array.isArray(response.data)) {
         setData(response.data);
         setLastSync(new Date());
+        playNotificationSound(); // เพิ่มเสียงเมื่อ sync สำเร็จ
       }
     } catch (err) {
       console.error("Sync error:", err);
-      alert("ไม่สามารถซิงค์ข้อมูลได้ โปรดลองใหม่ภายหลัง");
+      if (err.code === "ECONNABORTED") {
+        alert("การเชื่อมต่อหมดเวลา โปรดลองอีกครั้ง");
+      } else {
+        alert("ไม่สามารถซิงค์ข้อมูลได้ โปรดลองใหม่ภายหลัง");
+      }
     }
   };
 
@@ -1426,9 +1432,12 @@ function App() {
       const audio = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3");
       audio.play().catch(e => {
         console.error("Audio play error:", e);
-        // Fallback to browser's default notification sound
-        const fallbackAudio = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3");
-        fallbackAudio.play();
+        // Fallback to browser's default notification
+        new Notification("Sync Completed", {
+          body: "Data has been synced successfully"
+        }).catch(err => {
+          console.error("Notification error:", err);
+        });
       });
     } catch (e) {
       console.error("Audio initialization error:", e);
@@ -1471,29 +1480,27 @@ function App() {
         {
           ticket_id: ticketId,
           status: newStatus,
-          admin_id: adminId // ส่ง adminId ด้วยถ้ามี
+          admin_id: adminId
         },
         {
           withCredentials: true,
           headers: {
             "Content-Type": "application/json",
-            "Accept": "application/json"
-          },
-          timeout: 10000 // ตั้งค่า timeout เป็น 10 วินาที
+            "Accept": "application/json",
+            "X-API-KEY": "https://script.google.com/macros/s/AKfycbzjF4FD4JuHqnuw1Kd1Et8--u8JNUn3s5SzDUakMmN8F0_Zha6U9JAOeF6Z2BHyDOVhsg/exec" // ใส่ API key ที่ตรงกับ backend
+          }
         }
       );
   
       if (response.data && response.data.success) {
         console.log("✅ Status updated");
-        setData((prevData) =>
-          prevData.map((item) =>
+        setData(prevData =>
+          prevData.map(item =>
             item["Ticket ID"] === ticketId
               ? { ...item, สถานะ: newStatus }
               : item
           )
         );
-        
-        // แสดงข้อความสำเร็จให้ผู้ใช้
         alert(`อัปเดตสถานะ Ticket ${ticketId} เป็น ${newStatus} สำเร็จ`);
       } else {
         console.error("Failed to update status:", response.data);
@@ -1502,14 +1509,20 @@ function App() {
     } catch (err) {
       console.error("❌ Failed to update status:", err);
       
-      // แสดง error ที่เป็นมิตรกับผู้ใช้
-      if (err.code === "ERR_NETWORK") {
-        alert("การเชื่อมต่อล้มเหลว โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ต");
-      } else if (err.response) {
+      if (err.response) {
         // Server responded with a status code that falls out of 2xx
+        console.error("Response data:", err.response.data);
+        console.error("Response status:", err.response.status);
+        console.error("Response headers:", err.response.headers);
         alert(`เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: ${err.response.data.error || err.response.statusText}`);
+      } else if (err.request) {
+        // The request was made but no response was received
+        console.error("Request:", err.request);
+        alert("ไม่ได้รับคำตอบจากเซิร์ฟเวอร์ โปรดตรวจสอบการเชื่อมต่อ");
       } else {
-        alert("เกิดข้อผิดพลาดในการอัปเดตสถานะ โปรดลองอีกครั้ง");
+        // Something happened in setting up the request
+        console.error("Error:", err.message);
+        alert("เกิดข้อผิดพลาดในการตั้งค่าการร้องขอ: " + err.message);
       }
     }
   };
