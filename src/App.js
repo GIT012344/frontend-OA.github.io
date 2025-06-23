@@ -1472,57 +1472,53 @@ function App() {
   // Get unique types for filter dropdown
   const uniqueTypes = [...new Set(data.map((item) => item["Type"] || "None"))];
 
-  // อัปเดตสถานะ
+  const API_KEY = "RF7HySsgh8pRmAW3UgwHu4fZ7WWyokBrrs1Ewx7tt8MJ47eFqlnZ4eOZnEg2UFZH++4ZW0gfRK/MLynU0kANOEq23M4Hqa6jdGGWeDO75TuPEEZJoHOw2yabnaSDOfhtXc9GzZdXW8qoVqFnROPhegdB04t89/1O/w1cDnyilFU=";
   const handleStatusChange = async (ticketId, newStatus) => {
+    console.log("Attempting to update status...");
+    
     try {
       const response = await axios.post(
         "https://backend-oa-pqy2.onrender.com/update-status",
         {
           ticket_id: ticketId,
           status: newStatus,
-          admin_id: adminId
+          admin_id: "admin01"
         },
         {
-          withCredentials: true,
           headers: {
             "Content-Type": "application/json",
-            "Accept": "application/json",
-            "X-API-KEY": "https://script.google.com/macros/s/AKfycbzjF4FD4JuHqnuw1Kd1Et8--u8JNUn3s5SzDUakMmN8F0_Zha6U9JAOeF6Z2BHyDOVhsg/exec" // ใส่ API key ที่ตรงกับ backend
-          }
+            "X-API-KEY": API_KEY
+          },
+          withCredentials: true,
+          timeout: 10000
         }
       );
   
-      if (response.data && response.data.success) {
-        console.log("✅ Status updated");
-        setData(prevData =>
-          prevData.map(item =>
-            item["Ticket ID"] === ticketId
-              ? { ...item, สถานะ: newStatus }
-              : item
-          )
-        );
-        alert(`อัปเดตสถานะ Ticket ${ticketId} เป็น ${newStatus} สำเร็จ`);
-      } else {
-        console.error("Failed to update status:", response.data);
-        alert("อัปเดตสถานะไม่สำเร็จ โปรดลองอีกครั้ง");
-      }
-    } catch (err) {
-      console.error("❌ Failed to update status:", err);
+      console.log("Response:", response.data);
       
-      if (err.response) {
-        // Server responded with a status code that falls out of 2xx
-        console.error("Response data:", err.response.data);
-        console.error("Response status:", err.response.status);
-        console.error("Response headers:", err.response.headers);
-        alert(`เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: ${err.response.data.error || err.response.statusText}`);
-      } else if (err.request) {
-        // The request was made but no response was received
-        console.error("Request:", err.request);
-        alert("ไม่ได้รับคำตอบจากเซิร์ฟเวอร์ โปรดตรวจสอบการเชื่อมต่อ");
+      if (response.data && response.data.success) {
+        alert(`Status updated successfully!`);
+        // อัปเดต state ตามต้องการ
       } else {
-        // Something happened in setting up the request
-        console.error("Error:", err.message);
-        alert("เกิดข้อผิดพลาดในการตั้งค่าการร้องขอ: " + err.message);
+        alert("Failed to update status: " + (response.data.error || "Unknown error"));
+      }
+    } catch (error) {
+      console.error("Full error:", error);
+      
+      if (error.response) {
+        // Server responded with error status
+        console.error("Response data:", error.response.data);
+        console.error("Response status:", error.response.status);
+        console.error("Response headers:", error.response.headers);
+        alert(`Server error: ${error.response.data?.error || error.response.statusText}`);
+      } else if (error.request) {
+        // No response received
+        console.error("No response received:", error.request);
+        alert("No response from server. Check your connection or try again later.");
+      } else {
+        // Request setup error
+        console.error("Request setup error:", error.message);
+        alert("Error setting up request: " + error.message);
       }
     }
   };
