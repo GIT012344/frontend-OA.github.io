@@ -1470,14 +1470,16 @@ function App() {
         "https://backend-oa-pqy2.onrender.com/update-status",
         {
           ticket_id: ticketId,
-          status: newStatus
+          status: newStatus,
+          admin_id: adminId // ส่ง adminId ด้วยถ้ามี
         },
         {
           withCredentials: true,
           headers: {
             "Content-Type": "application/json",
             "Accept": "application/json"
-          }
+          },
+          timeout: 10000 // ตั้งค่า timeout เป็น 10 วินาที
         }
       );
   
@@ -1490,13 +1492,25 @@ function App() {
               : item
           )
         );
+        
+        // แสดงข้อความสำเร็จให้ผู้ใช้
+        alert(`อัปเดตสถานะ Ticket ${ticketId} เป็น ${newStatus} สำเร็จ`);
       } else {
         console.error("Failed to update status:", response.data);
+        alert("อัปเดตสถานะไม่สำเร็จ โปรดลองอีกครั้ง");
       }
     } catch (err) {
       console.error("❌ Failed to update status:", err);
+      
       // แสดง error ที่เป็นมิตรกับผู้ใช้
-      alert("ไม่สามารถอัปเดตสถานะได้ โปรดลองอีกครั้งหรือตรวจสอบการเชื่อมต่อ");
+      if (err.code === "ERR_NETWORK") {
+        alert("การเชื่อมต่อล้มเหลว โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ต");
+      } else if (err.response) {
+        // Server responded with a status code that falls out of 2xx
+        alert(`เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: ${err.response.data.error || err.response.statusText}`);
+      } else {
+        alert("เกิดข้อผิดพลาดในการอัปเดตสถานะ โปรดลองอีกครั้ง");
+      }
     }
   };
 
