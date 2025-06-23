@@ -92,9 +92,9 @@ const ExportButton = styled.button`
   &:hover {
     transform: translateY(-1px);
     box-shadow: ${(props) =>
-    props.primary
-      ? "0 8px 20px rgba(71, 85, 105, 0.25)"
-      : "0 4px 12px rgba(0, 0, 0, 0.08)"};
+      props.primary
+        ? "0 8px 20px rgba(71, 85, 105, 0.25)"
+        : "0 4px 12px rgba(0, 0, 0, 0.08)"};
   }
 
   &:active {
@@ -106,9 +106,9 @@ const ExportButton = styled.button`
     width: 16px;
     height: 16px;
     background-image: ${(props) =>
-    props.primary
-      ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`
-      : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`};
+      props.primary
+        ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`
+        : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`};
     background-size: contain;
     background-repeat: no-repeat;
   }
@@ -141,7 +141,7 @@ const StatCard = styled.div`
     right: 0;
     height: 3px;
     background: ${(props) =>
-    props.accent || "linear-gradient(90deg, #64748b, #94a3b8)"};
+      props.accent || "linear-gradient(90deg, #64748b, #94a3b8)"};
     opacity: 0.8;
   }
 
@@ -230,20 +230,20 @@ const TableRow = styled.tr`
 
   &:nth-child(even) {
     background-color: ${(props) =>
-    props.$bgColor ? props.$bgColor : "rgba(248, 250, 252, 0.5)"};
+      props.$bgColor ? props.$bgColor : "rgba(248, 250, 252, 0.5)"};
   }
 
   &:hover {
     background-color: ${(props) =>
-    props.$bgColor
-      ? props.$bgColor === "#ffebee"
-        ? "#ffcdd2"
-        : props.$bgColor === "#fff3e0"
+      props.$bgColor
+        ? props.$bgColor === "#ffebee"
+          ? "#ffcdd2"
+          : props.$bgColor === "#fff3e0"
           ? "#ffe0b2"
           : props.$bgColor === "#fffde7"
-            ? "#fff59d"
-            : "rgba(241, 245, 249, 0.8)"
-      : "rgba(241, 245, 249, 0.8)"};
+          ? "#fff59d"
+          : "rgba(241, 245, 249, 0.8)"
+        : "rgba(241, 245, 249, 0.8)"};
     transform: scale(1.001);
   }
 `;
@@ -1035,7 +1035,7 @@ const ToggleButton = styled.button`
     background-size: contain;
     background-repeat: no-repeat;
     transform: ${(props) =>
-    props.$collapsed ? "rotate(180deg)" : "rotate(0deg)"};
+      props.$collapsed ? "rotate(180deg)" : "rotate(0deg)"};
     transition: transform 0.2s ease;
   }
 `;
@@ -1075,10 +1075,10 @@ const RankBadge = styled.span`
     props.rank === 1
       ? "#f59e0b"
       : props.rank === 2
-        ? "#94a3b8"
-        : props.rank === 3
-          ? "#b45309"
-          : "#e2e8f0"};
+      ? "#94a3b8"
+      : props.rank === 3
+      ? "#b45309"
+      : "#e2e8f0"};
   color: ${(props) => (props.rank <= 3 ? "white" : "#475569")};
   font-weight: 600;
   margin-right: 12px;
@@ -1176,9 +1176,12 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
-          withCredentials: true
-        })
+        const response = await axios.get(
+          "https://backend-oa-pqy2.onrender.com/api/data",
+          {
+            withCredentials: true
+          }
+        );
         setData(Array.isArray(response.data) ? response.data : []);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -1198,24 +1201,18 @@ function App() {
           timeout: 10000,
           headers: {
             "Content-Type": "application/json",
-            "X-API-KEY": "https://script.google.com/macros/s/AKfycbzjF4FD4JuHqnuw1Kd1Et8--u8JNUn3s5SzDUakMmN8F0_Zha6U9JAOeF6Z2BHyDOVhsg/exec"
           },
           withCredentials: true,
         }
       );
-  
+
       if (response.data && Array.isArray(response.data)) {
         setData(response.data);
         setLastSync(new Date());
-        playNotificationSound(); // เพิ่มเสียงเมื่อ sync สำเร็จ
       }
     } catch (err) {
       console.error("Sync error:", err);
-      if (err.code === "ECONNABORTED") {
-        alert("การเชื่อมต่อหมดเวลา โปรดลองอีกครั้ง");
-      } else {
-        alert("ไม่สามารถซิงค์ข้อมูลได้ โปรดลองใหม่ภายหลัง");
-      }
+      alert("ไม่สามารถซิงค์ข้อมูลได้ โปรดลองใหม่ภายหลัง");
     }
   };
 
@@ -1349,6 +1346,30 @@ function App() {
     fetchEmailRankings();
   }, [data]);
 
+  const fetchNotifications = async () => {
+    try {
+      const response = await axios.get(
+        "https://backend-oa-pqy2.onrender.com/api/notifications",
+        {
+          timeout: 10000,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
+
+      if (response.data && Array.isArray(response.data)) {
+        setNotifications(response.data);
+        const unread = response.data.some((notification) => !notification.read);
+        setHasUnread(unread);
+      }
+    } catch (err) {
+      console.error("Error fetching notifications:", err);
+      setNotifications([]);
+    }
+  };
+
   useEffect(() => {
     const fetchNotifications = () => {
       axios
@@ -1426,101 +1447,60 @@ function App() {
         });
     }
   };
-
-  const playNotificationSound = () => {
-    try {
-      const audio = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3");
-      audio.play().catch(e => {
-        console.error("Audio play error:", e);
-        // Fallback to browser's default notification
-        new Notification("Sync Completed", {
-          body: "Data has been synced successfully"
-        }).catch(err => {
-          console.error("Notification error:", err);
-        });
-      });
-    } catch (e) {
-      console.error("Audio initialization error:", e);
-    }
-  };
-
-
+  // Filter data based on search and filters
   const filteredData = Array.isArray(data)
     ? data.filter((row) => {
-      // Search filter
-      const matchesSearch =
-        searchTerm === "" ||
-        row["อีเมล"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        row["ชื่อ"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        row["เบอร์ติดต่อ"]
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        row["แผนก"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        row["Ticket ID"]?.toString().includes(searchTerm);
+        // Search filter
+        const matchesSearch =
+          searchTerm === "" ||
+          row["อีเมล"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          row["ชื่อ"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          row["เบอร์ติดต่อ"]
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          row["แผนก"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          row["Ticket ID"]?.toString().includes(searchTerm);
 
-      // Status filter
-      const matchesStatus =
-        statusFilter === "all" || row["สถานะ"] === statusFilter;
+        // Status filter
+        const matchesStatus =
+          statusFilter === "all" || row["สถานะ"] === statusFilter;
 
-      // Type filter
-      const matchesType = typeFilter === "all" || row["Type"] === typeFilter;
+        // Type filter
+        const matchesType = typeFilter === "all" || row["Type"] === typeFilter;
 
-      return matchesSearch && matchesStatus && matchesType;
-    })
+        return matchesSearch && matchesStatus && matchesType;
+      })
     : [];
 
   // Get unique types for filter dropdown
   const uniqueTypes = [...new Set(data.map((item) => item["Type"] || "None"))];
 
-  const API_KEY = "RF7HySsgh8pRmAW3UgwHu4fZ7WWyokBrrs1Ewx7tt8MJ47eFqlnZ4eOZnEg2UFZH++4ZW0gfRK/MLynU0kANOEq23M4Hqa6jdGGWeDO75TuPEEZJoHOw2yabnaSDOfhtXc9GzZdXW8qoVqFnROPhegdB04t89/1O/w1cDnyilFU=";
-  const handleStatusChange = async (ticketId, newStatus) => {
-    console.log("Attempting to update status...");
-    
-    try {
-      const response = await axios.post(
+  // อัปเดตสถานะ
+  const handleStatusChange = (ticketId, newStatus) => {
+    axios
+      .post(
         "https://backend-oa-pqy2.onrender.com/update-status",
         {
           ticket_id: ticketId,
           status: newStatus,
-          admin_id: "admin01"
         },
         {
           headers: {
             "Content-Type": "application/json",
-            "X-API-KEY": API_KEY
           },
-          withCredentials: true,
-          timeout: 10000
         }
-      );
-  
-      console.log("Response:", response.data);
-      
-      if (response.data && response.data.success) {
-        alert(`Status updated successfully!`);
-        // อัปเดต state ตามต้องการ
-      } else {
-        alert("Failed to update status: " + (response.data.error || "Unknown error"));
-      }
-    } catch (error) {
-      console.error("Full error:", error);
-      
-      if (error.response) {
-        // Server responded with error status
-        console.error("Response data:", error.response.data);
-        console.error("Response status:", error.response.status);
-        console.error("Response headers:", error.response.headers);
-        alert(`Server error: ${error.response.data?.error || error.response.statusText}`);
-      } else if (error.request) {
-        // No response received
-        console.error("No response received:", error.request);
-        alert("No response from server. Check your connection or try again later.");
-      } else {
-        // Request setup error
-        console.error("Request setup error:", error.message);
-        alert("Error setting up request: " + error.message);
-      }
-    }
+      )
+      .then(() => {
+        console.log("✅ Status updated");
+        setData((prevData) =>
+          prevData.map((item) =>
+            item["Ticket ID"] === ticketId
+              ? { ...item, สถานะ: newStatus }
+              : item
+          )
+        );
+      })
+      .catch((err) => console.error("❌ Failed to update status:", err));
   };
 
   // Handle user selection
@@ -1590,7 +1570,7 @@ function App() {
 
         // อัปเดต textbox ในตาราง tickets เป็นค่าว่าง
         await axios.post(
-          "https://backend-oa-pqy2.onrender.com/update-textbox",
+          "https://backend-oa-pqy2.onrender.comupdate-textbox",
           {
             ticket_id: selectedUser,
             textbox: "",
@@ -1953,11 +1933,7 @@ function App() {
             <Title>Ticket Management System</Title>
             <SyncIndicator>{formatLastSync()}</SyncIndicator>
             <HeaderSection>
-              <div>
-                <ExportButton onClick={syncData} style={{ marginRight: '12px' }}>
-                  Sync Data
-                </ExportButton>
-              </div>
+              <div></div>
               <ExportSection>
                 <NotificationBell
                   hasUnread={hasUnread}
@@ -1983,12 +1959,12 @@ function App() {
                     status === "Pending"
                       ? "linear-gradient(90deg, #ef4444, #f87171)"
                       : status === "Scheduled"
-                        ? "linear-gradient(90deg, #06b6d4, #67e8f9)"
-                        : status === "In Progress"
-                          ? "linear-gradient(90deg, #f59e0b, #fbbf24)"
-                          : status === "Waiting"
-                            ? "linear-gradient(90deg, #8b5cf6, #a78bfa)"
-                            : "linear-gradient(90deg, #10b981, #34d399)"
+                      ? "linear-gradient(90deg, #06b6d4, #67e8f9)"
+                      : status === "In Progress"
+                      ? "linear-gradient(90deg, #f59e0b, #fbbf24)"
+                      : status === "Waiting"
+                      ? "linear-gradient(90deg, #8b5cf6, #a78bfa)"
+                      : "linear-gradient(90deg, #10b981, #34d399)"
                   }
                 >
                   <StatTitle>{status}</StatTitle>
@@ -2444,8 +2420,8 @@ function App() {
                 >
                   <NotificationContent>
                     {notification.message &&
-                      typeof notification.message === "string" &&
-                      notification.message.includes("New message from") ? (
+                    typeof notification.message === "string" &&
+                    notification.message.includes("New message from") ? (
                       <>
                         <div
                           style={{ fontWeight: "bold", marginBottom: "4px" }}
