@@ -92,9 +92,9 @@ const ExportButton = styled.button`
   &:hover {
     transform: translateY(-1px);
     box-shadow: ${(props) =>
-    props.primary
-      ? "0 8px 20px rgba(71, 85, 105, 0.25)"
-      : "0 4px 12px rgba(0, 0, 0, 0.08)"};
+      props.primary
+        ? "0 8px 20px rgba(71, 85, 105, 0.25)"
+        : "0 4px 12px rgba(0, 0, 0, 0.08)"};
   }
 
   &:active {
@@ -106,9 +106,9 @@ const ExportButton = styled.button`
     width: 16px;
     height: 16px;
     background-image: ${(props) =>
-    props.primary
-      ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`
-      : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`};
+      props.primary
+        ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`
+        : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`};
     background-size: contain;
     background-repeat: no-repeat;
   }
@@ -141,7 +141,7 @@ const StatCard = styled.div`
     right: 0;
     height: 3px;
     background: ${(props) =>
-    props.accent || "linear-gradient(90deg, #64748b, #94a3b8)"};
+      props.accent || "linear-gradient(90deg, #64748b, #94a3b8)"};
     opacity: 0.8;
   }
 
@@ -230,20 +230,20 @@ const TableRow = styled.tr`
 
   &:nth-child(even) {
     background-color: ${(props) =>
-    props.$bgColor ? props.$bgColor : "rgba(248, 250, 252, 0.5)"};
+      props.$bgColor ? props.$bgColor : "rgba(248, 250, 252, 0.5)"};
   }
 
   &:hover {
     background-color: ${(props) =>
-    props.$bgColor
-      ? props.$bgColor === "#ffebee"
-        ? "#ffcdd2"
-        : props.$bgColor === "#fff3e0"
+      props.$bgColor
+        ? props.$bgColor === "#ffebee"
+          ? "#ffcdd2"
+          : props.$bgColor === "#fff3e0"
           ? "#ffe0b2"
           : props.$bgColor === "#fffde7"
-            ? "#fff59d"
-            : "rgba(241, 245, 249, 0.8)"
-      : "rgba(241, 245, 249, 0.8)"};
+          ? "#fff59d"
+          : "rgba(241, 245, 249, 0.8)"
+        : "rgba(241, 245, 249, 0.8)"};
     transform: scale(1.001);
   }
 `;
@@ -1035,7 +1035,7 @@ const ToggleButton = styled.button`
     background-size: contain;
     background-repeat: no-repeat;
     transform: ${(props) =>
-    props.$collapsed ? "rotate(180deg)" : "rotate(0deg)"};
+      props.$collapsed ? "rotate(180deg)" : "rotate(0deg)"};
     transition: transform 0.2s ease;
   }
 `;
@@ -1075,10 +1075,10 @@ const RankBadge = styled.span`
     props.rank === 1
       ? "#f59e0b"
       : props.rank === 2
-        ? "#94a3b8"
-        : props.rank === 3
-          ? "#b45309"
-          : "#e2e8f0"};
+      ? "#94a3b8"
+      : props.rank === 3
+      ? "#b45309"
+      : "#e2e8f0"};
   color: ${(props) => (props.rank <= 3 ? "white" : "#475569")};
   font-weight: 600;
   margin-right: 12px;
@@ -1130,7 +1130,6 @@ function App() {
   const [emailRankings, setEmailRankings] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarHover, setSidebarHover] = useState(false);
-
 
   const dashboardRef = useRef(null);
   const listRef = useRef(null);
@@ -1300,8 +1299,10 @@ function App() {
             if (textboxUpdates.length > 0) {
               setNotifications((prev) => [...textboxUpdates, ...prev]);
               setHasUnread(true);
-              const audio = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3");
-              audio.play().catch(e => console.log("Audio play failed:", e));
+
+              // Play notification sound
+              const audio = new Audio("/notification.mp3");
+              audio.play().catch((e) => console.log("Audio play failed:", e));
             }
 
             return newData;
@@ -1449,26 +1450,26 @@ function App() {
   // Filter data based on search and filters
   const filteredData = Array.isArray(data)
     ? data.filter((row) => {
-      // Search filter
-      const matchesSearch =
-        searchTerm === "" ||
-        row["อีเมล"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        row["ชื่อ"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        row["เบอร์ติดต่อ"]
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        row["แผนก"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        row["Ticket ID"]?.toString().includes(searchTerm);
+        // Search filter
+        const matchesSearch =
+          searchTerm === "" ||
+          row["อีเมล"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          row["ชื่อ"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          row["เบอร์ติดต่อ"]
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          row["แผนก"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          row["Ticket ID"]?.toString().includes(searchTerm);
 
-      // Status filter
-      const matchesStatus =
-        statusFilter === "all" || row["สถานะ"] === statusFilter;
+        // Status filter
+        const matchesStatus =
+          statusFilter === "all" || row["สถานะ"] === statusFilter;
 
-      // Type filter
-      const matchesType = typeFilter === "all" || row["Type"] === typeFilter;
+        // Type filter
+        const matchesType = typeFilter === "all" || row["Type"] === typeFilter;
 
-      return matchesSearch && matchesStatus && matchesType;
-    })
+        return matchesSearch && matchesStatus && matchesType;
+      })
     : [];
 
   // Get unique types for filter dropdown
@@ -1551,17 +1552,42 @@ function App() {
 
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบประวัติการสนทนาทั้งหมด?")) {
       try {
+        // ลบข้อความทั้งหมดในตาราง messages ที่เกี่ยวข้องกับ ticket_id นี้
         await axios.post(
           "https://backend-oa-pqy2.onrender.com/api/messages/delete",
           {
             ticket_id: selectedUser,
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
           }
         );
 
+        // อัปเดต state เพื่อลบข้อความออกจาก UI
         setMessages([]);
+
+        // อัปเดต textbox ในตาราง tickets เป็นค่าว่าง
+        await axios.post(
+          "https://backend-oa-pqy2.onrender.com/update-textbox",
+          {
+            ticket_id: selectedUser,
+            textbox: "",
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        // อัปเดต local state
+        setChatMessage("");
         alert("ลบประวัติการสนทนาสำเร็จ");
       } catch (err) {
-        console.error("Failed to clear messages:", err);
+        console.error("❌ Failed to clear messages:", err);
+        alert("เกิดข้อผิดพลาดในการลบประวัติการสนทนา");
       }
     }
   };
@@ -1575,23 +1601,40 @@ function App() {
           "https://backend-oa-pqy2.onrender.com/api/messages",
           {
             params: { ticket_id: selectedUser },
+            timeout: 10000,
+            headers: {
+              "Content-Type": "application/json",
+            },
+            withCredentials: true,
           }
         );
 
-        if (response.data) {
+        if (response.data && Array.isArray(response.data)) {
           setMessages(response.data);
+        } else {
+          setMessages([]);
         }
 
         // ทำเครื่องหมายว่าข้อความถูกอ่านแล้ว
-        await axios.post(
-          "https://backend-oa-pqy2.onrender.com/api/messages/mark-read",
-          {
-            ticket_id: selectedUser,
-            admin_id: adminId,
-          }
-        );
+        if (response.data && response.data.length > 0) {
+          await axios.post(
+            "https://backend-oa-pqy2.onrender.com/api/messages/mark-read",
+            {
+              ticket_id: selectedUser,
+              admin_id: adminId,
+            },
+            {
+              timeout: 10000,
+              headers: {
+                "Content-Type": "application/json",
+              },
+              withCredentials: true,
+            }
+          );
+        }
       } catch (err) {
         console.error("Failed to load messages:", err);
+        setMessages([]);
       }
     };
 
@@ -1601,43 +1644,75 @@ function App() {
   const handleChatSubmit = async () => {
     if (!selectedUser || !chatMessage.trim()) return;
 
-    // กรณีส่งประกาศ
     if (selectedUser === "announcement") {
-      if (!window.confirm("คุณแน่ใจหรือไม่ว่าต้องการส่งประกาศนี้ไปยังสมาชิกทั้งหมด?")) {
+      if (
+        !window.confirm(
+          "คุณแน่ใจหรือไม่ว่าต้องการส่งประกาศนี้ไปยังสมาชิกทั้งหมด?"
+        )
+      ) {
         return;
       }
 
       try {
         const response = await axios.post(
           "https://backend-oa-pqy2.onrender.com/send-announcement",
-          { message: chatMessage }
+          { message: chatMessage },
+          { headers: { "Content-Type": "application/json" } }
         );
 
         if (response.data.success) {
           alert(`ส่งประกาศสำเร็จไปยัง ${response.data.recipient_count} คน`);
           setChatMessage("");
+
+          setNotifications((prev) => [
+            {
+              id: Date.now(),
+              message: `ประกาศใหม่: ${chatMessage}`,
+              timestamp: new Date().toISOString(),
+              read: false,
+            },
+            ...prev,
+          ]);
+          setHasUnread(true);
+        } else {
+          alert("เกิดข้อผิดพลาดในการส่งประกาศ");
         }
       } catch (err) {
-        console.error("Failed to send announcement:", err);
+        console.error("❌ Failed to send announcement:", err);
+        alert("เกิดข้อผิดพลาดในการส่งประกาศ");
       }
       return;
     }
 
-    // กรณีส่งข้อความปกติ
     try {
-      // ส่งข้อความ
+      // 1. อัปเดต Textbox
+      await axios.post(
+        "https://backend-oa-pqy2.onrender.com/update-textbox",
+        {
+          ticket_id: selectedUser,
+          textbox: chatMessage,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // 2. เพิ่มข้อความใหม่ในระบบ messages
       const messageResponse = await axios.post(
         "https://backend-oa-pqy2.onrender.com/api/messages",
         {
           ticket_id: selectedUser,
           admin_id: adminId,
-          sender_name: "Admin", // หรือดึงชื่อจากระบบ
+          sender_name: "Admin",
           message: chatMessage,
           is_admin_message: true,
         }
       );
 
-      // อัปเดต state ข้อความ
+      setChatMessage("");
+
       setMessages((prev) => [
         ...prev,
         {
@@ -1652,9 +1727,22 @@ function App() {
         },
       ]);
 
-      setChatMessage("");
+      // 4. Clear the textbox in the database
+      await axios.post(
+        "https://backend-oa-pqy2.onrender.com/update-textbox",
+        {
+          ticket_id: selectedUser,
+          textbox: "",
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
     } catch (err) {
-      console.error("Failed to send message:", err);
+      console.error("❌ Failed to send message:", err);
+      alert("เกิดข้อผิดพลาดในการส่งข้อความ");
     }
   };
 
@@ -1871,12 +1959,12 @@ function App() {
                     status === "Pending"
                       ? "linear-gradient(90deg, #ef4444, #f87171)"
                       : status === "Scheduled"
-                        ? "linear-gradient(90deg, #06b6d4, #67e8f9)"
-                        : status === "In Progress"
-                          ? "linear-gradient(90deg, #f59e0b, #fbbf24)"
-                          : status === "Waiting"
-                            ? "linear-gradient(90deg, #8b5cf6, #a78bfa)"
-                            : "linear-gradient(90deg, #10b981, #34d399)"
+                      ? "linear-gradient(90deg, #06b6d4, #67e8f9)"
+                      : status === "In Progress"
+                      ? "linear-gradient(90deg, #f59e0b, #fbbf24)"
+                      : status === "Waiting"
+                      ? "linear-gradient(90deg, #8b5cf6, #a78bfa)"
+                      : "linear-gradient(90deg, #10b981, #34d399)"
                   }
                 >
                   <StatTitle>{status}</StatTitle>
@@ -2197,9 +2285,24 @@ function App() {
           <div ref={chatRef}>
             <ChatContainer>
               <ChatHeader>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <ChatTitle>Admin Chat</ChatTitle>
-                  <button onClick={handleRefreshChat} title="Refresh Chat">
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "12px" }}
+                >
+                  <ChatTitle>Admin</ChatTitle>
+                  <button
+                    onClick={handleRefreshChat}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      padding: "6px",
+                      borderRadius: "50%",
+                      transition: "all 0.2s ease",
+                    }}
+                    title="Refresh Chat"
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="20"
@@ -2208,6 +2311,8 @@ function App() {
                       fill="none"
                       stroke="#64748b"
                       strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     >
                       <path d="M21.5 2v6h-6M2.5 22v-6h6M22 11.5A10 10 0 0 0 9.004 3.5M2 12.5a10 10 0 0 0 13 8.5" />
                     </svg>
@@ -2217,14 +2322,24 @@ function App() {
               </ChatHeader>
 
               <UserSelectContainer>
-                <UserSelect value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)}>
+                <UserSelect value={selectedUser} onChange={handleUserSelect}>
                   <option value="">-- Select User --</option>
-                  <option value="announcement">📢 Announcement to All Members</option>
+                  <option value="announcement">
+                    📢 Announcement to All Members
+                  </option>
                   {data
                     .filter((row) => row["Type"] === "Information")
+                    .reduce((unique, row) => {
+                      if (
+                        !unique.some((item) => item["อีเมล"] === row["อีเมล"])
+                      ) {
+                        unique.push(row);
+                      }
+                      return unique;
+                    }, [])
                     .map((row) => (
                       <option key={row["Ticket ID"]} value={row["Ticket ID"]}>
-                        {row["อีเมล"]} ({row["ชื่อ"]})
+                        {row["อีเมล"] || "None"} ({row["ชื่อ"] || "No Name"})
                       </option>
                     ))}
                 </UserSelect>
@@ -2240,7 +2355,6 @@ function App() {
                   </Message>
                 ))}
               </MessagesContainer>
-
               {selectedUser && (
                 <InputContainer>
                   <InputWrapper>
@@ -2252,16 +2366,12 @@ function App() {
                           ? "Type your announcement here..."
                           : "Type your message here..."
                       }
-                      onKeyPress={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleChatSubmit();
-                        }
-                      }}
                     />
                     <ClearButton onClick={handleClearChat}>Clear</ClearButton>
                     <SendButton onClick={handleChatSubmit}>
-                      {selectedUser === "announcement" ? "Send Announcement" : "Send"}
+                      {selectedUser === "announcement"
+                        ? "Send Announcement"
+                        : "Send"}
                     </SendButton>
                   </InputWrapper>
                 </InputContainer>
@@ -2310,8 +2420,8 @@ function App() {
                 >
                   <NotificationContent>
                     {notification.message &&
-                      typeof notification.message === "string" &&
-                      notification.message.includes("New message from") ? (
+                    typeof notification.message === "string" &&
+                    notification.message.includes("New message from") ? (
                       <>
                         <div
                           style={{ fontWeight: "bold", marginBottom: "4px" }}
