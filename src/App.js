@@ -1176,45 +1176,15 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get(
-          "https://backend-oa-pqy2.onrender.com/api/data",
-          {
-            withCredentials: true
-          }
-        );
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data");
         setData(Array.isArray(response.data) ? response.data : []);
       } catch (error) {
         console.error("Error fetching data:", error);
-        // แสดงข้อความ error ให้ผู้ใช้รู้
-        alert("ไม่สามารถโหลดข้อมูลได้ โปรดลองใหม่ภายหลัง");
         setData([]); // Fallback to empty array
       }
     };
     fetchData();
   }, []);
-
-  const syncData = async () => {
-    try {
-      const response = await axios.get(
-        "https://backend-oa-pqy2.onrender.com/sync-tickets",
-        {
-          timeout: 10000,
-          headers: {
-            "Content-Type": "application/json",
-          },
-          withCredentials: true,
-        }
-      );
-
-      if (response.data && Array.isArray(response.data)) {
-        setData(response.data);
-        setLastSync(new Date());
-      }
-    } catch (err) {
-      console.error("Sync error:", err);
-      alert("ไม่สามารถซิงค์ข้อมูลได้ โปรดลองใหม่ภายหลัง");
-    }
-  };
 
   useEffect(() => {
     if (isDragging) {
@@ -1322,21 +1292,9 @@ function App() {
     const fetchEmailRankings = async () => {
       try {
         const response = await axios.get(
-          "https://backend-oa-pqy2.onrender.com/api/email-rankings",
-          {
-            timeout: 10000,
-            headers: {
-              "Content-Type": "application/json",
-            },
-            withCredentials: true,
-          }
+          "https://backend-oa-pqy2.onrender.com/api/email-rankings"
         );
-
-        if (response.data && Array.isArray(response.data)) {
-          setEmailRankings(response.data);
-        } else {
-          setEmailRankings([]);
-        }
+        setEmailRankings(response.data);
       } catch (error) {
         console.error("Error fetching email rankings:", error);
         setEmailRankings([]);
@@ -1345,30 +1303,6 @@ function App() {
 
     fetchEmailRankings();
   }, [data]);
-
-  const fetchNotifications = async () => {
-    try {
-      const response = await axios.get(
-        "https://backend-oa-pqy2.onrender.com/api/notifications",
-        {
-          timeout: 10000,
-          headers: {
-            "Content-Type": "application/json",
-          },
-          withCredentials: true,
-        }
-      );
-
-      if (response.data && Array.isArray(response.data)) {
-        setNotifications(response.data);
-        const unread = response.data.some((notification) => !notification.read);
-        setHasUnread(unread);
-      }
-    } catch (err) {
-      console.error("Error fetching notifications:", err);
-      setNotifications([]);
-    }
-  };
 
   useEffect(() => {
     const fetchNotifications = () => {
@@ -1426,9 +1360,7 @@ function App() {
     if (id) {
       // Mark single notification as read
       axios
-        .post("https://backend-oa-pqy2.onrender.com/mark-notification-read", {
-          id,
-        })
+        .post("https://backend-oa-pqy2.onrender.com/mark-notification-read", { id })
         .then(() => {
           setNotifications((prev) =>
             prev.map((n) => (n.id === id ? { ...n, read: true } : n))
@@ -1438,9 +1370,7 @@ function App() {
     } else {
       // Mark all notifications as read
       axios
-        .post(
-          "https://backend-oa-pqy2.onrender.com/mark-all-notifications-read"
-        )
+        .post("https://backend-oa-pqy2.onrender.com/mark-all-notifications-read")
         .then(() => {
           setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
           setHasUnread(false);
@@ -1517,10 +1447,7 @@ function App() {
 
   const deleteNotification = async (id) => {
     try {
-      await axios.post(
-        "https://backend-oa-pqy2.onrender.com/delete-notification",
-        { id }
-      );
+      await axios.post("https://backend-oa-pqy2.onrender.com/delete-notification", { id });
       setNotifications(notifications.filter((n) => n.id !== id));
     } catch (err) {
       console.error("Error deleting notification:", err);
@@ -1597,44 +1524,20 @@ function App() {
       if (!selectedUser) return;
 
       try {
-        const response = await axios.get(
-          "https://backend-oa-pqy2.onrender.com/api/messages",
-          {
-            params: { ticket_id: selectedUser },
-            timeout: 10000,
-            headers: {
-              "Content-Type": "application/json",
-            },
-            withCredentials: true,
-          }
-        );
-
-        if (response.data && Array.isArray(response.data)) {
-          setMessages(response.data);
-        } else {
-          setMessages([]);
-        }
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
+          params: { ticket_id: selectedUser },
+        });
+        setMessages(response.data);
 
         // ทำเครื่องหมายว่าข้อความถูกอ่านแล้ว
-        if (response.data && response.data.length > 0) {
-          await axios.post(
-            "https://backend-oa-pqy2.onrender.com/api/messages/mark-read",
-            {
-              ticket_id: selectedUser,
-              admin_id: adminId,
-            },
-            {
-              timeout: 10000,
-              headers: {
-                "Content-Type": "application/json",
-              },
-              withCredentials: true,
-            }
-          );
+        if (response.data.length > 0) {
+          await axios.post("https://backend-oa-pqy2.onrender.com/api/messages/mark-read", {
+            ticket_id: selectedUser,
+            admin_id: adminId,
+          });
         }
       } catch (err) {
         console.error("Failed to load messages:", err);
-        setMessages([]);
       }
     };
 
@@ -2128,6 +2031,63 @@ function App() {
             </Dashboard>
           </div>
           <div ref={listRef}>
+            <StatCard
+              accent="linear-gradient(90deg, #3b82f6, #2563eb)"
+              style={{ gridColumn: "span 2" }}
+            >
+              <StatTitle>นัดหมายล่าสุด</StatTitle>
+              <div style={{ marginTop: "16px" }}>
+                {data
+                  .filter((ticket) => ticket["Appointment"])
+                  .sort((a, b) => {
+                    // Sort by either the "วันที่แจ้ง" field or by the appointment date itself
+                    const dateA = new Date(a["วันที่แจ้ง"] || a["Appointment"]);
+                    const dateB = new Date(b["วันที่แจ้ง"] || b["Appointment"]);
+                    return dateB - dateA; // Newest first
+                  })
+                  .slice(0, 3) // Show only the 3 most recent
+                  .map((ticket) => (
+                    <div
+                      key={ticket["Ticket ID"]}
+                      style={{
+                        marginBottom: "12px",
+                        padding: "12px",
+                        background: "rgba(241, 245, 249, 0.5)",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <div style={{ fontWeight: "600" }}>
+                        {ticket["ชื่อ"]} (Ticket ID: {ticket["Ticket ID"]})
+                      </div>
+                      <div style={{ fontSize: "0.875rem", color: "#475569" }}>
+                        {new Date(ticket["Appointment"]).toLocaleString(
+                          "th-TH",
+                          {
+                            dateStyle: "full",
+                            timeStyle: "short",
+                          }
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "#64748b",
+                          marginTop: "4px",
+                        }}
+                      >
+                        {ticket["แผนก"]} • {ticket["สถานะ"]} • แจ้งเมื่อ:{" "}
+                        {new Date(ticket["วันที่แจ้ง"]).toLocaleString(
+                          "th-TH",
+                          {
+                            dateStyle: "short",
+                            timeStyle: "short",
+                          }
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </StatCard>
             <TableContainer>
               <TableTitle>รายการ Ticket ทั้งหมด</TableTitle>
 
