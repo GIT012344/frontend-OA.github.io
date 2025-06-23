@@ -1176,12 +1176,9 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get(
-          "https://backend-oa-pqy2.onrender.com/api/data",
-          {
-            withCredentials: true
-          }
-        );
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
+          withCredentials: true
+        })
         setData(Array.isArray(response.data) ? response.data : []);
       } catch (error) {
         console.error("Error fetching data:", error);
