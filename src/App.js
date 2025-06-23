@@ -1299,7 +1299,6 @@ function App() {
             if (textboxUpdates.length > 0) {
               setNotifications((prev) => [...textboxUpdates, ...prev]);
               setHasUnread(true);
-
               const audio = new Audio("https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3");
               audio.play().catch(e => console.log("Audio play failed:", e));
             }
@@ -1643,45 +1642,102 @@ function App() {
   const handleChatSubmit = async () => {
     if (!selectedUser || !chatMessage.trim()) return;
 
+    if (selectedUser === "announcement") {
+      if (
+        !window.confirm(
+          "คุณแน่ใจหรือไม่ว่าต้องการส่งประกาศนี้ไปยังสมาชิกทั้งหมด?"
+        )
+      ) {
+        return;
+      }
+
+      try {
+        const response = await axios.post(
+          "https://backend-oa-pqy2.onrender.com/send-announcement",
+          { message: chatMessage },
+          { headers: { "Content-Type": "application/json" } }
+        );
+
+        if (response.data.success) {
+          alert(`ส่งประกาศสำเร็จไปยัง ${response.data.recipient_count} คน`);
+          setChatMessage("");
+
+          setNotifications((prev) => [
+            {
+              id: Date.now(),
+              message: `ประกาศใหม่: ${chatMessage}`,
+              timestamp: new Date().toISOString(),
+              read: false,
+            },
+            ...prev,
+          ]);
+          setHasUnread(true);
+        } else {
+          alert("เกิดข้อผิดพลาดในการส่งประกาศ");
+        }
+      } catch (err) {
+        console.error("❌ Failed to send announcement:", err);
+        alert("เกิดข้อผิดพลาดในการส่งประกาศ");
+      }
+      return;
+    }
+
     try {
-      // ส่งข้อความไปยัง backend
-      const response = await axios.post(
-        "https://backend-oa-pqy2.onrender.com/api/messages",
-        {
-          ticket_id: selectedUser,
-          admin_id: adminId,
-          sender_name: "Admin", // ระบุว่าเป็น admin
-          message: chatMessage,
-          is_admin_message: true
-        }
-      );
-
-      // อัปเดต state ข้อความ
-      setMessages(prev => [
-        ...prev,
-        {
-          id: response.data.id,
-          ticket_id: selectedUser,
-          admin_id: adminId,
-          sender_name: "Admin",
-          message: chatMessage,
-          timestamp: new Date().toISOString(),
-          is_read: true,
-          is_admin_message: true
-        }
-      ]);
-
-      setChatMessage(""); // ล้าง input หลังส่ง
-
-      // อัปเดต textbox ในตาราง tickets เป็นค่าว่าง
+      // 1. อัปเดต Textbox
       await axios.post(
         "https://backend-oa-pqy2.onrender.com/update-textbox",
         {
           ticket_id: selectedUser,
-          textbox: ""
+          textbox: chatMessage,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
         }
       );
 
+      // 2. เพิ่มข้อความใหม่ในระบบ messages
+      const messageResponse = await axios.post(
+        "https://backend-oa-pqy2.onrender.com/api/messages",
+        {
+          ticket_id: selectedUser,
+          admin_id: adminId,
+          sender_name: "Admin",
+          message: chatMessage,
+          is_admin_message: true,
+        }
+      );
+
+      setChatMessage("");
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: messageResponse.data.id,
+          ticket_id: selectedUser,
+          admin_id: adminId,
+          sender_name: "Admin",
+          message: chatMessage,
+          timestamp: messageResponse.data.timestamp,
+          is_read: true,
+          is_admin_message: true,
+        },
+      ]);
+
+      // 4. Clear the textbox in the database
+      await axios.post(
+        "https://backend-oa-pqy2.onrender.com/update-textbox",
+        {
+          ticket_id: selectedUser,
+          textbox: "",
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
     } catch (err) {
       console.error("❌ Failed to send message:", err);
       alert("เกิดข้อผิดพลาดในการส่งข้อความ");
@@ -2289,9 +2345,7 @@ function App() {
               <MessagesContainer>
                 {messages.map((msg) => (
                   <Message key={msg.id} isAI={!msg.is_admin_message}>
-                    <div style={{ fontWeight: "bold" }}>
-                      {msg.is_admin_message ? "Admin" : msg.sender_name}
-                    </div>
+                    <div style={{ fontWeight: "bold" }}>{msg.sender_name}</div>
                     {msg.message}
                     <MessageTime isAI={!msg.is_admin_message}>
                       {new Date(msg.timestamp).toLocaleTimeString()}
