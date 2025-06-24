@@ -1224,63 +1224,81 @@ function App() {
 
   // ดึงข้อมูลจาก PostgreSQL ทุก 10 วิ
   useEffect(() => {
-    const sync = () => {
-      axios
-        .get("https://backend-oa-pqy2.onrender.com/sync-tickets")
-        .then((response) => {
-          console.log("✅ Synced from Google Sheets");
-          setLastSync(new Date());
-
-          const newData = Array.isArray(response?.data) ? response.data : [];
-
-          axios
-            .post("https://backend-oa-pqy2.onrender.com/clear-textboxes")
-            .then((res) => {
-              if (res.data.cleared_count > 0) {
-                console.log(`✅ Cleared ${res.data.cleared_count} textboxes`);
-              }
-            })
-            .catch((err) => console.error("Textbox clear error:", err));
-
-          setData((prevData) => {
-            const textboxUpdates = [];
-
-            if (Array.isArray(prevData) && Array.isArray(newData)) {
-              newData.forEach((newTicket) => {
-                const oldTicket = prevData.find(
-                  (t) => t["Ticket ID"] === newTicket["Ticket ID"]
-                );
-                // เพิ่มเงื่อนไขตรวจสอบว่า TEXTBOX มีค่าหรือไม่
-                if (
-                  oldTicket &&
-                  newTicket.TEXTBOX &&
-                  newTicket.TEXTBOX !== oldTicket.TEXTBOX
-                ) {
-                  textboxUpdates.push({
-                    id: Date.now() + Math.random(),
-                    message: `New message for ticket ${newTicket["Ticket ID"]}: ${newTicket.TEXTBOX}`,
-                    timestamp: new Date().toISOString(),
-                    read: false,
-                  });
-                }
-              });
-            }
-
-            if (textboxUpdates.length > 0) {
-              setNotifications((prev) => [...textboxUpdates, ...prev]);
-              setHasUnread(true);
-
-              // Play notification sound
-              const audio = new Audio("/notification.mp3");
-              audio.play().catch((e) => console.log("Audio play failed:", e));
-            }
-
-            return newData;
-          });
-        })
-        .catch((err) => {
-          console.error("Sync error:", err);
+    const sync = async () => {
+      try {
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/sync-tickets", {
+          timeout: 10000 // ตั้งค่า timeout 10 วินาที
         });
+        
+        console.log("✅ Synced from Google Sheets");
+        setLastSync(new Date());
+
+        const newData = Array.isArray(response?.data) ? response.data : [];
+
+        try {
+          const clearResponse = await axios.post("https://backend-oa-pqy2.onrender.com/clear-textboxes");
+          if (clearResponse.data.cleared_count > 0) {
+            console.log(`✅ Cleared ${clearResponse.data.cleared_count} textboxes`);
+          }
+        } catch (err) {
+          console.error("Textbox clear error:", err);
+        }
+
+        setData((prevData) => {
+          const textboxUpdates = [];
+
+          if (Array.isArray(prevData) && Array.isArray(newData)) {
+            newData.forEach((newTicket) => {
+              const oldTicket = prevData.find(
+                (t) => t["Ticket ID"] === newTicket["Ticket ID"]
+              );
+              // เพิ่มเงื่อนไขตรวจสอบว่า TEXTBOX มีค่าหรือไม่
+              if (
+                oldTicket &&
+                newTicket.TEXTBOX &&
+                newTicket.TEXTBOX !== oldTicket.TEXTBOX
+              ) {
+                textboxUpdates.push({
+                  id: Date.now() + Math.random(),
+                  message: `New message for ticket ${newTicket["Ticket ID"]}: ${newTicket.TEXTBOX}`,
+                  timestamp: new Date().toISOString(),
+                  read: false,
+                });
+              }
+            });
+          }
+
+          if (textboxUpdates.length > 0) {
+            setNotifications((prev) => [...textboxUpdates, ...prev]);
+            setHasUnread(true);
+
+            // Play notification sound
+            const audio = new Audio("/notification.mp3");
+            audio.play().catch((e) => console.log("Audio play failed:", e));
+          }
+
+          return newData;
+        });
+        
+      } catch (error) {
+        console.error("❌ Sync error:", error);
+        
+        // แสดงข้อความผิดพลาดให้ผู้ใช้ทราบ
+        if (error.response) {
+          // ข้อผิดพลาดจากเซิร์ฟเวอร์ (5xx, 4xx)
+          console.error("Server responded with:", error.response.status);
+          console.error("Error details:", error.response.data);
+        } else if (error.request) {
+          // ไม่ได้รับ response จากเซิร์ฟเวอร์
+          console.error("No response received from server");
+        } else {
+          // ข้อผิดพลาดอื่นๆ
+          console.error("Error setting up request:", error.message);
+        }
+        
+        // ตั้งค่า fallback data เพื่อไม่ให้แอพพัง
+        setData([]);
+      }
     };
 
     sync();
