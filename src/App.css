@@ -36,3 +36,59 @@
     transform: rotate(360deg);
   }
 }
+
+/* Responsive table container */
+.table-container, .TableContainer {
+  width: 100%;
+  overflow-x: auto;
+  margin-bottom: 32px;
+}
+
+/* Responsive table */
+table, .StyledTable {
+  min-width: 900px;
+  font-size: 1rem;
+}
+
+@media (max-width: 1200px) {
+  table, .StyledTable {
+    min-width: 700px;
+    font-size: 0.95rem;
+  }
+}
+@media (max-width: 900px) {
+  table, .StyledTable {
+    min-width: 600px;
+    font-size: 0.9rem;
+  }
+}
+@media (max-width: 600px) {
+  table, .StyledTable {
+    min-width: 400px;
+    font-size: 0.85rem;
+  }
+}
+
+/* ปุ่มลบ */
+button, .btn-delete {
+  transition: background 0.2s, box-shadow 0.2s;
+}
+button:active, .btn-delete:active {
+  box-shadow: 0 2px 8px rgba(239,68,68,0.15);
+}
+
+/* เพิ่มความโปร่งใสและขอบมนให้ปุ่มลบ */
+.btn-delete, button[style*='#ef4444'] {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1rem;
+  box-shadow: 0 2px 8px rgba(239,68,68,0.08);
+}
+.btn-delete:hover, button[style*='#ef4444']:hover {
+  background: #d32f2f;
+}
