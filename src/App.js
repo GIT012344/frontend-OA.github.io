@@ -1471,23 +1471,37 @@ function App() {
     }
   };
 
-  const handleDeleteTicket = (ticketId) => {
+  const handleDeleteTicket = async (ticketId) => {
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?")) {
-      axios
-        .post("https://backend-oa-pqy2.onrender.com/delete-ticket", {
-          ticket_id: ticketId,
-        })
-        .then(() => {
+      try {
+        const response = await axios.post(
+          "https://backend-oa-pqy2.onrender.com/delete-ticket",
+          { ticket_id: ticketId },
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+  
+        if (response.data.success) {
           console.log("✅ Ticket deleted");
           // อัปเดต state เพื่อลบ ticket ออกจาก UI
           setData((prevData) =>
             prevData.filter((item) => item["Ticket ID"] !== ticketId)
           );
-        })
-        .catch((err) => {
-          console.error("❌ Failed to delete ticket:", err);
-          alert("Failed to delete ticket: " + err.message);
-        });
+          alert(response.data.message || "ลบ Ticket สำเร็จ");
+        } else {
+          alert(response.data.error || "Failed to delete ticket");
+        }
+      } catch (err) {
+        console.error("❌ Failed to delete ticket:", err);
+        alert(
+          err.response?.data?.error || 
+          err.response?.data?.message || 
+          "Failed to delete ticket: " + err.message
+        );
+      }
     }
   };
 
