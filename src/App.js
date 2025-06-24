@@ -92,9 +92,9 @@ const ExportButton = styled.button`
   &:hover {
     transform: translateY(-1px);
     box-shadow: ${(props) =>
-      props.primary
-        ? "0 8px 20px rgba(71, 85, 105, 0.25)"
-        : "0 4px 12px rgba(0, 0, 0, 0.08)"};
+    props.primary
+      ? "0 8px 20px rgba(71, 85, 105, 0.25)"
+      : "0 4px 12px rgba(0, 0, 0, 0.08)"};
   }
 
   &:active {
@@ -106,9 +106,9 @@ const ExportButton = styled.button`
     width: 16px;
     height: 16px;
     background-image: ${(props) =>
-      props.primary
-        ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`
-        : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`};
+    props.primary
+      ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`
+      : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E")`};
     background-size: contain;
     background-repeat: no-repeat;
   }
@@ -141,7 +141,7 @@ const StatCard = styled.div`
     right: 0;
     height: 3px;
     background: ${(props) =>
-      props.accent || "linear-gradient(90deg, #64748b, #94a3b8)"};
+    props.accent || "linear-gradient(90deg, #64748b, #94a3b8)"};
     opacity: 0.8;
   }
 
@@ -230,20 +230,20 @@ const TableRow = styled.tr`
 
   &:nth-child(even) {
     background-color: ${(props) =>
-      props.$bgColor ? props.$bgColor : "rgba(248, 250, 252, 0.5)"};
+    props.$bgColor ? props.$bgColor : "rgba(248, 250, 252, 0.5)"};
   }
 
   &:hover {
     background-color: ${(props) =>
-      props.$bgColor
-        ? props.$bgColor === "#ffebee"
-          ? "#ffcdd2"
-          : props.$bgColor === "#fff3e0"
+    props.$bgColor
+      ? props.$bgColor === "#ffebee"
+        ? "#ffcdd2"
+        : props.$bgColor === "#fff3e0"
           ? "#ffe0b2"
           : props.$bgColor === "#fffde7"
-          ? "#fff59d"
-          : "rgba(241, 245, 249, 0.8)"
-        : "rgba(241, 245, 249, 0.8)"};
+            ? "#fff59d"
+            : "rgba(241, 245, 249, 0.8)"
+      : "rgba(241, 245, 249, 0.8)"};
     transform: scale(1.001);
   }
 `;
@@ -1035,7 +1035,7 @@ const ToggleButton = styled.button`
     background-size: contain;
     background-repeat: no-repeat;
     transform: ${(props) =>
-      props.$collapsed ? "rotate(180deg)" : "rotate(0deg)"};
+    props.$collapsed ? "rotate(180deg)" : "rotate(0deg)"};
     transition: transform 0.2s ease;
   }
 `;
@@ -1075,10 +1075,10 @@ const RankBadge = styled.span`
     props.rank === 1
       ? "#f59e0b"
       : props.rank === 2
-      ? "#94a3b8"
-      : props.rank === 3
-      ? "#b45309"
-      : "#e2e8f0"};
+        ? "#94a3b8"
+        : props.rank === 3
+          ? "#b45309"
+          : "#e2e8f0"};
   color: ${(props) => (props.rank <= 3 ? "white" : "#475569")};
   font-weight: 600;
   margin-right: 12px;
@@ -1130,6 +1130,8 @@ function App() {
   const [emailRankings, setEmailRankings] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarHover, setSidebarHover] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const dashboardRef = useRef(null);
   const listRef = useRef(null);
@@ -1175,14 +1177,35 @@ function App() {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data");
-        setData(Array.isArray(response.data) ? response.data : []);
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
+          timeout: 30000
+        });
+
+        if (response.status === 200) {
+          setData(Array.isArray(response.data) ? response.data : []);
+        } else {
+          console.error("Received non-200 status:", response.status);
+          setData([]);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
+        setError(error.message);
+
+        // Implement retry logic
+        if (error.code === 'ECONNABORTED' || !error.response) {
+          console.log("Retrying request...");
+          setTimeout(fetchData, 5000); // Retry after 5 seconds
+        }
+
         setData([]); // Fallback to empty array
+      } finally {
+        setLoading(false);
       }
     };
+
     fetchData();
   }, []);
 
@@ -1229,7 +1252,7 @@ function App() {
         const response = await axios.get("https://backend-oa-pqy2.onrender.com/sync-tickets", {
           timeout: 10000 // ตั้งค่า timeout 10 วินาที
         });
-        
+
         console.log("✅ Synced from Google Sheets");
         setLastSync(new Date());
 
@@ -1279,10 +1302,10 @@ function App() {
 
           return newData;
         });
-        
+
       } catch (error) {
         console.error("❌ Sync error:", error);
-        
+
         // แสดงข้อความผิดพลาดให้ผู้ใช้ทราบ
         if (error.response) {
           // ข้อผิดพลาดจากเซิร์ฟเวอร์ (5xx, 4xx)
@@ -1295,7 +1318,7 @@ function App() {
           // ข้อผิดพลาดอื่นๆ
           console.error("Error setting up request:", error.message);
         }
-        
+
         // ตั้งค่า fallback data เพื่อไม่ให้แอพพัง
         setData([]);
       }
@@ -1398,26 +1421,26 @@ function App() {
   // Filter data based on search and filters
   const filteredData = Array.isArray(data)
     ? data.filter((row) => {
-        // Search filter
-        const matchesSearch =
-          searchTerm === "" ||
-          row["อีเมล"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          row["ชื่อ"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          row["เบอร์ติดต่อ"]
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          row["แผนก"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          row["Ticket ID"]?.toString().includes(searchTerm);
+      // Search filter
+      const matchesSearch =
+        searchTerm === "" ||
+        row["อีเมล"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row["ชื่อ"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row["เบอร์ติดต่อ"]
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        row["แผนก"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row["Ticket ID"]?.toString().includes(searchTerm);
 
-        // Status filter
-        const matchesStatus =
-          statusFilter === "all" || row["สถานะ"] === statusFilter;
+      // Status filter
+      const matchesStatus =
+        statusFilter === "all" || row["สถานะ"] === statusFilter;
 
-        // Type filter
-        const matchesType = typeFilter === "all" || row["Type"] === typeFilter;
+      // Type filter
+      const matchesType = typeFilter === "all" || row["Type"] === typeFilter;
 
-        return matchesSearch && matchesStatus && matchesType;
-      })
+      return matchesSearch && matchesStatus && matchesType;
+    })
     : [];
 
   // Get unique types for filter dropdown
@@ -1673,6 +1696,19 @@ function App() {
     return `ซิงค์ล่าสุด: ${lastSync.toLocaleTimeString()}`;
   };
 
+  const checkBackendHealth = async () => {
+    try {
+      const response = await axios.get('https://backend-oa-pqy2.onrender.com/health', {
+        timeout: 5000
+      });
+      console.log('Backend status:', response.data.status);
+      return true;
+    } catch (error) {
+      console.error('Backend is down:', error);
+      return false;
+    }
+  };
+
   const handleRefreshChat = async () => {
     if (!selectedUser) return;
 
@@ -1850,612 +1886,626 @@ function App() {
       </Sidebar>
       <MainContent style={{ marginLeft: sidebarOpen ? "240px" : "80px" }}>
         <Container>
-          <div ref={dashboardRef}>
-            <Title>Ticket Management System</Title>
-            <SyncIndicator>{formatLastSync()}</SyncIndicator>
-            <HeaderSection>
-              <div></div>
-              <ExportSection>
-                <NotificationBell
-                  hasUnread={hasUnread}
-                  onClick={() => {
-                    setShowNotifications(!showNotifications);
-                    if (hasUnread && !showNotifications) {
-                      markAsRead();
-                    }
-                  }}
-                />
-                <ExportButton onClick={exportToCSV}>ส่งออก CSV</ExportButton>
-                <ExportButton primary onClick={exportToJSON}>
-                  ส่งออก JSON
-                </ExportButton>
-              </ExportSection>
-            </HeaderSection>
-            {/* Dashboard */}
-            <Dashboard>
-              {Object.entries(statusCounts).map(([status, count]) => (
-                <StatCard
-                  key={status}
-                  accent={
-                    status === "Pending"
-                      ? "linear-gradient(90deg, #ef4444, #f87171)"
-                      : status === "Scheduled"
-                      ? "linear-gradient(90deg, #06b6d4, #67e8f9)"
-                      : status === "In Progress"
-                      ? "linear-gradient(90deg, #f59e0b, #fbbf24)"
-                      : status === "Waiting"
-                      ? "linear-gradient(90deg, #8b5cf6, #a78bfa)"
-                      : "linear-gradient(90deg, #10b981, #34d399)"
-                  }
-                >
-                  <StatTitle>{status}</StatTitle>
-                  <StatValue>{count}</StatValue>
-                </StatCard>
-              ))}
-              <StatCard accent="linear-gradient(90deg, #6366f1, #8b5cf6)">
-                <StatTitle>ระบบถูกใช้งานทั้งหมด</StatTitle>
-                <StatValue>{data.length}</StatValue>
-                <div
-                  style={{
-                    marginTop: "12px",
-                    fontSize: "0.875rem",
-                    color: "#64748b",
-                  }}
-                >
-                  {new Date().toLocaleDateString("th-TH", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </div>
-              </StatCard>
-              <StatCard accent="linear-gradient(90deg, #ec4899, #f43f5e)">
-                <StatTitle>ประเภทของ Ticket</StatTitle>
-                <div style={{ marginTop: "16px" }}>
-                  {Object.entries(
-                    data.reduce((acc, ticket) => {
-                      const type = ticket["Type"] || "None";
-                      acc[type] = (acc[type] || 0) + 1;
-                      return acc;
-                    }, {})
-                  ).map(([type, count]) => (
+          {loading && (
+            <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
+              Loading data...
+            </div>
+          )}
+          {error && (
+            <div style={{ textAlign: "center", padding: "40px", color: "#ef4444" }}>
+              Error: {error}
+            </div>
+          )}
+          {!loading && !error && (
+            <>
+              <div ref={dashboardRef}>
+                <Title>Ticket Management System</Title>
+                <SyncIndicator>{formatLastSync()}</SyncIndicator>
+                <HeaderSection>
+                  <div></div>
+                  <ExportSection>
+                    <NotificationBell
+                      hasUnread={hasUnread}
+                      onClick={() => {
+                        setShowNotifications(!showNotifications);
+                        if (hasUnread && !showNotifications) {
+                          markAsRead();
+                        }
+                      }}
+                    />
+                    <ExportButton onClick={exportToCSV}>ส่งออก CSV</ExportButton>
+                    <ExportButton primary onClick={exportToJSON}>
+                      ส่งออก JSON
+                    </ExportButton>
+                  </ExportSection>
+                </HeaderSection>
+                {/* Dashboard */}
+                <Dashboard>
+                  {Object.entries(statusCounts).map(([status, count]) => (
+                    <StatCard
+                      key={status}
+                      accent={
+                        status === "Pending"
+                          ? "linear-gradient(90deg, #ef4444, #f87171)"
+                          : status === "Scheduled"
+                            ? "linear-gradient(90deg, #06b6d4, #67e8f9)"
+                            : status === "In Progress"
+                              ? "linear-gradient(90deg, #f59e0b, #fbbf24)"
+                              : status === "Waiting"
+                                ? "linear-gradient(90deg, #8b5cf6, #a78bfa)"
+                                : "linear-gradient(90deg, #10b981, #34d399)"
+                      }
+                    >
+                      <StatTitle>{status}</StatTitle>
+                      <StatValue>{count}</StatValue>
+                    </StatCard>
+                  ))}
+                  <StatCard accent="linear-gradient(90deg, #6366f1, #8b5cf6)">
+                    <StatTitle>ระบบถูกใช้งานทั้งหมด</StatTitle>
+                    <StatValue>{data.length}</StatValue>
                     <div
-                      key={type}
                       style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginBottom: "8px",
+                        marginTop: "12px",
+                        fontSize: "0.875rem",
+                        color: "#64748b",
                       }}
                     >
-                      <span>{type}</span>
-                      <span style={{ fontWeight: "600" }}>{count}</span>
+                      {new Date().toLocaleDateString("th-TH", {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
                     </div>
-                  ))}
-                </div>
-              </StatCard>
-              <StatCard accent="linear-gradient(90deg, #f59e0b, #f97316)">
-                <StatTitle>แผนกที่แจ้ง Ticket สูงสุด</StatTitle>
-                <RankingList>
-                  {Object.entries(
-                    data.reduce((acc, ticket) => {
-                      const dept = ticket["แผนก"] || "ไม่ระบุ";
-                      acc[dept] = (acc[dept] || 0) + 1;
-                      return acc;
-                    }, {})
-                  )
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 5)
-                    .map(([dept, count], index) => (
-                      <RankingItem key={dept}>
-                        <div style={{ display: "flex", alignItems: "center" }}>
-                          <RankBadge rank={index + 1}>{index + 1}</RankBadge>
-                          <span>{dept}</span>
-                        </div>
-                        <TicketCount>{count} tickets</TicketCount>
-                      </RankingItem>
-                    ))}
-                </RankingList>
-              </StatCard>
-              <EmailRankingCard>
-                <StatTitle>Top 5 Emails by Ticket Count</StatTitle>
-                {emailRankings.length > 0 ? (
-                  <RankingList>
-                    {emailRankings.map((item, index) => (
-                      <RankingItem key={item.email}>
+                  </StatCard>
+                  <StatCard accent="linear-gradient(90deg, #ec4899, #f43f5e)">
+                    <StatTitle>ประเภทของ Ticket</StatTitle>
+                    <div style={{ marginTop: "16px" }}>
+                      {Object.entries(
+                        data.reduce((acc, ticket) => {
+                          const type = ticket["Type"] || "None";
+                          acc[type] = (acc[type] || 0) + 1;
+                          return acc;
+                        }, {})
+                      ).map(([type, count]) => (
                         <div
+                          key={type}
                           style={{
                             display: "flex",
-                            alignItems: "center",
-                            flex: 1,
+                            justifyContent: "space-between",
+                            marginBottom: "8px",
                           }}
                         >
-                          <RankBadge rank={index + 1}>{index + 1}</RankBadge>
-                          <EmailInfo
-                            title={item.email}
-                            onClick={() => filterByEmail(item.email)}
+                          <span>{type}</span>
+                          <span style={{ fontWeight: "600" }}>{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </StatCard>
+                  <StatCard accent="linear-gradient(90deg, #f59e0b, #f97316)">
+                    <StatTitle>แผนกที่แจ้ง Ticket สูงสุด</StatTitle>
+                    <RankingList>
+                      {Object.entries(
+                        data.reduce((acc, ticket) => {
+                          const dept = ticket["แผนก"] || "ไม่ระบุ";
+                          acc[dept] = (acc[dept] || 0) + 1;
+                          return acc;
+                        }, {})
+                      )
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 5)
+                        .map(([dept, count], index) => (
+                          <RankingItem key={dept}>
+                            <div style={{ display: "flex", alignItems: "center" }}>
+                              <RankBadge rank={index + 1}>{index + 1}</RankBadge>
+                              <span>{dept}</span>
+                            </div>
+                            <TicketCount>{count} tickets</TicketCount>
+                          </RankingItem>
+                        ))}
+                    </RankingList>
+                  </StatCard>
+                  <EmailRankingCard>
+                    <StatTitle>Top 5 Emails by Ticket Count</StatTitle>
+                    {emailRankings.length > 0 ? (
+                      <RankingList>
+                        {emailRankings.map((item, index) => (
+                          <RankingItem key={item.email}>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                flex: 1,
+                              }}
+                            >
+                              <RankBadge rank={index + 1}>{index + 1}</RankBadge>
+                              <EmailInfo
+                                title={item.email}
+                                onClick={() => filterByEmail(item.email)}
+                                style={{
+                                  cursor: "pointer",
+                                  "&:hover": { textDecoration: "underline" },
+                                }}
+                              >
+                                {item.email}
+                              </EmailInfo>
+                            </div>
+                            <TicketCount>{item.count} tickets</TicketCount>
+                          </RankingItem>
+                        ))}
+                      </RankingList>
+                    ) : (
+                      <div
+                        style={{
+                          color: "#64748b",
+                          textAlign: "center",
+                          marginTop: "20px",
+                        }}
+                      >
+                        No email data available
+                      </div>
+                    )}
+                  </EmailRankingCard>
+                  <StatCard
+                    accent="linear-gradient(90deg, #3b82f6, #2563eb)"
+                    style={{ gridColumn: "span 2" }}
+                  >
+                    <StatTitle>นัดหมายล่าสุด</StatTitle>
+                    <div style={{ marginTop: "16px" }}>
+                      {data
+                        .filter((ticket) => ticket["Appointment"])
+                        .sort(
+                          (a, b) =>
+                            new Date(b["Appointment"]) - new Date(a["Appointment"])
+                        )
+                        .slice(0, 3)
+                        .map((ticket) => (
+                          <div
+                            key={ticket["Ticket ID"]}
                             style={{
-                              cursor: "pointer",
-                              "&:hover": { textDecoration: "underline" },
+                              marginBottom: "12px",
+                              padding: "12px",
+                              background: "rgba(241, 245, 249, 0.5)",
+                              borderRadius: "8px",
                             }}
                           >
-                            {item.email}
-                          </EmailInfo>
-                        </div>
-                        <TicketCount>{item.count} tickets</TicketCount>
-                      </RankingItem>
-                    ))}
-                  </RankingList>
-                ) : (
-                  <div
-                    style={{
-                      color: "#64748b",
-                      textAlign: "center",
-                      marginTop: "20px",
-                    }}
-                  >
-                    No email data available
-                  </div>
-                )}
-              </EmailRankingCard>
-              <StatCard
-                accent="linear-gradient(90deg, #3b82f6, #2563eb)"
-                style={{ gridColumn: "span 2" }}
-              >
-                <StatTitle>นัดหมายล่าสุด</StatTitle>
-                <div style={{ marginTop: "16px" }}>
-                  {data
-                    .filter((ticket) => ticket["Appointment"])
-                    .sort(
-                      (a, b) =>
-                        new Date(b["Appointment"]) - new Date(a["Appointment"])
-                    )
-                    .slice(0, 3)
-                    .map((ticket) => (
-                      <div
-                        key={ticket["Ticket ID"]}
-                        style={{
-                          marginBottom: "12px",
-                          padding: "12px",
-                          background: "rgba(241, 245, 249, 0.5)",
-                          borderRadius: "8px",
-                        }}
-                      >
-                        <div style={{ fontWeight: "600" }}>
-                          {ticket["ชื่อ"]}
-                        </div>
-                        <div style={{ fontSize: "0.875rem", color: "#475569" }}>
-                          {new Date(ticket["Appointment"]).toLocaleString(
-                            "th-TH",
-                            {
-                              dateStyle: "full",
-                              timeStyle: "short",
-                            }
-                          )}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: "0.75rem",
-                            color: "#64748b",
-                            marginTop: "4px",
-                          }}
-                        >
-                          {ticket["แผนก"]} • {ticket["สถานะ"]}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </StatCard>
-            </Dashboard>
-          </div>
-          <div ref={listRef}>
-            <StatCard
-              accent="linear-gradient(90deg, #3b82f6, #2563eb)"
-              style={{ gridColumn: "span 2" }}
-            >
-              <StatTitle>นัดหมายล่าสุด</StatTitle>
-              <div style={{ marginTop: "16px" }}>
-                {data
-                  .filter((ticket) => ticket["Appointment"])
-                  .sort((a, b) => {
-                    // Sort by either the "วันที่แจ้ง" field or by the appointment date itself
-                    const dateA = new Date(a["วันที่แจ้ง"] || a["Appointment"]);
-                    const dateB = new Date(b["วันที่แจ้ง"] || b["Appointment"]);
-                    return dateB - dateA; // Newest first
-                  })
-                  .slice(0, 3) // Show only the 3 most recent
-                  .map((ticket) => (
-                    <div
-                      key={ticket["Ticket ID"]}
-                      style={{
-                        marginBottom: "12px",
-                        padding: "12px",
-                        background: "rgba(241, 245, 249, 0.5)",
-                        borderRadius: "8px",
-                      }}
-                    >
-                      <div style={{ fontWeight: "600" }}>
-                        {ticket["ชื่อ"]} (Ticket ID: {ticket["Ticket ID"]})
-                      </div>
-                      <div style={{ fontSize: "0.875rem", color: "#475569" }}>
-                        {new Date(ticket["Appointment"]).toLocaleString(
-                          "th-TH",
-                          {
-                            dateStyle: "full",
-                            timeStyle: "short",
-                          }
-                        )}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "#64748b",
-                          marginTop: "4px",
-                        }}
-                      >
-                        {ticket["แผนก"]} • {ticket["สถานะ"]} • แจ้งเมื่อ:{" "}
-                        {new Date(ticket["วันที่แจ้ง"]).toLocaleString(
-                          "th-TH",
-                          {
-                            dateStyle: "short",
-                            timeStyle: "short",
-                          }
-                        )}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </StatCard>
-            <TableContainer>
-              <TableTitle>รายการ Ticket ทั้งหมด</TableTitle>
-
-              {/* Search and Filter Section */}
-              <SearchAndFilterContainer>
-                <SearchInput
-                  type="text"
-                  placeholder="ค้นหา Ticket..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-
-                {/* Date Filter - Moved here */}
-                <DateFilterContainer>
-                  <FilterLabel>วันที่:</FilterLabel>
-                  <DateInput
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                  <FilterButton onClick={fetchDataByDate} disabled={!startDate}>
-                    กรอง
-                  </FilterButton>
-                  <ResetButton onClick={resetDateFilter}>รีเซ็ต</ResetButton>
-                  {isDateFilterActive && (
-                    <div
-                      style={{
-                        marginTop: "8px",
-                        color: "#475569",
-                        fontSize: "0.875rem",
-                      }}
-                    >
-                      กำลังแสดงข้อมูลวันที่:{" "}
-                      {new Date(startDate).toLocaleDateString("th-TH")}
-                    </div>
-                  )}
-                </DateFilterContainer>
-
-                <FilterGroup>
-                  <FilterLabel>สถานะ:</FilterLabel>
-                  <FilterSelect
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                  >
-                    <option value="all">ทั้งหมด</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Scheduled">Scheduled</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Waiting">Waiting</option>
-                    <option value="Completed">Completed</option>
-                  </FilterSelect>
-                </FilterGroup>
-
-                <FilterGroup>
-                  <FilterLabel>ประเภท:</FilterLabel>
-                  <FilterSelect
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value)}
-                  >
-                    <option value="all">ทั้งหมด</option>
-                    {uniqueTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </FilterSelect>
-                </FilterGroup>
-              </SearchAndFilterContainer>
-
-              <ScrollContainer>
-                <StyledTable>
-                  <TableHeader>
-                    <tr>
-                      <TableHeaderCell>Ticket ID</TableHeaderCell>{" "}
-                      <TableHeaderCell>อีเมล</TableHeaderCell>
-                      <TableHeaderCell>ชื่อ</TableHeaderCell>
-                      <TableHeaderCell>เบอร์ติดต่อ</TableHeaderCell>
-                      <TableHeaderCell>แผนก</TableHeaderCell>
-                      <TableHeaderCell>วันที่แจ้ง</TableHeaderCell>
-                      <TableHeaderCell>สถานะ</TableHeaderCell>
-                      <TableHeaderCell>Appointment</TableHeaderCell>
-                      <TableHeaderCell>Requeste</TableHeaderCell>
-                      <TableHeaderCell>Report</TableHeaderCell>
-                      <TableHeaderCell>Type</TableHeaderCell>
-                      <TableHeaderCell>Action</TableHeaderCell>
-                    </tr>
-                  </TableHeader>
-                  <tbody>
-                    {filteredData.map((row, i) => {
-                      const rowColor = getRowColor(
-                        row["วันที่แจ้ง"],
-                        row["สถานะ"]
-                      );
-                      return (
-                        <TableRow key={i} $bgColor={rowColor}>
-                          <TableCell>{row["Ticket ID"] || "None"}</TableCell>{" "}
-                          {/* Added this line */}
-                          <TableCell>{row["อีเมล"] || "None"}</TableCell>
-                          <TableCell>{row["ชื่อ"] || "None"}</TableCell>
-                          <TableCell>{row["เบอร์ติดต่อ"] || "None"}</TableCell>
-                          <TableCell>{row["แผนก"] || "None"}</TableCell>
-                          <TableCell>{row["วันที่แจ้ง"] || "None"}</TableCell>
-                          <TableCell>
-                            <StatusSelect
-                              value={row["สถานะ"] || "None"}
-                              onChange={(e) =>
-                                handleStatusChange(
-                                  row["Ticket ID"],
-                                  e.target.value
-                                )
-                              }
-                            >
-                              <option value="None">None</option>
-                              <option value="Pending">Pending</option>
-                              <option value="Scheduled">Scheduled</option>
-                              <option value="In Progress">In Progress</option>
-                              <option value="Waiting">Waiting</option>
-                              <option value="Completed">Completed</option>
-                            </StatusSelect>
-                          </TableCell>
-                          <TableCell>{row["Appointment"] || "None"}</TableCell>
-                          <TableCell>{row["Requeste"] || "None"}</TableCell>
-                          <TableCell>{row["Report"] || "None"}</TableCell>
-                          <TableCell>{row["Type"] || "None"}</TableCell>
-                          <TableCell>
-                            <button
-                              onClick={() =>
-                                handleDeleteTicket(row["Ticket ID"])
-                              }
+                            <div style={{ fontWeight: "600" }}>
+                              {ticket["ชื่อ"]}
+                            </div>
+                            <div style={{ fontSize: "0.875rem", color: "#475569" }}>
+                              {new Date(ticket["Appointment"]).toLocaleString(
+                                "th-TH",
+                                {
+                                  dateStyle: "full",
+                                  timeStyle: "short",
+                                }
+                              )}
+                            </div>
+                            <div
                               style={{
-                                background: "#ef4444",
-                                color: "white",
-                                border: "none",
-                                padding: "8px 12px",
-                                borderRadius: "6px",
-                                cursor: "pointer",
-                                transition: "all 0.2s ease",
+                                fontSize: "0.75rem",
+                                color: "#64748b",
+                                marginTop: "4px",
                               }}
-                              onMouseOver={(e) =>
-                                (e.target.style.opacity = "0.8")
-                              }
-                              onMouseOut={(e) => (e.target.style.opacity = "1")}
                             >
-                              ลบ
-                            </button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </tbody>
-                </StyledTable>
-              </ScrollContainer>
-            </TableContainer>
-          </div>
-          <div ref={chatRef}>
-            <ChatContainer>
-              <ChatHeader>
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "12px" }}
-                >
-                  <ChatTitle>Admin</ChatTitle>
-                  <button
-                    onClick={handleRefreshChat}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      padding: "6px",
-                      borderRadius: "50%",
-                      transition: "all 0.2s ease",
-                    }}
-                    title="Refresh Chat"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#64748b"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M21.5 2v6h-6M2.5 22v-6h6M22 11.5A10 10 0 0 0 9.004 3.5M2 12.5a10 10 0 0 0 13 8.5" />
-                    </svg>
-                  </button>
-                </div>
-                <ChatStatus>Online</ChatStatus>
-              </ChatHeader>
-
-              <UserSelectContainer>
-                <UserSelect value={selectedUser} onChange={handleUserSelect}>
-                  <option value="">-- Select User --</option>
-                  <option value="announcement">
-                    📢 Announcement to All Members
-                  </option>
-                  {data
-                    .filter((row) => row["Type"] === "Information")
-                    .reduce((unique, row) => {
-                      if (
-                        !unique.some((item) => item["อีเมล"] === row["อีเมล"])
-                      ) {
-                        unique.push(row);
-                      }
-                      return unique;
-                    }, [])
-                    .map((row) => (
-                      <option key={row["Ticket ID"]} value={row["Ticket ID"]}>
-                        {row["อีเมล"] || "None"} ({row["ชื่อ"] || "No Name"})
-                      </option>
-                    ))}
-                </UserSelect>
-              </UserSelectContainer>
-              <MessagesContainer>
-                {messages.map((msg) => (
-                  <Message key={msg.id} isAI={!msg.is_admin_message}>
-                    <div style={{ fontWeight: "bold" }}>{msg.sender_name}</div>
-                    {msg.message}
-                    <MessageTime isAI={!msg.is_admin_message}>
-                      {new Date(msg.timestamp).toLocaleTimeString()}
-                    </MessageTime>
-                  </Message>
-                ))}
-              </MessagesContainer>
-              {selectedUser && (
-                <InputContainer>
-                  <InputWrapper>
-                    <ChatTextArea
-                      value={chatMessage}
-                      onChange={(e) => setChatMessage(e.target.value)}
-                      placeholder={
-                        selectedUser === "announcement"
-                          ? "Type your announcement here..."
-                          : "Type your message here..."
-                      }
-                    />
-                    <ClearButton onClick={handleClearChat}>Clear</ClearButton>
-                    <SendButton onClick={handleChatSubmit}>
-                      {selectedUser === "announcement"
-                        ? "Send Announcement"
-                        : "Send"}
-                    </SendButton>
-                  </InputWrapper>
-                </InputContainer>
-              )}
-            </ChatContainer>
-          </div>
-          <NotificationDropdown
-            visible={showNotifications}
-            style={{
-              transform: `translate(${notificationPosition.x}px, ${notificationPosition.y}px)`,
-              cursor: isDragging ? "grabbing" : "grab",
-            }}
-            onMouseDown={handleMouseDown}
-          >
-            <CloseButton onClick={() => setShowNotifications(false)}>
-              &times;
-            </CloseButton>
-            <NotificationHeader>
-              <NotificationTitle>การแจ้งเตือนล่าสุด</NotificationTitle>
-              <div>
-                <MarkAllRead onClick={() => markAsRead()}>
-                  อ่านทั้งหมด
-                </MarkAllRead>
-                <MarkAllRead
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        "คุณแน่ใจหรือไม่ว่าต้องการลบการแจ้งเตือนทั้งหมด?"
-                      )
-                    ) {
-                      notifications.forEach((n) => deleteNotification(n.id));
-                    }
-                  }}
-                  style={{ marginLeft: "10px", color: "#ef4444" }}
-                >
-                  ลบทั้งหมด
-                </MarkAllRead>
+                              {ticket["แผนก"]} • {ticket["สถานะ"]}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </StatCard>
+                </Dashboard>
               </div>
-            </NotificationHeader>
-
-            {notifications.length > 0 ? (
-              notifications.map((notification) => (
-                <NotificationItem
-                  key={notification.id}
-                  unread={!notification.read}
+              <div ref={listRef}>
+                <StatCard
+                  accent="linear-gradient(90deg, #3b82f6, #2563eb)"
+                  style={{ gridColumn: "span 2" }}
                 >
-                  <NotificationContent>
-                    {notification.message &&
-                    typeof notification.message === "string" &&
-                    notification.message.includes("New message from") ? (
-                      <>
+                  <StatTitle>นัดหมายล่าสุด</StatTitle>
+                  <div style={{ marginTop: "16px" }}>
+                    {data
+                      .filter((ticket) => ticket["Appointment"])
+                      .sort((a, b) => {
+                        // Sort by either the "วันที่แจ้ง" field or by the appointment date itself
+                        const dateA = new Date(a["วันที่แจ้ง"] || a["Appointment"]);
+                        const dateB = new Date(b["วันที่แจ้ง"] || b["Appointment"]);
+                        return dateB - dateA; // Newest first
+                      })
+                      .slice(0, 3) // Show only the 3 most recent
+                      .map((ticket) => (
                         <div
-                          style={{ fontWeight: "bold", marginBottom: "4px" }}
-                        >
-                          New Message 📩 from{" "}
-                          {notification.message
-                            .split(" from ")[1]
-                            ?.split(" for ticket")[0] || "Unknown"}
-                        </div>
-                        <div
+                          key={ticket["Ticket ID"]}
                           style={{
-                            background: "#f0f4f8",
-                            padding: "8px",
-                            borderRadius: "4px",
+                            marginBottom: "12px",
+                            padding: "12px",
+                            background: "rgba(241, 245, 249, 0.5)",
+                            borderRadius: "8px",
                           }}
                         >
-                          {notification.message.split(": ").slice(1).join(": ")}
+                          <div style={{ fontWeight: "600" }}>
+                            {ticket["ชื่อ"]} (Ticket ID: {ticket["Ticket ID"]})
+                          </div>
+                          <div style={{ fontSize: "0.875rem", color: "#475569" }}>
+                            {new Date(ticket["Appointment"]).toLocaleString(
+                              "th-TH",
+                              {
+                                dateStyle: "full",
+                                timeStyle: "short",
+                              }
+                            )}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.75rem",
+                              color: "#64748b",
+                              marginTop: "4px",
+                            }}
+                          >
+                            {ticket["แผนก"]} • {ticket["สถานะ"]} • แจ้งเมื่อ:{" "}
+                            {new Date(ticket["วันที่แจ้ง"]).toLocaleString(
+                              "th-TH",
+                              {
+                                dateStyle: "short",
+                                timeStyle: "short",
+                              }
+                            )}
+                          </div>
                         </div>
-                      </>
-                    ) : (
-                      notification.message || "No message content"
-                    )}
-                  </NotificationContent>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginTop: "8px",
-                    }}
-                  >
-                    <NotificationTime>
-                      {new Date(notification.timestamp).toLocaleString()}
-                    </NotificationTime>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteNotification(notification.id);
-                      }}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "#ef4444",
-                        cursor: "pointer",
-                        fontSize: "0.75rem",
-                      }}
-                    >
-                      ลบ
-                    </button>
+                      ))}
                   </div>
-                </NotificationItem>
-              ))
-            ) : (
-              <EmptyNotifications>ไม่มีการแจ้งเตือน</EmptyNotifications>
-            )}
-          </NotificationDropdown>
+                </StatCard>
+                <TableContainer>
+                  <TableTitle>รายการ Ticket ทั้งหมด</TableTitle>
+
+                  {/* Search and Filter Section */}
+                  <SearchAndFilterContainer>
+                    <SearchInput
+                      type="text"
+                      placeholder="ค้นหา Ticket..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+
+                    {/* Date Filter - Moved here */}
+                    <DateFilterContainer>
+                      <FilterLabel>วันที่:</FilterLabel>
+                      <DateInput
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                      />
+                      <FilterButton onClick={fetchDataByDate} disabled={!startDate}>
+                        กรอง
+                      </FilterButton>
+                      <ResetButton onClick={resetDateFilter}>รีเซ็ต</ResetButton>
+                      {isDateFilterActive && (
+                        <div
+                          style={{
+                            marginTop: "8px",
+                            color: "#475569",
+                            fontSize: "0.875rem",
+                          }}
+                        >
+                          กำลังแสดงข้อมูลวันที่:{" "}
+                          {new Date(startDate).toLocaleDateString("th-TH")}
+                        </div>
+                      )}
+                    </DateFilterContainer>
+
+                    <FilterGroup>
+                      <FilterLabel>สถานะ:</FilterLabel>
+                      <FilterSelect
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                      >
+                        <option value="all">ทั้งหมด</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Scheduled">Scheduled</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Waiting">Waiting</option>
+                        <option value="Completed">Completed</option>
+                      </FilterSelect>
+                    </FilterGroup>
+
+                    <FilterGroup>
+                      <FilterLabel>ประเภท:</FilterLabel>
+                      <FilterSelect
+                        value={typeFilter}
+                        onChange={(e) => setTypeFilter(e.target.value)}
+                      >
+                        <option value="all">ทั้งหมด</option>
+                        {uniqueTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </FilterSelect>
+                    </FilterGroup>
+                  </SearchAndFilterContainer>
+
+                  <ScrollContainer>
+                    <StyledTable>
+                      <TableHeader>
+                        <tr>
+                          <TableHeaderCell>Ticket ID</TableHeaderCell>{" "}
+                          <TableHeaderCell>อีเมล</TableHeaderCell>
+                          <TableHeaderCell>ชื่อ</TableHeaderCell>
+                          <TableHeaderCell>เบอร์ติดต่อ</TableHeaderCell>
+                          <TableHeaderCell>แผนก</TableHeaderCell>
+                          <TableHeaderCell>วันที่แจ้ง</TableHeaderCell>
+                          <TableHeaderCell>สถานะ</TableHeaderCell>
+                          <TableHeaderCell>Appointment</TableHeaderCell>
+                          <TableHeaderCell>Requeste</TableHeaderCell>
+                          <TableHeaderCell>Report</TableHeaderCell>
+                          <TableHeaderCell>Type</TableHeaderCell>
+                          <TableHeaderCell>Action</TableHeaderCell>
+                        </tr>
+                      </TableHeader>
+                      <tbody>
+                        {filteredData.map((row, i) => {
+                          const rowColor = getRowColor(
+                            row["วันที่แจ้ง"],
+                            row["สถานะ"]
+                          );
+                          return (
+                            <TableRow key={i} $bgColor={rowColor}>
+                              <TableCell>{row["Ticket ID"] || "None"}</TableCell>{" "}
+                              {/* Added this line */}
+                              <TableCell>{row["อีเมล"] || "None"}</TableCell>
+                              <TableCell>{row["ชื่อ"] || "None"}</TableCell>
+                              <TableCell>{row["เบอร์ติดต่อ"] || "None"}</TableCell>
+                              <TableCell>{row["แผนก"] || "None"}</TableCell>
+                              <TableCell>{row["วันที่แจ้ง"] || "None"}</TableCell>
+                              <TableCell>
+                                <StatusSelect
+                                  value={row["สถานะ"] || "None"}
+                                  onChange={(e) =>
+                                    handleStatusChange(
+                                      row["Ticket ID"],
+                                      e.target.value
+                                    )
+                                  }
+                                >
+                                  <option value="None">None</option>
+                                  <option value="Pending">Pending</option>
+                                  <option value="Scheduled">Scheduled</option>
+                                  <option value="In Progress">In Progress</option>
+                                  <option value="Waiting">Waiting</option>
+                                  <option value="Completed">Completed</option>
+                                </StatusSelect>
+                              </TableCell>
+                              <TableCell>{row["Appointment"] || "None"}</TableCell>
+                              <TableCell>{row["Requeste"] || "None"}</TableCell>
+                              <TableCell>{row["Report"] || "None"}</TableCell>
+                              <TableCell>{row["Type"] || "None"}</TableCell>
+                              <TableCell>
+                                <button
+                                  onClick={() =>
+                                    handleDeleteTicket(row["Ticket ID"])
+                                  }
+                                  style={{
+                                    background: "#ef4444",
+                                    color: "white",
+                                    border: "none",
+                                    padding: "8px 12px",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease",
+                                  }}
+                                  onMouseOver={(e) =>
+                                    (e.target.style.opacity = "0.8")
+                                  }
+                                  onMouseOut={(e) => (e.target.style.opacity = "1")}
+                                >
+                                  ลบ
+                                </button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </tbody>
+                    </StyledTable>
+                  </ScrollContainer>
+                </TableContainer>
+              </div>
+              <div ref={chatRef}>
+                <ChatContainer>
+                  <ChatHeader>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: "12px" }}
+                    >
+                      <ChatTitle>Admin</ChatTitle>
+                      <button
+                        onClick={handleRefreshChat}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          padding: "6px",
+                          borderRadius: "50%",
+                          transition: "all 0.2s ease",
+                        }}
+                        title="Refresh Chat"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#64748b"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M21.5 2v6h-6M2.5 22v-6h6M22 11.5A10 10 0 0 0 9.004 3.5M2 12.5a10 10 0 0 0 13 8.5" />
+                        </svg>
+                      </button>
+                    </div>
+                    <ChatStatus>Online</ChatStatus>
+                  </ChatHeader>
+
+                  <UserSelectContainer>
+                    <UserSelect value={selectedUser} onChange={handleUserSelect}>
+                      <option value="">-- Select User --</option>
+                      <option value="announcement">
+                        📢 Announcement to All Members
+                      </option>
+                      {data
+                        .filter((row) => row["Type"] === "Information")
+                        .reduce((unique, row) => {
+                          if (
+                            !unique.some((item) => item["อีเมล"] === row["อีเมล"])
+                          ) {
+                            unique.push(row);
+                          }
+                          return unique;
+                        }, [])
+                        .map((row) => (
+                          <option key={row["Ticket ID"]} value={row["Ticket ID"]}>
+                            {row["อีเมล"] || "None"} ({row["ชื่อ"] || "No Name"})
+                          </option>
+                        ))}
+                    </UserSelect>
+                  </UserSelectContainer>
+                  <MessagesContainer>
+                    {messages.map((msg) => (
+                      <Message key={msg.id} isAI={!msg.is_admin_message}>
+                        <div style={{ fontWeight: "bold" }}>{msg.sender_name}</div>
+                        {msg.message}
+                        <MessageTime isAI={!msg.is_admin_message}>
+                          {new Date(msg.timestamp).toLocaleTimeString()}
+                        </MessageTime>
+                      </Message>
+                    ))}
+                  </MessagesContainer>
+                  {selectedUser && (
+                    <InputContainer>
+                      <InputWrapper>
+                        <ChatTextArea
+                          value={chatMessage}
+                          onChange={(e) => setChatMessage(e.target.value)}
+                          placeholder={
+                            selectedUser === "announcement"
+                              ? "Type your announcement here..."
+                              : "Type your message here..."
+                          }
+                        />
+                        <ClearButton onClick={handleClearChat}>Clear</ClearButton>
+                        <SendButton onClick={handleChatSubmit}>
+                          {selectedUser === "announcement"
+                            ? "Send Announcement"
+                            : "Send"}
+                        </SendButton>
+                      </InputWrapper>
+                    </InputContainer>
+                  )}
+                </ChatContainer>
+              </div>
+              <NotificationDropdown
+                visible={showNotifications}
+                style={{
+                  transform: `translate(${notificationPosition.x}px, ${notificationPosition.y}px)`,
+                  cursor: isDragging ? "grabbing" : "grab",
+                }}
+                onMouseDown={handleMouseDown}
+              >
+                <CloseButton onClick={() => setShowNotifications(false)}>
+                  &times;
+                </CloseButton>
+                <NotificationHeader>
+                  <NotificationTitle>การแจ้งเตือนล่าสุด</NotificationTitle>
+                  <div>
+                    <MarkAllRead onClick={() => markAsRead()}>
+                      อ่านทั้งหมด
+                    </MarkAllRead>
+                    <MarkAllRead
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            "คุณแน่ใจหรือไม่ว่าต้องการลบการแจ้งเตือนทั้งหมด?"
+                          )
+                        ) {
+                          notifications.forEach((n) => deleteNotification(n.id));
+                        }
+                      }}
+                      style={{ marginLeft: "10px", color: "#ef4444" }}
+                    >
+                      ลบทั้งหมด
+                    </MarkAllRead>
+                  </div>
+                </NotificationHeader>
+
+                {notifications.length > 0 ? (
+                  notifications.map((notification) => (
+                    <NotificationItem
+                      key={notification.id}
+                      unread={!notification.read}
+                    >
+                      <NotificationContent>
+                        {notification.message &&
+                          typeof notification.message === "string" &&
+                          notification.message.includes("New message from") ? (
+                          <>
+                            <div
+                              style={{ fontWeight: "bold", marginBottom: "4px" }}
+                            >
+                              New Message 📩 from{" "}
+                              {notification.message
+                                .split(" from ")[1]
+                                ?.split(" for ticket")[0] || "Unknown"}
+                            </div>
+                            <div
+                              style={{
+                                background: "#f0f4f8",
+                                padding: "8px",
+                                borderRadius: "4px",
+                              }}
+                            >
+                              {notification.message.split(": ").slice(1).join(": ")}
+                            </div>
+                          </>
+                        ) : (
+                          notification.message || "No message content"
+                        )}
+                      </NotificationContent>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginTop: "8px",
+                        }}
+                      >
+                        <NotificationTime>
+                          {new Date(notification.timestamp).toLocaleString()}
+                        </NotificationTime>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteNotification(notification.id);
+                          }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#ef4444",
+                            cursor: "pointer",
+                            fontSize: "0.75rem",
+                          }}
+                        >
+                          ลบ
+                        </button>
+                      </div>
+                    </NotificationItem>
+                  ))
+                ) : (
+                  <EmptyNotifications>ไม่มีการแจ้งเตือน</EmptyNotifications>
+                )}
+              </NotificationDropdown>
+            </>
+          )}
         </Container>
       </MainContent>
     </>
