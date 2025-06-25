@@ -131,21 +131,35 @@ function Login({ setToken }) {
     try {
       const response = await axios.post('https://backend-oa-pqy2.onrender.com/api/login', {
         pin_code: pinCode
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
-      const token = response.data.access_token;
-      setToken(token);
-      localStorage.setItem('token', token);
-      navigate('/dashboard');
+      if (response.data.access_token) {
+        const token = response.data.access_token;
+        setToken(token);
+        localStorage.setItem('token', token);
+        navigate('/dashboard');
+      } else {
+        setError('ไม่ได้รับ token จากเซิร์ฟเวอร์');
+      }
     } catch (err) {
-      if (err.response?.status === 401) {
+      console.error('Login error:', err);
+      if (err.response?.status === 400) {
+        setError('รหัส PIN ไม่ถูกต้อง');
+      } else if (err.response?.status === 401) {
         setError('รหัส PIN ไม่ถูกต้อง');
       } else if (err.response?.status === 403) {
         setError('รหัส PIN หมดอายุหรือถูกระงับการใช้งาน');
+      } else if (err.response?.status === 404) {
+        setError('ไม่พบ API endpoint');
+      } else if (err.code === 'ERR_NETWORK') {
+        setError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
       } else {
         setError('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
       }
-      console.error('Login error:', err);
     } finally {
       setIsLoading(false);
     }
