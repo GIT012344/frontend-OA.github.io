@@ -10,18 +10,25 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (token) {
       // Decode token เพื่อดึงข้อมูลผู้ใช้
-      const decoded = JSON.parse(atob(token.split('.')[1]));
-      setUser(decoded);
+      try {
+        const decoded = JSON.parse(atob(token.split('.')[1]));
+        setUser(decoded);
+      } catch (error) {
+        console.error('Error decoding token:', error);
+        // ถ้า decode token ไม่ได้ ให้ลบ token ออก
+        localStorage.removeItem('token');
+        setToken(null);
+        setUser(null);
+      }
     } else {
       setUser(null);
     }
   }, [token]);
 
-  const login = async (username, password) => {
+  const login = async (pinCode) => {
     try {
       const response = await axios.post('https://backend-oa-pqy2.onrender.com/api/login', {
-        username,
-        password
+        pin_code: pinCode
       });
 
       const newToken = response.data.access_token;

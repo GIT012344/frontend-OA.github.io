@@ -1173,8 +1173,7 @@ function App() {
   const [emailRankings, setEmailRankings] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarHover, setSidebarHover] = useState(false);
-  const [token, setToken] = useState(localStorage.getItem('token'));
-  const { user, logout } = useAuth();
+  const { token, user, logout } = useAuth();
 
   const dashboardRef = useRef(null);
   const listRef = useRef(null);
@@ -1229,14 +1228,13 @@ function App() {
             }
           });
         } catch (err) {
-          localStorage.removeItem('token');
-          setToken(null);
+          logout();
         }
       }
     };
 
     verifyToken();
-  }, [token]);
+  }, [token, logout]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -1882,7 +1880,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <Login setToken={setToken} />} />
+        <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <Login />} />
         <Route path="/dashboard" element={token ? (
           // Main dashboard content
           <>
@@ -1942,7 +1940,7 @@ function App() {
                   <HeaderSection>
                   <UserInfo>
                   <div>
-                    <strong>{user?.username}</strong> ({user?.role})
+                    <strong>{user?.username || user?.name || 'Admin'}</strong> ({user?.role || 'User'})
                   </div>
                   <LogoutButton onClick={logout}>
                     ออกจากระบบ

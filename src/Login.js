@@ -27,30 +27,40 @@ const LoginTitle = styled.h1`
   font-weight: 700;
 `;
 
-const InputField = styled.input`
+const PinInput = styled.input`
   width: 100%;
-  padding: 12px 16px;
+  padding: 16px;
   margin-bottom: 20px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 1.5rem;
+  text-align: center;
+  letter-spacing: 8px;
+  font-weight: 600;
   transition: all 0.2s ease;
+  background: #f8fafc;
 
   &:focus {
     outline: none;
     border-color: #64748b;
     box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.1);
+    background: white;
+  }
+
+  &::placeholder {
+    color: #94a3b8;
+    letter-spacing: 4px;
   }
 `;
 
 const LoginButton = styled.button`
   width: 100%;
-  padding: 14px;
+  padding: 16px;
   background: linear-gradient(135deg, #475569 0%, #64748b 100%);
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 1rem;
+  border-radius: 12px;
+  font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -63,41 +73,81 @@ const LoginButton = styled.button`
   &:active {
     transform: translateY(0);
   }
+
+  &:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
 `;
 
 const ErrorMessage = styled.div`
   color: #ef4444;
   margin-top: 16px;
   text-align: center;
+  font-weight: 500;
+`;
+
+const PinLabel = styled.div`
+  text-align: center;
+  color: #64748b;
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+`;
+
+const PinHint = styled.div`
+  text-align: center;
+  color: #94a3b8;
+  margin-top: 12px;
+  font-size: 0.85rem;
 `;
 
 function Login({ setToken }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [pinCode, setPinCode] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+
+  const handlePinChange = (e) => {
+    const value = e.target.value.replace(/\D/g, ''); // รับเฉพาะตัวเลข
+    if (value.length <= 6) { // จำกัดความยาวไม่เกิน 6 หลัก
+      setPinCode(value);
+      setError(''); // ล้าง error เมื่อผู้ใช้พิมพ์
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
+
+    if (pinCode.length < 4) {
+      setError('กรุณาใส่รหัส PIN อย่างน้อย 4 หลัก');
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const response = await axios.post('https://backend-oa-pqy2.onrender.com/api/login', {
-        username,
-        password
+        pin_code: pinCode
       });
 
       const token = response.data.access_token;
       setToken(token);
-      
-      // บันทึก token ใน localStorage
       localStorage.setItem('token', token);
-      
-      // Redirect ไปหน้า dashboard
       navigate('/dashboard');
     } catch (err) {
-      setError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+      if (err.response?.status === 401) {
+        setError('รหัส PIN ไม่ถูกต้อง');
+      } else if (err.response?.status === 403) {
+        setError('รหัส PIN หมดอายุหรือถูกระงับการใช้งาน');
+      } else {
+        setError('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
+      }
       console.error('Login error:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -105,24 +155,25 @@ function Login({ setToken }) {
     <LoginContainer>
       <LoginForm>
         <LoginTitle>เข้าสู่ระบบ Helpdesk</LoginTitle>
+        <PinLabel>กรุณาใส่รหัส PIN</PinLabel>
         <form onSubmit={handleSubmit}>
-          <InputField
-            type="text"
-            placeholder="ชื่อผู้ใช้"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-          <InputField
+          <PinInput
             type="password"
-            placeholder="รหัสผ่าน"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••"
+            value={pinCode}
+            onChange={handlePinChange}
+            maxLength={6}
             required
+            autoFocus
           />
-          <LoginButton type="submit">เข้าสู่ระบบ</LoginButton>
+          <LoginButton type="submit" disabled={isLoading || pinCode.length < 4}>
+            {isLoading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}
+          </LoginButton>
           {error && <ErrorMessage>{error}</ErrorMessage>}
         </form>
+        <PinHint>
+          รหัส PIN ต้องมี 4-6 หลัก
+        </PinHint>
       </LoginForm>
     </LoginContainer>
   );
