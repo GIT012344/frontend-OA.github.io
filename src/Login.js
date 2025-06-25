@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import axios from 'axios';
+import { useAuth } from './AuthContext';
 
 const LoginContainer = styled.div`
   display: flex;
@@ -103,11 +103,33 @@ const PinHint = styled.div`
   font-size: 0.85rem;
 `;
 
+const TestPins = styled.div`
+  margin-top: 20px;
+  padding: 16px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  border-left: 4px solid #64748b;
+`;
+
+const TestPinsTitle = styled.div`
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+`;
+
+const TestPinItem = styled.div`
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 4px;
+`;
+
 function Login({ setToken }) {
   const [pinCode, setPinCode] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handlePinChange = (e) => {
     const value = e.target.value.replace(/\D/g, ''); // รับเฉพาะตัวเลข
@@ -129,37 +151,16 @@ function Login({ setToken }) {
     }
 
     try {
-      const response = await axios.post('https://backend-oa-pqy2.onrender.com/api/login', {
-        pin_code: pinCode
-      }, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.data.access_token) {
-        const token = response.data.access_token;
+      const success = await login(pinCode);
+      if (success) {
+        // ใช้ token จาก AuthContext
+        const token = localStorage.getItem('token');
         setToken(token);
-        localStorage.setItem('token', token);
         navigate('/dashboard');
-      } else {
-        setError('ไม่ได้รับ token จากเซิร์ฟเวอร์');
       }
     } catch (err) {
       console.error('Login error:', err);
-      if (err.response?.status === 400) {
-        setError('รหัส PIN ไม่ถูกต้อง');
-      } else if (err.response?.status === 401) {
-        setError('รหัส PIN ไม่ถูกต้อง');
-      } else if (err.response?.status === 403) {
-        setError('รหัส PIN หมดอายุหรือถูกระงับการใช้งาน');
-      } else if (err.response?.status === 404) {
-        setError('ไม่พบ API endpoint');
-      } else if (err.code === 'ERR_NETWORK') {
-        setError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
-      } else {
-        setError('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
-      }
+      setError(err.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
     } finally {
       setIsLoading(false);
     }
@@ -188,6 +189,13 @@ function Login({ setToken }) {
         <PinHint>
           รหัส PIN ต้องมี 4-6 หลัก
         </PinHint>
+        
+        <TestPins>
+          <TestPinsTitle>🔑 รหัส PIN สำหรับทดสอบ:</TestPinsTitle>
+          <TestPinItem>• 123456 - ผู้ดูแลระบบ (Admin) - ใช้งานได้</TestPinItem>
+          <TestPinItem>• 654321 - ผู้ใช้งานทั่วไป (User)</TestPinItem>
+          <TestPinItem>• 111111 - ผู้ทดสอบ (Test)</TestPinItem>
+        </TestPins>
       </LoginForm>
     </LoginContainer>
   );
