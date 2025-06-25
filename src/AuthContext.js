@@ -25,6 +25,16 @@ const MOCK_PIN_CODES = {
   }
 };
 
+// Helper function to safely encode strings with non-Latin1 characters
+const safeBtoa = (str) => {
+  return btoa(unescape(encodeURIComponent(str)));
+};
+
+// Helper function to safely decode strings
+const safeAtob = (str) => {
+  return decodeURIComponent(escape(atob(str)));
+};
+
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [user, setUser] = useState(null);
@@ -62,12 +72,14 @@ export function AuthProvider({ children }) {
       if (MOCK_PIN_CODES[pinCode]) {
         const userData = MOCK_PIN_CODES[pinCode];
         
-        // สร้าง mock token
-        const mockToken = btoa(JSON.stringify({
+        // สร้าง mock token ด้วย safe encoding
+        const tokenData = {
           ...userData,
           exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 ชั่วโมง
           iat: Math.floor(Date.now() / 1000)
-        }));
+        };
+        
+        const mockToken = safeBtoa(JSON.stringify(tokenData));
         
         // บันทึก token และ user data
         setToken(mockToken);
@@ -95,7 +107,7 @@ export function AuthProvider({ children }) {
             
             // Decode และ set user data
             try {
-              const decoded = JSON.parse(atob(newToken.split('.')[1]));
+              const decoded = JSON.parse(safeAtob(newToken.split('.')[1]));
               setUser(decoded);
             } catch (error) {
               console.error('Error decoding token:', error);
