@@ -1221,6 +1221,15 @@ function App() {
   useEffect(() => {
     const verifyToken = async () => {
       if (token) {
+        // ตรวจสอบว่าเป็น mock token หรือไม่
+        const userData = localStorage.getItem('userData');
+        if (userData) {
+          // ถ้ามี userData แสดงว่าเป็น mock token ไม่ต้องเรียก protected API
+          console.log('Using mock token, skipping protected API call');
+          return;
+        }
+        
+        // ถ้าไม่มี userData ให้ลองเรียก protected API
         try {
           await axios.get('https://backend-oa-pqy2.onrender.com/api/protected', {
             headers: {
@@ -1228,6 +1237,7 @@ function App() {
             }
           });
         } catch (err) {
+          console.log('Protected API call failed, logging out');
           logout();
         }
       }

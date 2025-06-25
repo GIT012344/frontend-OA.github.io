@@ -124,7 +124,7 @@ const TestPinItem = styled.div`
   margin-bottom: 4px;
 `;
 
-function Login({ setToken }) {
+function Login() {
   const [pinCode, setPinCode] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -153,9 +153,6 @@ function Login({ setToken }) {
     try {
       const success = await login(pinCode);
       if (success) {
-        // ใช้ token จาก AuthContext
-        const token = localStorage.getItem('token');
-        setToken(token);
         navigate('/dashboard');
       }
     } catch (err) {
