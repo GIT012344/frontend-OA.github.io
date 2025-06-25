@@ -1173,7 +1173,8 @@ function App() {
   const [emailRankings, setEmailRankings] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarHover, setSidebarHover] = useState(false);
-  const { token, user, logout } = useAuth();
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const { user, logout } = useAuth();
 
   const dashboardRef = useRef(null);
   const listRef = useRef(null);
@@ -1228,36 +1229,27 @@ function App() {
             }
           });
         } catch (err) {
-          logout();
+          localStorage.removeItem('token');
+          setToken(null);
         }
       }
     };
 
     verifyToken();
-  }, [token, logout]);
+  }, [token]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data");
         setData(Array.isArray(response.data) ? response.data : []);
       } catch (error) {
         console.error("Error fetching data:", error);
-        if (error.response?.status === 401) {
-          logout();
-        }
         setData([]); // Fallback to empty array
       }
     };
-    
-    if (token) {
-      fetchData();
-    }
-  }, [token, logout]);
+    fetchData();
+  }, []);
 
   useEffect(() => {
     if (isDragging) {
@@ -1298,14 +1290,8 @@ function App() {
   // ดึงข้อมูลจาก PostgreSQL ทุก 10 วิ
   useEffect(() => {
     const sync = () => {
-      if (!token) return;
-      
       axios
-        .get("https://backend-oa-pqy2.onrender.com/sync-tickets", {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
+        .get("https://backend-oa-pqy2.onrender.com/sync-tickets")
         .then((response) => {
           console.log("✅ Synced from Google Sheets");
           setLastSync(new Date());
@@ -1313,11 +1299,7 @@ function App() {
           const newData = Array.isArray(response?.data) ? response.data : [];
 
           axios
-            .post("https://backend-oa-pqy2.onrender.com/clear-textboxes", {}, {
-              headers: {
-                Authorization: `Bearer ${token}`
-              }
-            })
+            .post("https://backend-oa-pqy2.onrender.com/clear-textboxes")
             .then((res) => {
               if (res.data.cleared_count > 0) {
                 console.log(`✅ Cleared ${res.data.cleared_count} textboxes`);
@@ -1363,85 +1345,55 @@ function App() {
         })
         .catch((err) => {
           console.error("Sync error:", err);
-          if (err.response?.status === 401) {
-            logout();
-          }
         });
     };
 
-    if (token) {
-      sync();
-      const interval = setInterval(sync, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [token, logout]);
+    sync();
+    const interval = setInterval(sync, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const fetchEmailRankings = async () => {
       try {
         const response = await axios.get(
-          "https://backend-oa-pqy2.onrender.com/api/email-rankings",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
+          "https://backend-oa-pqy2.onrender.com/api/email-rankings"
         );
         setEmailRankings(response.data);
       } catch (error) {
         console.error("Error fetching email rankings:", error);
-        if (error.response?.status === 401) {
-          logout();
-        }
         setEmailRankings([]);
       }
     };
 
-    if (token) {
-      fetchEmailRankings();
-    }
-  }, [data, token, logout]);
+    fetchEmailRankings();
+  }, [data]);
 
   useEffect(() => {
     const fetchNotifications = () => {
-      if (!token) return;
-      
       axios
-        .get("https://backend-oa-pqy2.onrender.com/api/notifications", {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
+        .get("https://backend-oa-pqy2.onrender.com/api/notifications")
         .then((res) => {
           setNotifications(res.data);
           // Check if there are any unread notifications
           const unread = res.data.some((notification) => !notification.read);
           setHasUnread(unread);
         })
-        .catch((err) => {
-          console.error("Error fetching notifications:", err);
-          if (err.response?.status === 401) {
-            logout();
-          }
-        });
+        .catch((err) => console.error("Error fetching notifications:", err));
     };
 
-    if (token) {
-      fetchNotifications();
-      const interval = setInterval(fetchNotifications, 15000); // Check every 15 seconds
-      return () => clearInterval(interval);
-    }
-  }, [token, logout]);
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 15000); // Check every 15 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchDataByDate = () => {
-    if (!startDate || !token) return;
+    if (!startDate) return;
 
     axios
       .get("https://backend-oa-pqy2.onrender.com/api/data-by-date", {
         params: { date: startDate },
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
       })
       .then((res) => {
         setData(Array.isArray(res.data) ? res.data : []);
@@ -1449,9 +1401,6 @@ function App() {
       })
       .catch((err) => {
         console.error("Error fetching data by date:", err);
-        if (err.response?.status === 401) {
-          logout();
-        }
         setData([]); // Reset to empty array on error
       });
   };
@@ -1463,64 +1412,33 @@ function App() {
     setStatusFilter("all");
     setTypeFilter("all");
 
-    if (!token) return;
-
     axios
-      .get("https://backend-oa-pqy2.onrender.com/api/data", {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      })
+      .get("https://backend-oa-pqy2.onrender.com/api/data")
       .then((res) => setData(Array.isArray(res.data) ? res.data : []))
       .catch((err) => {
         console.error(err);
-        if (err.response?.status === 401) {
-          logout();
-        }
         setData([]); // Reset to empty array on error
       });
   };
   // Add this function to mark notifications as read
   const markAsRead = (id = null) => {
-    if (!token) return;
-    
     if (id) {
       // Mark single notification as read
       axios
-        .post("https://backend-oa-pqy2.onrender.com/api/mark-notification-read", { id }, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
+        .post("https://backend-oa-pqy2.onrender.com/mark-notification-read", { id })
         .then(() => {
           setNotifications((prev) =>
             prev.map((n) => (n.id === id ? { ...n, read: true } : n))
           );
           setHasUnread(notifications.some((n) => !n.read && n.id !== id));
-        })
-        .catch((err) => {
-          console.error("Error marking notification as read:", err);
-          if (err.response?.status === 401) {
-            logout();
-          }
         });
     } else {
       // Mark all notifications as read
       axios
-        .post("https://backend-oa-pqy2.onrender.com/api/mark-all-notifications-read", {}, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
+        .post("https://backend-oa-pqy2.onrender.com/mark-all-notifications-read")
         .then(() => {
           setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
           setHasUnread(false);
-        })
-        .catch((err) => {
-          console.error("Error marking all notifications as read:", err);
-          if (err.response?.status === 401) {
-            logout();
-          }
         });
     }
   };
@@ -1554,11 +1472,9 @@ function App() {
 
   // อัปเดตสถานะ
   const handleStatusChange = (ticketId, newStatus) => {
-    if (!token) return;
-    
     axios
       .post(
-        "https://backend-oa-pqy2.onrender.com/api/update-status",
+        "https://backend-oa-pqy2.onrender.com/update-status",
         {
           ticket_id: ticketId,
           status: newStatus,
@@ -1566,7 +1482,6 @@ function App() {
         {
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
           },
         }
       )
@@ -1580,12 +1495,7 @@ function App() {
           )
         );
       })
-      .catch((err) => {
-        console.error("❌ Failed to update status:", err);
-        if (err.response?.status === 401) {
-          logout();
-        }
-      });
+      .catch((err) => console.error("❌ Failed to update status:", err));
   };
 
   // Handle user selection
@@ -1601,35 +1511,23 @@ function App() {
   };
 
   const deleteNotification = async (id) => {
-    if (!token) return;
-    
     try {
-      await axios.post("https://backend-oa-pqy2.onrender.com/api/delete-notification", { id }, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      await axios.post("https://backend-oa-pqy2.onrender.com/delete-notification", { id });
       setNotifications(notifications.filter((n) => n.id !== id));
     } catch (err) {
       console.error("Error deleting notification:", err);
-      if (err.response?.status === 401) {
-        logout();
-      }
     }
   };
 
   const handleDeleteTicket = async (ticketId) => {
-    if (!token) return;
-    
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?")) {
       try {
         const response = await axios.post(
-          "https://backend-oa-pqy2.onrender.com/api/delete-ticket",
+          "https://backend-oa-pqy2.onrender.com/delete-ticket",
           { ticket_id: ticketId },
           {
             headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
+              'Content-Type': 'application/json'
             }
           }
         );
@@ -1646,21 +1544,17 @@ function App() {
         }
       } catch (err) {
         console.error("❌ Failed to delete ticket:", err);
-        if (err.response?.status === 401) {
-          logout();
-        } else {
-          alert(
-            err.response?.data?.error ||
-            err.response?.data?.message ||
-            "Failed to delete ticket: " + err.message
-          );
-        }
+        alert(
+          err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Failed to delete ticket: " + err.message
+        );
       }
     }
   };
 
   const handleClearChat = async () => {
-    if (!selectedUser || !token) return;
+    if (!selectedUser) return;
 
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบประวัติการสนทนาทั้งหมด?")) {
       try {
@@ -1673,7 +1567,6 @@ function App() {
           {
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`
             },
           }
         );
@@ -1683,7 +1576,7 @@ function App() {
 
         // อัปเดต textbox ในตาราง tickets เป็นค่าว่าง
         await axios.post(
-          "https://backend-oa-pqy2.onrender.com/api/update-textbox",
+          "https://backend-oa-pqy2.onrender.com/update-textbox",
           {
             ticket_id: selectedUser,
             textbox: "",
@@ -1691,7 +1584,6 @@ function App() {
           {
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`
             },
           }
         );
@@ -1701,11 +1593,7 @@ function App() {
         alert("ลบประวัติการสนทนาสำเร็จ");
       } catch (err) {
         console.error("❌ Failed to clear messages:", err);
-        if (err.response?.status === 401) {
-          logout();
-        } else {
-          alert("เกิดข้อผิดพลาดในการลบประวัติการสนทนา");
-        }
+        alert("เกิดข้อผิดพลาดในการลบประวัติการสนทนา");
       }
     }
   };
@@ -1717,9 +1605,6 @@ function App() {
       try {
         const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
           params: { ticket_id: selectedUser },
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
         });
         setMessages(response.data);
 
@@ -1728,10 +1613,6 @@ function App() {
           await axios.post("https://backend-oa-pqy2.onrender.com/api/messages/mark-read", {
             ticket_id: selectedUser,
             admin_id: adminId,
-          }, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
           });
         }
       } catch (err) {
@@ -1740,10 +1621,10 @@ function App() {
     };
 
     loadMessages();
-  }, [selectedUser, adminId, token]);
+  }, [selectedUser, adminId]);
 
   const handleChatSubmit = async () => {
-    if (!selectedUser || !chatMessage.trim() || !token) return;
+    if (!selectedUser || !chatMessage.trim()) return;
 
     if (selectedUser === "announcement") {
       if (
@@ -1756,9 +1637,9 @@ function App() {
 
       try {
         const response = await axios.post(
-          "https://backend-oa-pqy2.onrender.com/api/send-announcement",
+          "https://backend-oa-pqy2.onrender.com/send-announcement",
           { message: chatMessage },
-          { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } }
+          { headers: { "Content-Type": "application/json" } }
         );
 
         if (response.data.success) {
@@ -1780,11 +1661,7 @@ function App() {
         }
       } catch (err) {
         console.error("❌ Failed to send announcement:", err);
-        if (err.response?.status === 401) {
-          logout();
-        } else {
-          alert("เกิดข้อผิดพลาดในการส่งประกาศ");
-        }
+        alert("เกิดข้อผิดพลาดในการส่งประกาศ");
       }
       return;
     }
@@ -1792,7 +1669,7 @@ function App() {
     try {
       // 1. อัปเดต Textbox
       await axios.post(
-        "https://backend-oa-pqy2.onrender.com/api/update-textbox",
+        "https://backend-oa-pqy2.onrender.com/update-textbox",
         {
           ticket_id: selectedUser,
           textbox: chatMessage,
@@ -1800,7 +1677,6 @@ function App() {
         {
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
           },
         }
       );
@@ -1814,12 +1690,6 @@ function App() {
           sender_name: "Admin",
           message: chatMessage,
           is_admin_message: true,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
         }
       );
 
@@ -1841,7 +1711,7 @@ function App() {
 
       // 4. Clear the textbox in the database
       await axios.post(
-        "https://backend-oa-pqy2.onrender.com/api/update-textbox",
+        "https://backend-oa-pqy2.onrender.com/update-textbox",
         {
           ticket_id: selectedUser,
           textbox: "",
@@ -1849,17 +1719,12 @@ function App() {
         {
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
           },
         }
       );
     } catch (err) {
       console.error("❌ Failed to send message:", err);
-      if (err.response?.status === 401) {
-        logout();
-      } else {
-        alert("เกิดข้อผิดพลาดในการส่งข้อความ");
-      }
+      alert("เกิดข้อผิดพลาดในการส่งข้อความ");
     }
   };
 
@@ -1870,28 +1735,20 @@ function App() {
   };
 
   const handleRefreshChat = async () => {
-    if (!selectedUser || !token) return;
+    if (!selectedUser) return;
 
     try {
       const response = await axios.post(
-        "https://backend-oa-pqy2.onrender.com/api/refresh-messages",
+        "https://backend-oa-pqy2.onrender.com/refresh-messages",
         {
           ticket_id: selectedUser,
           admin_id: adminId,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
         }
       );
 
       setMessages(response.data.messages);
     } catch (err) {
       console.error("Failed to refresh messages:", err);
-      if (err.response?.status === 401) {
-        logout();
-      }
     }
   };
 
@@ -2025,7 +1882,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <Login />} />
+        <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <Login setToken={setToken} />} />
         <Route path="/dashboard" element={token ? (
           // Main dashboard content
           <>
@@ -2085,7 +1942,7 @@ function App() {
                   <HeaderSection>
                   <UserInfo>
                   <div>
-                    <strong>{user?.username || user?.name || 'Admin'}</strong> ({user?.role || 'User'})
+                    <strong>{user?.username}</strong> ({user?.role})
                   </div>
                   <LogoutButton onClick={logout}>
                     ออกจากระบบ
