@@ -1375,22 +1375,41 @@ function App() {
       try {
         const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data");
         setData(Array.isArray(response.data) ? response.data : []);
+        setLastSync(new Date());
+        setBackendStatus('connected');
+        setLastError(null);
       } catch (error) {
         console.error("Error fetching data:", error);
         if (error.response) {
           console.error("Server error:", error.response.status, error.response.data);
           if (error.response.status === 500) {
-            console.log("Backend server error - this is a server-side issue");
+            setBackendStatus('error');
+            setLastError({
+              status: error.response.status,
+              message: error.response.data?.message || 'Database transaction error',
+              details: error.response.data?.error || 'Unknown server error'
+            });
           }
         } else if (error.request) {
-          console.error("Network error - no response from server");
+          setBackendStatus('offline');
+          setLastError({
+            status: 'NETWORK',
+            message: 'No response from server',
+            details: 'Backend server may be down or unreachable'
+          });
         } else {
-          console.error("Request setup error:", error.message);
+          setBackendStatus('error');
+          setLastError({
+            status: 'ERROR',
+            message: error.message,
+            details: 'Request setup failed'
+          });
         }
-        setData([]); // Fallback to empty array
       }
     };
     fetchData();
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -1428,116 +1447,6 @@ function App() {
     }
     return ""; // ไม่มีสี (ค่าปกติ)
   };
-
-  // ดึงข้อมูลจาก PostgreSQL ทุก 10 วิ
-  useEffect(() => {
-    const sync = () => {
-      axios
-        .get("https://backend-oa-pqy2.onrender.com/sync-tickets")
-        .then((response) => {
-          console.log("✅ Synced from Google Sheets");
-          setLastSync(new Date());
-          setBackendStatus('connected'); // Reset status on success
-          setLastError(null); // Clear error details on success
-
-          const newData = Array.isArray(response?.data) ? response.data : [];
-
-          axios
-            .post("https://backend-oa-pqy2.onrender.com/clear-textboxes")
-            .then((res) => {
-              if (res.data.cleared_count > 0) {
-                console.log(`✅ Cleared ${res.data.cleared_count} textboxes`);
-              }
-            })
-            .catch((err) => {
-              console.error("Textbox clear error:", err);
-              // Don't show error to user for this non-critical operation
-            });
-
-          setData((prevData) => {
-            const textboxUpdates = [];
-
-            if (Array.isArray(prevData) && Array.isArray(newData)) {
-              newData.forEach((newTicket) => {
-                const oldTicket = prevData.find(
-                  (t) => t["Ticket ID"] === newTicket["Ticket ID"]
-                );
-                // เพิ่มเงื่อนไขตรวจสอบว่า TEXTBOX มีค่าหรือไม่
-                if (
-                  oldTicket &&
-                  newTicket.TEXTBOX &&
-                  newTicket.TEXTBOX !== oldTicket.TEXTBOX
-                ) {
-                  textboxUpdates.push({
-                    id: Date.now() + Math.random(),
-                    message: `New message for ticket ${newTicket["Ticket ID"]}: ${newTicket.TEXTBOX}`,
-                    timestamp: new Date().toISOString(),
-                    read: false,
-                  });
-                }
-              });
-            }
-
-            if (textboxUpdates.length > 0) {
-              setNotifications((prev) => [...textboxUpdates, ...prev]);
-              setHasUnread(true);
-
-              // Play notification sound
-              const audio = new Audio("/notification.mp3");
-              audio.play().catch((e) => console.log("Audio play failed:", e));
-            }
-
-            return newData;
-          });
-        })
-        .catch((err) => {
-          console.error("Sync error:", err);
-          // Add more specific error handling
-          if (err.response) {
-            // Server responded with error status
-            console.error("Server error:", err.response.status, err.response.data);
-            if (err.response.status === 500) {
-              console.log("Backend server error - this is a server-side issue");
-              setBackendStatus('error');
-              // Store error details for display
-              setLastError({
-                status: err.response.status,
-                message: err.response.data?.message || 'Database transaction error',
-                details: err.response.data?.error || 'Unknown server error'
-              });
-            }
-          } else if (err.request) {
-            // Request was made but no response received
-            console.error("Network error - no response from server");
-            setBackendStatus('offline');
-            setLastError({
-              status: 'NETWORK',
-              message: 'No response from server',
-              details: 'Backend server may be down or unreachable'
-            });
-          } else {
-            // Something else happened
-            console.error("Request setup error:", err.message);
-            setBackendStatus('error');
-            setLastError({
-              status: 'ERROR',
-              message: err.message,
-              details: 'Request setup failed'
-            });
-          }
-          
-          // Don't update lastSync on error to show the last successful sync
-          // Only update if we haven't set it yet
-          if (!lastSync) {
-            setLastSync(new Date());
-          }
-        });
-    };
-
-    sync();
-    const interval = setInterval(sync, 30000);
-    return () => clearInterval(interval);
-  }, [lastSync]);
 
   useEffect(() => {
     const fetchEmailRankings = async () => {
@@ -1955,19 +1864,14 @@ function App() {
   const handleManualRetry = async () => {
     setIsRetrying(true);
     setRetryCount(prev => prev + 1);
-    
     try {
-      const response = await axios.get("https://backend-oa-pqy2.onrender.com/sync-tickets");
-      console.log("✅ Manual retry successful");
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data");
+      setData(Array.isArray(response.data) ? response.data : []);
       setBackendStatus('connected');
       setRetryCount(0);
-      setLastError(null); // Clear error details on success
-      
-      const newData = Array.isArray(response?.data) ? response.data : [];
-      setData(newData);
+      setLastError(null);
       setLastSync(new Date());
     } catch (error) {
-      console.error("Manual retry failed:", error);
       if (error.response?.status === 500) {
         setBackendStatus('error');
         setLastError({
