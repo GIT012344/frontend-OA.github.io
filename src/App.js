@@ -6,6 +6,7 @@ import styled from "styled-components";
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './Login';
 import { AuthProvider, useAuth } from './AuthContext';
+import ChatComponent from './ChatComponent';
 
 // Styled components with elegant, modern, and sophisticated design
 const Container = styled.div`
@@ -1340,35 +1341,6 @@ function App() {
     },
     [notificationPosition.x, notificationPosition.y]
   );
-
-  // ตรวจสอบ token เมื่อ component โหลด
-  useEffect(() => {
-    const verifyToken = async () => {
-      if (token) {
-        // ตรวจสอบว่าเป็น mock token หรือไม่
-        const userData = localStorage.getItem('userData');
-        if (userData) {
-          // ถ้ามี userData แสดงว่าเป็น mock token ไม่ต้องเรียก protected API
-          console.log('Using mock token, skipping protected API call');
-          return;
-        }
-        
-        // ถ้าไม่มี userData ให้ลองเรียก protected API
-        try {
-          await axios.get('https://backend-oa-pqy2.onrender.com/api/protected', {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-        } catch (err) {
-          console.log('Protected API call failed, logging out');
-          logout();
-        }
-      }
-    };
-
-    verifyToken();
-  }, [token, logout]);
 
   useEffect(() => {
     const fetchData = async () => {

@@ -5,24 +5,12 @@ const AuthContext = createContext();
 
 // Mock PIN codes สำหรับทดสอบ
 const MOCK_PIN_CODES = {
-  '123456': {
+  '000000': {
     username: 'admin',
     name: 'ผู้ดูแลระบบ',
     role: 'admin',
     email: 'admin@example.com'
   },
-  '654321': {
-    username: 'user',
-    name: 'ผู้ใช้งานทั่วไป',
-    role: 'user',
-    email: 'user@example.com'
-  },
-  '111111': {
-    username: 'test',
-    name: 'ผู้ทดสอบ',
-    role: 'user',
-    email: 'test@example.com'
-  }
 };
 
 // Helper function to safely encode strings with non-Latin1 characters
