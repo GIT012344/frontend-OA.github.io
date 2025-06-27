@@ -336,6 +336,126 @@ const SyncIndicator = styled.div`
   }
 `;
 
+const BackendStatusIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  padding: 8px 16px;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  width: fit-content;
+  margin: 0 auto 16px;
+  font-weight: 500;
+  border: 1px solid;
+
+  ${(props) => {
+    switch (props.$status) {
+      case 'connected':
+        return `
+          color: #10b981;
+          background: rgba(16, 185, 129, 0.1);
+          border-color: rgba(16, 185, 129, 0.2);
+          &::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+          }
+        `;
+      case 'error':
+        return `
+          color: #ef4444;
+          background: rgba(239, 68, 68, 0.1);
+          border-color: rgba(239, 68, 68, 0.2);
+          &::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+            animation: pulse 1s infinite;
+          }
+        `;
+      case 'offline':
+        return `
+          color: #f59e0b;
+          background: rgba(245, 158, 11, 0.1);
+          border-color: rgba(245, 158, 11, 0.2);
+          &::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #f59e0b;
+            animation: pulse 1.5s infinite;
+          }
+        `;
+      default:
+        return '';
+    }
+  }}
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+`;
+
+const RetryButton = styled.button`
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &::before {
+    content: "";
+    width: 12px;
+    height: 12px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+  }
+`;
+
+const ErrorDetails = styled.div`
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 8px 0;
+  font-size: 0.8rem;
+  color: #ef4444;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+`;
+
 const ChatContainer = styled.div`
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(20px);
@@ -1173,6 +1293,10 @@ function App() {
   const [emailRankings, setEmailRankings] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarHover, setSidebarHover] = useState(false);
+  const [backendStatus, setBackendStatus] = useState('connected'); // 'connected', 'error', 'offline'
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [lastError, setLastError] = useState(null);
   const { token, user, logout } = useAuth();
 
   const dashboardRef = useRef(null);
@@ -1253,6 +1377,16 @@ function App() {
         setData(Array.isArray(response.data) ? response.data : []);
       } catch (error) {
         console.error("Error fetching data:", error);
+        if (error.response) {
+          console.error("Server error:", error.response.status, error.response.data);
+          if (error.response.status === 500) {
+            console.log("Backend server error - this is a server-side issue");
+          }
+        } else if (error.request) {
+          console.error("Network error - no response from server");
+        } else {
+          console.error("Request setup error:", error.message);
+        }
         setData([]); // Fallback to empty array
       }
     };
@@ -1303,6 +1437,8 @@ function App() {
         .then((response) => {
           console.log("✅ Synced from Google Sheets");
           setLastSync(new Date());
+          setBackendStatus('connected'); // Reset status on success
+          setLastError(null); // Clear error details on success
 
           const newData = Array.isArray(response?.data) ? response.data : [];
 
@@ -1313,7 +1449,10 @@ function App() {
                 console.log(`✅ Cleared ${res.data.cleared_count} textboxes`);
               }
             })
-            .catch((err) => console.error("Textbox clear error:", err));
+            .catch((err) => {
+              console.error("Textbox clear error:", err);
+              // Don't show error to user for this non-critical operation
+            });
 
           setData((prevData) => {
             const textboxUpdates = [];
@@ -1353,13 +1492,52 @@ function App() {
         })
         .catch((err) => {
           console.error("Sync error:", err);
+          // Add more specific error handling
+          if (err.response) {
+            // Server responded with error status
+            console.error("Server error:", err.response.status, err.response.data);
+            if (err.response.status === 500) {
+              console.log("Backend server error - this is a server-side issue");
+              setBackendStatus('error');
+              // Store error details for display
+              setLastError({
+                status: err.response.status,
+                message: err.response.data?.message || 'Database transaction error',
+                details: err.response.data?.error || 'Unknown server error'
+              });
+            }
+          } else if (err.request) {
+            // Request was made but no response received
+            console.error("Network error - no response from server");
+            setBackendStatus('offline');
+            setLastError({
+              status: 'NETWORK',
+              message: 'No response from server',
+              details: 'Backend server may be down or unreachable'
+            });
+          } else {
+            // Something else happened
+            console.error("Request setup error:", err.message);
+            setBackendStatus('error');
+            setLastError({
+              status: 'ERROR',
+              message: err.message,
+              details: 'Request setup failed'
+            });
+          }
+          
+          // Don't update lastSync on error to show the last successful sync
+          // Only update if we haven't set it yet
+          if (!lastSync) {
+            setLastSync(new Date());
+          }
         });
     };
 
     sync();
     const interval = setInterval(sync, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [lastSync]);
 
   useEffect(() => {
     const fetchEmailRankings = async () => {
@@ -1370,6 +1548,13 @@ function App() {
         setEmailRankings(response.data);
       } catch (error) {
         console.error("Error fetching email rankings:", error);
+        if (error.response) {
+          console.error("Server error:", error.response.status, error.response.data);
+        } else if (error.request) {
+          console.error("Network error - no response from server");
+        } else {
+          console.error("Request setup error:", error.message);
+        }
         setEmailRankings([]);
       }
     };
@@ -1387,7 +1572,17 @@ function App() {
           const unread = res.data.some((notification) => !notification.read);
           setHasUnread(unread);
         })
-        .catch((err) => console.error("Error fetching notifications:", err));
+        .catch((err) => {
+          console.error("Error fetching notifications:", err);
+          if (err.response) {
+            console.error("Server error:", err.response.status, err.response.data);
+          } else if (err.request) {
+            console.error("Network error - no response from server");
+          } else {
+            console.error("Request setup error:", err.message);
+          }
+          // Don't show error to user for notifications
+        });
     };
 
     fetchNotifications();
@@ -1742,6 +1937,57 @@ function App() {
     return `ซิงค์ล่าสุด: ${lastSync.toLocaleTimeString()}`;
   };
 
+  // Get backend status text
+  const getBackendStatusText = () => {
+    switch (backendStatus) {
+      case 'connected':
+        return '🟢 Backend Connected';
+      case 'error':
+        return '🔴 Backend Error (500)';
+      case 'offline':
+        return '🟡 Backend Offline';
+      default:
+        return '⚪ Unknown Status';
+    }
+  };
+
+  // Manual retry function
+  const handleManualRetry = async () => {
+    setIsRetrying(true);
+    setRetryCount(prev => prev + 1);
+    
+    try {
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/sync-tickets");
+      console.log("✅ Manual retry successful");
+      setBackendStatus('connected');
+      setRetryCount(0);
+      setLastError(null); // Clear error details on success
+      
+      const newData = Array.isArray(response?.data) ? response.data : [];
+      setData(newData);
+      setLastSync(new Date());
+    } catch (error) {
+      console.error("Manual retry failed:", error);
+      if (error.response?.status === 500) {
+        setBackendStatus('error');
+        setLastError({
+          status: error.response.status,
+          message: error.response.data?.message || 'Database transaction error',
+          details: error.response.data?.error || 'Unknown server error'
+        });
+      } else {
+        setBackendStatus('offline');
+        setLastError({
+          status: 'NETWORK',
+          message: 'No response from server',
+          details: 'Backend server may be down or unreachable'
+        });
+      }
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
   const handleRefreshChat = async () => {
     if (!selectedUser) return;
 
@@ -1947,6 +2193,26 @@ function App() {
                 <div ref={dashboardRef}>
                   <Title>Ticket Management System</Title>
                   <SyncIndicator>{formatLastSync()}</SyncIndicator>
+                  <BackendStatusIndicator $status={backendStatus}>
+                    {getBackendStatusText()}
+                    {(backendStatus === 'error' || backendStatus === 'offline') && (
+                      <RetryButton 
+                        onClick={handleManualRetry} 
+                        disabled={isRetrying}
+                      >
+                        {isRetrying ? 'Retrying...' : 'Retry'}
+                      </RetryButton>
+                    )}
+                  </BackendStatusIndicator>
+                  {lastError && (
+                    <ErrorDetails>
+                      <strong>Error Details:</strong><br />
+                      Status: {lastError.status}<br />
+                      Message: {lastError.message}<br />
+                      Details: {lastError.details}<br />
+                      {retryCount > 0 && <span>Retry attempts: {retryCount}</span>}
+                    </ErrorDetails>
+                  )}
                   <HeaderSection>
                   <UserInfo>
                   <div>
