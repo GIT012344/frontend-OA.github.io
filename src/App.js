@@ -5,8 +5,8 @@ import axios from "axios";
 import styled from "styled-components";
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './Login';
-import { AuthProvider, useAuth } from './AuthContext';
-import ChatComponent from './ChatComponent';
+import { useAuth } from './AuthContext';
+import './styles.css';
 
 // Styled components with elegant, modern, and sophisticated design
 const Container = styled.div`
