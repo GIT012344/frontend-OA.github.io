@@ -121,7 +121,7 @@ const ExportButton = styled.button`
 
 const Dashboard = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 24px;
   margin-bottom: 40px;
   position: relative;
@@ -2306,6 +2306,85 @@ function App() {
     }
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
+  // ฟังก์ชันคำนวณข้อมูล dashboard
+  const getDailySummary = () => {
+    const dailySummary = {};
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateKey = date.toISOString().split('T')[0];
+      dailySummary[dateKey] = {
+        date: date,
+        count: 0,
+        pending: 0,
+        inProgress: 0,
+        completed: 0
+      };
+    }
+    data.forEach(ticket => {
+      if (!ticket["วันที่แจ้ง"]) return;
+      const ticketDate = new Date(ticket["วันที่แจ้ง"]).toISOString().split('T')[0];
+      if (dailySummary[ticketDate]) {
+        dailySummary[ticketDate].count++;
+        if (ticket["สถานะ"] === "Pending") {
+          dailySummary[ticketDate].pending++;
+        } else if (ticket["สถานะ"] === "In Progress") {
+          dailySummary[ticketDate].inProgress++;
+        } else if (ticket["สถานะ"] === "Completed") {
+          dailySummary[ticketDate].completed++;
+        }
+      }
+    });
+    return Object.values(dailySummary).sort((a, b) => b.date - a.date);
+  };
+  const getBasicStats = () => {
+    const stats = {
+      total: data.length,
+      pending: 0,
+      inProgress: 0,
+      avgResolutionTime: 0
+    };
+    let totalResolutionTime = 0;
+    let resolvedCount = 0;
+    data.forEach(ticket => {
+      if (ticket["สถานะ"] === "Pending") {
+        stats.pending++;
+      } else if (ticket["สถานะ"] === "In Progress") {
+        stats.inProgress++;
+      }
+      if (ticket["สถานะ"] === "Completed" && ticket["วันที่แจ้ง"]) {
+        const created = new Date(ticket["วันที่แจ้ง"]);
+        const now = new Date();
+        totalResolutionTime += (now - created) / (1000 * 60 * 60);
+        resolvedCount++;
+      }
+    });
+    if (resolvedCount > 0) {
+      stats.avgResolutionTime = (totalResolutionTime / resolvedCount).toFixed(1);
+    }
+    return stats;
+  };
+  const getOverdueTickets = () => {
+    const overdueTickets = [];
+    const now = new Date();
+    data.forEach(ticket => {
+      if (!ticket["วันที่แจ้ง"]) return;
+      const created = new Date(ticket["วันที่แจ้ง"]);
+      const hoursSinceCreation = (now - created) / (1000 * 60 * 60);
+      if (ticket["สถานะ"] !== "Completed" && hoursSinceCreation > 48) {
+        overdueTickets.push({
+          id: ticket["Ticket ID"],
+          name: ticket["ชื่อ"],
+          department: ticket["แผนก"],
+          status: ticket["สถานะ"],
+          hoursOverdue: Math.floor(hoursSinceCreation - 48)
+        });
+      }
+    });
+    return overdueTickets.sort((a, b) => b.hoursOverdue - a.hoursOverdue);
+  };
+
   return (
     <Router>
       <Routes>
@@ -2498,43 +2577,100 @@ function App() {
                   </HeaderSection>
                   {/* Dashboard */}
                   <Dashboard>
-                    {Object.entries(statusCounts).map(([status, count]) => (
-                      <StatCard
-                        key={status}
-                        $accent={
-                          status === "Pending"
-                            ? "linear-gradient(90deg, #ef4444, #f87171)"
-                            : status === "Scheduled"
-                              ? "linear-gradient(90deg, #06b6d4, #67e8f9)"
-                              : status === "In Progress"
-                                ? "linear-gradient(90deg, #f59e0b, #fbbf24)"
-                                : status === "Waiting"
-                                  ? "linear-gradient(90deg, #8b5cf6, #a78bfa)"
-                                  : "linear-gradient(90deg, #10b981, #34d399)"
-                        }
-                      >
-                        <StatTitle>{status}</StatTitle>
-                        <StatValue>{count}</StatValue>
-                      </StatCard>
-                    ))}
-                    <StatCard $accent="linear-gradient(90deg, #6366f1, #8b5cf6)">
-                      <StatTitle>ระบบถูกใช้งานทั้งหมด</StatTitle>
-                      <StatValue>{data.length}</StatValue>
-                      <div
-                        style={{
-                          marginTop: "12px",
-                          fontSize: "0.875rem",
-                          color: "#64748b",
-                        }}
-                      >
-                        {new Date().toLocaleDateString("th-TH", {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
+                    {/* 1. สรุปภาพรวม ticket รายวัน */}
+                    <SummaryCard $accent="linear-gradient(90deg, #3b82f6, #2563eb)">
+                      <StatTitle>สรุป Ticket รายวัน (7 วันที่ผ่านมา)</StatTitle>
+                      <SummaryList>
+                        {getDailySummary().map((day) => (
+                          <SummaryItem key={day.date.toISOString()}>
+                            <DayTitle>
+                              {day.date.toLocaleDateString("th-TH", {
+                                weekday: "long",
+                                day: "numeric",
+                                month: "short"
+                              })}
+                            </DayTitle>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <TicketCountBadge title="ทั้งหมด">{day.count} Tickets</TicketCountBadge>
+                              <TicketCountBadge title="Pending" style={{ background: '#ffebee', color: '#ef4444' }}>
+                                {day.pending}
+                              </TicketCountBadge>
+                              <TicketCountBadge title="In Progress" style={{ background: '#fff3e0', color: '#f59e0b' }}>
+                                {day.inProgress}
+                              </TicketCountBadge>
+                              <TicketCountBadge title="Completed" style={{ background: '#e6f7ee', color: '#10b981' }}>
+                                {day.completed}
+                              </TicketCountBadge>
+                            </div>
+                          </SummaryItem>
+                        ))}
+                      </SummaryList>
+                    </SummaryCard>
+
+                    {/* 2. สถิติพื้นฐาน */}
+                    <StatCard $accent="linear-gradient(90deg, #10b981, #34d399)">
+                      <StatTitle>สถิติพื้นฐาน</StatTitle>
+                      <div style={{ marginTop: '16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                          <span>ทั้งหมด:</span>
+                          <span style={{ fontWeight: '600' }}>{getBasicStats().total}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                          <span>Pending:</span>
+                          <span style={{ fontWeight: '600', color: '#ef4444' }}>{getBasicStats().pending}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                          <span>In Progress:</span>
+                          <span style={{ fontWeight: '600', color: '#f59e0b' }}>{getBasicStats().inProgress}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>เวลาเฉลี่ยในการแก้ไข:</span>
+                          <span style={{ fontWeight: '600' }}>
+                            {getBasicStats().avgResolutionTime > 0 
+                              ? `${getBasicStats().avgResolutionTime} ชั่วโมง` 
+                              : 'ไม่มีข้อมูล'}
+                          </span>
+                        </div>
                       </div>
                     </StatCard>
+
+                    {/* 3. Overdue Tickets */}
+                    <AlertCard $alert={getOverdueTickets().length > 0}>
+                      <StatTitle>Overdue Tickets</StatTitle>
+                      {getOverdueTickets().length > 0 ? (
+                        <>
+                          <AlertTitle $alert>
+                            มี {getOverdueTickets().length} Tickets ที่เกินกำหนด
+                          </AlertTitle>
+                          <SummaryList>
+                            {getOverdueTickets().slice(0, 5).map(ticket => (
+                              <AlertItem key={ticket.id} $alert>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <span>
+                                    #{ticket.id} - {ticket.name} ({ticket.department})
+                                  </span>
+                                  <span style={{ fontWeight: '600' }}>
+                                    +{ticket.hoursOverdue} ชม.
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                                  สถานะ: {ticket.status}
+                                </div>
+                              </AlertItem>
+                            ))}
+                          </SummaryList>
+                          {getOverdueTickets().length > 5 && (
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '8px' }}>
+                              + อีก {getOverdueTickets().length - 5} Tickets
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <AlertTitle>ไม่มี Ticket ที่เกินกำหนด</AlertTitle>
+                      )}
+                    </AlertCard>
+
+                    {/* 4. สถิติอื่นๆ ที่มีอยู่เดิม */}
                     <StatCard $accent="linear-gradient(90deg, #ec4899, #f43f5e)">
                       <StatTitle>ประเภทของ Ticket</StatTitle>
                       <div style={{ marginTop: "16px" }}>
@@ -2557,118 +2693,6 @@ function App() {
                             <span style={{ fontWeight: "600" }}>{count}</span>
                           </div>
                         ))}
-                      </div>
-                    </StatCard>
-                    <StatCard $accent="linear-gradient(90deg, #f59e0b, #f97316)">
-                      <StatTitle>แผนกที่แจ้ง Ticket สูงสุด</StatTitle>
-                      <RankingList>
-                        {Object.entries(
-                          data.reduce((acc, ticket) => {
-                            const dept = ticket["แผนก"] || "ไม่ระบุ";
-                            acc[dept] = (acc[dept] || 0) + 1;
-                            return acc;
-                          }, {})
-                        )
-                          .sort((a, b) => b[1] - a[1])
-                          .slice(0, 5)
-                          .map(([dept, count], index) => (
-                            <RankingItem key={dept}>
-                              <div style={{ display: "flex", alignItems: "center" }}>
-                                <RankBadge $rank={index + 1}>{index + 1}</RankBadge>
-                                <span>{dept}</span>
-                              </div>
-                              <TicketCount>{count} tickets</TicketCount>
-                            </RankingItem>
-                          ))}
-                      </RankingList>
-                    </StatCard>
-                    <EmailRankingCard>
-                      <StatTitle>Top 5 Emails by Ticket Count</StatTitle>
-                      {emailRankings.length > 0 ? (
-                        <RankingList>
-                          {emailRankings.map((item, index) => (
-                            <RankingItem key={item.email}>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  flex: 1,
-                                }}
-                              >
-                                <RankBadge $rank={index + 1}>{index + 1}</RankBadge>
-                                <EmailInfo
-                                  title={item.email}
-                                  onClick={() => filterByEmail(item.email)}
-                                  style={{
-                                    cursor: "pointer",
-                                    "&:hover": { textDecoration: "underline" },
-                                  }}
-                                >
-                                  {item.email}
-                                </EmailInfo>
-                              </div>
-                              <TicketCount>{item.count} tickets</TicketCount>
-                            </RankingItem>
-                          ))}
-                        </RankingList>
-                      ) : (
-                        <div
-                          style={{
-                            color: "#64748b",
-                            textAlign: "center",
-                            marginTop: "20px",
-                          }}
-                        >
-                          No email data available
-                        </div>
-                      )}
-                    </EmailRankingCard>
-                    <StatCard
-                      $accent="linear-gradient(90deg, #3b82f6, #2563eb)"
-                      style={{ gridColumn: "span 2" }}
-                    >
-                      <StatTitle>นัดหมายล่าสุด</StatTitle>
-                      <div style={{ marginTop: "16px" }}>
-                        {data
-                          .filter((ticket) => ticket["Appointment"])
-                          .sort(
-                            (a, b) =>
-                              new Date(b["Appointment"]) - new Date(a["Appointment"])
-                          )
-                          .slice(0, 3)
-                          .map((ticket) => (
-                            <div
-                              key={ticket["Ticket ID"]}
-                              style={{
-                                marginBottom: "12px",
-                                padding: "12px",
-                                background: "rgba(241, 245, 249, 0.5)",
-                                borderRadius: "8px",
-                              }}
-                            >
-                              <div style={{ fontWeight: "600" }}>
-                                {ticket["ชื่อ"]}
-                              </div>
-                              <div style={{ fontSize: "0.875rem", color: "#475569" }}>
-                                {new Date(ticket["Appointment"]).toLocaleString(
-                                  "th-TH",
-                                  {
-                                    dateStyle: "full",
-                                    timeStyle: "short",
-                                  }
-                                )}
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: "0.75rem",
-                                  color: "#64748b",
-                                  marginTop: "4px",
-                                }}
-                              >
-                                {ticket["แผนก"]} • {ticket["สถานะ"]}
-                              </div>
-                            </div>
-                          ))}
                       </div>
                     </StatCard>
                   </Dashboard>
