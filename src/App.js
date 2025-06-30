@@ -2425,25 +2425,17 @@ function App() {
 
   const statusCounts = getStatusCounts();
 
-  function ProtectedRoute({ children }) {
-    const { token } = useAuth();
-
-    if (!token) {
-      return <Navigate to="/login" />;
+  // --- Notification Drag Events ---
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
     }
-
-    return children;
-  }
-
-  function LoginPage() {
-    const { token, login } = useAuth();
-
-    if (token) {
-      return <Navigate to="/dashboard" />;
-    }
-
-    return <Login login={login} />;
-  }
+  }, [isDragging, handleMouseMove, handleMouseUp]);
 
   return (
     <Router>
