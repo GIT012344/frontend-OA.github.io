@@ -2072,15 +2072,15 @@ function App() {
       setLoadingMessages(true);
       try {
         const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
-          params: { ticket_id: selectedUser },
+          params: { user_id: selectedUser } // Changed from ticket_id to user_id
         });
         setMessages(response.data);
 
-        // ทำเครื่องหมายว่าข้อความถูกอ่านแล้ว
+        // Mark messages as read
         if (response.data.length > 0) {
           await axios.post("https://backend-oa-pqy2.onrender.com/api/messages/mark-read", {
-            ticket_id: selectedUser,
-            admin_id: adminId,
+            user_id: selectedUser,
+            admin_id: adminId
           });
         }
       } catch (err) {
@@ -3199,27 +3199,22 @@ function App() {
                         <option value="announcement">
                           📢 Announcement to All Members
                         </option>
-                        {data
-                          .filter((row) => row["Type"] === "Information")
-                          .reduce((unique, row) => {
-                            if (
-                              !unique.some((item) => item["อีเมล"] === row["อีเมล"])
-                            ) {
-                              unique.push(row);
-                            }
-                            return unique;
-                          }, [])
-                          .map((row) => (
-                            <option key={row["Ticket ID"]} value={row["Ticket ID"]}>
-                              {row["อีเมล"] || "None"} ({row["ชื่อ"] || "No Name"})
-                            </option>
-                          ))}
+                        {Array.from(new Set(data.map(item => item["user_id"])))
+                          .filter(user_id => user_id)
+                          .map(user_id => {
+                            const userTicket = data.find(item => item["user_id"] === user_id);
+                            return (
+                              <option key={user_id} value={user_id}>
+                                {userTicket["อีเมล"] || "No Email"} ({userTicket["ชื่อ"] || "No Name"})
+                              </option>
+                            );
+                          })}
                       </UserSelect>
                     </UserSelectContainer>
                     <MessagesContainer>
                       {loadingMessages && (
                         <div style={{ textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
-                          กำลังโหลดข้อความ...
+                          Loading messages...
                         </div>
                       )}
                       {messages.map((msg) => (
@@ -3229,7 +3224,7 @@ function App() {
                           $isUser={msg.sender_name !== "Admin"}
                         >
                           <div style={{ fontWeight: "bold" }}>
-                            {msg.sender_name}
+                            {msg.is_admin_message ? "Admin" : msg.sender_name || "User"}
                           </div>
                           <ExpandableCell text={msg.message} />
                           <MessageTime $isAI={!msg.is_admin_message}>
