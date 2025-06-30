@@ -588,80 +588,42 @@ const MessagesContainer = styled.div`
   background: rgba(248, 250, 252, 0.5);
 `;
 
-const Message = styled.div`
+// --- Chat Message Bubble Styled Components ---
+const MessageBubble = styled.div`
   max-width: 80%;
   padding: 12px 16px;
-  border-radius: 12px;
+  border-radius: 18px;
   font-size: 0.95rem;
-  line-height: 1.5;
+  line-height: 1.4;
   position: relative;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-
-  ${(props) => {
-    if (props.$isAI) {
-      return `
-        align-self: flex-start;
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-bottom-left-radius: 0;
-        
-        &::before {
-          content: "";
-          position: absolute;
-          bottom: 0;
-          left: -8px;
-          width: 0;
-          height: 0;
-          border-right: 8px solid white;
-          border-top: 8px solid transparent;
-          filter: drop-shadow(-2px 2px 1px rgba(0,0,0,0.05));
-        }
-      `;
-    } else if (props.$isUser) {
-      return `
-        align-self: flex-start;
-        background: #f0f7ff;
-        border: 1px solid #d0e3ff;
-        border-bottom-left-radius: 0;
-        
-        &::before {
-          content: "";
-          position: absolute;
-          bottom: 0;
-          left: -8px;
-          width: 0;
-          height: 0;
-          border-right: 8px solid #f0f7ff;
-          border-top: 8px solid transparent;
-        }
-      `;
-    } else {
-      return `
-        align-self: flex-end;
-        background: linear-gradient(135deg, #475569 0%, #64748b 100%);
-        color: white;
-        border-bottom-right-radius: 0;
-        
-        &::before {
-          content: "";
-          position: absolute;
-          bottom: 0;
-          right: -8px;
-          width: 0;
-          height: 0;
-          border-left: 8px solid #475569;
-          border-top: 8px solid transparent;
-        }
-      `;
-    }
-  }}
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  word-break: break-word;
+  margin-bottom: 8px;
+  ${({ $isAdmin }) => $isAdmin 
+    ? `
+      align-self: flex-end;
+      background: #3b82f6;
+      color: white;
+      border-bottom-right-radius: 4px;
+    `
+    : `
+      align-self: flex-start;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-bottom-left-radius: 4px;
+    `}
 `;
-
-const MessageTime = styled.div`
+const MessageSender = styled.div`
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+  color: ${({ $isAdmin }) => $isAdmin ? 'rgba(255,255,255,0.9)' : '#475569'};
+`;
+const MessageTimeStyled = styled.div`
   font-size: 0.7rem;
-  color: ${(props) => (props.$isAI ? "#64748b" : "rgba(255,255,255,0.7)")};
   margin-top: 4px;
   text-align: right;
+  color: ${({ $isAdmin }) => $isAdmin ? 'rgba(255,255,255,0.7)' : '#64748b'};
 `;
 
 const InputContainer = styled.div`
@@ -3224,20 +3186,24 @@ function App() {
                           Loading messages...
                         </div>
                       )}
+                      {messages.length === 0 && !loadingMessages && (
+                        <div style={{ textAlign: 'center', color: '#64748b' }}>
+                          No messages yet
+                        </div>
+                      )}
                       {messages.map((msg) => (
-                        <Message 
+                        <MessageBubble 
                           key={msg.id} 
-                          $isAI={!msg.is_admin_message}
-                          $isUser={msg.sender_name !== "Admin"}
+                          $isAdmin={msg.is_admin_message}
                         >
-                          <div style={{ fontWeight: "bold" }}>
-                            {msg.is_admin_message ? "Admin" : msg.sender_name || "User"}
-                          </div>
-                          <ExpandableCell text={msg.message} />
-                          <MessageTime $isAI={!msg.is_admin_message}>
-                            {new Date(msg.timestamp).toLocaleTimeString()}
-                          </MessageTime>
-                        </Message>
+                          <MessageSender $isAdmin={msg.is_admin_message}>
+                            {msg.is_admin_message ? 'Admin' : msg.sender_name || 'User'}
+                          </MessageSender>
+                          <div>{msg.message}</div>
+                          <MessageTimeStyled $isAdmin={msg.is_admin_message}>
+                            {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
+                          </MessageTimeStyled>
+                        </MessageBubble>
                       ))}
                     </MessagesContainer>
                     {selectedUser && (
