@@ -1385,6 +1385,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [socketStatus, setSocketStatus] = useState('disconnected'); // 'connected', 'disconnected', 'error'
   const rowsPerPage = 5;
   
   const { token, user, logout } = useAuth();
@@ -1522,25 +1523,83 @@ function App() {
 
   // Socket.io setup for real-time updates
   useEffect(() => {
-    const socket = io("https://backend-oa-pqy2.onrender.com");
-    socketRef.current = socket;
+    let socket = null;
+    
+    try {
+      // Try to connect to Socket.io with timeout and error handling
+      socket = io("https://backend-oa-pqy2.onrender.com", {
+        timeout: 5000,
+        transports: ['polling', 'websocket'],
+        forceNew: true,
+        reconnection: false // Disable auto-reconnection to prevent spam
+      });
 
-    socket.on("refresh_data", fetchData);
-    socket.on("ticket_added", fetchData);
-    socket.on("ticket_updated", fetchData);
-    socket.on("ticket_deleted", fetchData);
-    socket.on("new_message", (data) => {
-      if (selectedUserRef.current && data && data.ticket_id === selectedUserRef.current) {
-        axios.get("https://backend-oa-pqy2.onrender.com/api/messages", { 
-          params: { ticket_id: selectedUserRef.current } 
-        })
-          .then((response) => setMessages(response.data))
-          .catch((err) => console.error("Failed to load messages (new_message):", err));
-      }
-    });
+      socketRef.current = socket;
+
+      // Add connection event handlers
+      socket.on("connect", () => {
+        console.log("✅ Socket.io connected successfully");
+        setSocketStatus('connected');
+      });
+
+      socket.on("connect_error", (error) => {
+        console.warn("⚠️ Socket.io connection failed:", error.message);
+        // Don't show error to user, just log it
+        setSocketStatus('error');
+        socketRef.current = null;
+      });
+
+      socket.on("disconnect", (reason) => {
+        console.log("🔌 Socket.io disconnected:", reason);
+        setSocketStatus('disconnected');
+        socketRef.current = null;
+      });
+
+      // Only add event listeners if connection is successful
+      socket.on("refresh_data", () => {
+        console.log("🔄 Socket.io: refresh_data received");
+        fetchData();
+      });
+      
+      socket.on("ticket_added", () => {
+        console.log("🆕 Socket.io: ticket_added received");
+        fetchData();
+      });
+      
+      socket.on("ticket_updated", () => {
+        console.log("✏️ Socket.io: ticket_updated received");
+        fetchData();
+      });
+      
+      socket.on("ticket_deleted", () => {
+        console.log("🗑️ Socket.io: ticket_deleted received");
+        fetchData();
+      });
+      
+      socket.on("new_message", (data) => {
+        console.log("💬 Socket.io: new_message received", data);
+        if (selectedUserRef.current && data && data.ticket_id === selectedUserRef.current) {
+          axios.get("https://backend-oa-pqy2.onrender.com/api/messages", { 
+            params: { ticket_id: selectedUserRef.current } 
+          })
+            .then((response) => setMessages(response.data))
+            .catch((err) => console.error("Failed to load messages (new_message):", err));
+        }
+      });
+
+    } catch (error) {
+      console.warn("⚠️ Socket.io initialization failed:", error.message);
+      setSocketStatus('error');
+      socketRef.current = null;
+    }
 
     return () => {
-      socket.disconnect();
+      if (socket) {
+        console.log("🔌 Cleaning up Socket.io connection");
+        socket.disconnect();
+        socketRef.current = null;
+      }
+      setSocketStatus('disconnected');
     };
   }, [fetchData]);
 
@@ -2049,16 +2108,33 @@ function App() {
 
   // Get backend status text
   const getBackendStatusText = () => {
-    switch (backendStatus) {
-      case 'connected':
-        return '🟢 Backend Connected';
-      case 'error':
-        return '🔴 Backend Error (500)';
-      case 'offline':
-        return '🟡 Backend Offline';
-      default:
-        return '⚪ Unknown Status';
-    }
+    const backendText = (() => {
+      switch (backendStatus) {
+        case 'connected':
+          return '🟢 Backend Connected';
+        case 'error':
+          return '🔴 Backend Error (500)';
+        case 'offline':
+          return '🟡 Backend Offline';
+        default:
+          return '⚪ Unknown Status';
+      }
+    })();
+
+    const socketText = (() => {
+      switch (socketStatus) {
+        case 'connected':
+          return ' | 🔄 Real-time Active';
+        case 'error':
+          return ' | ⚠️ Real-time Unavailable';
+        case 'disconnected':
+          return ' | 🔌 Real-time Disabled';
+        default:
+          return '';
+      }
+    })();
+
+    return backendText + socketText;
   };
 
   // Manual retry function
@@ -2371,6 +2447,21 @@ function App() {
                       The backend server is experiencing issues. Please try again later.
                     </div>
                   )}
+                  {socketStatus === 'error' && (
+                    <div style={{
+                      textAlign: 'center',
+                      color: '#f59e0b',
+                      fontSize: '0.875rem',
+                      marginBottom: '16px',
+                      padding: '12px',
+                      background: 'rgba(245, 158, 11, 0.1)',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(245, 158, 11, 0.2)'
+                    }}>
+                      <strong>⚠️ Real-time Updates Unavailable</strong><br />
+                      Real-time updates are not available. The app will work normally, but you may need to refresh manually to see updates.
+                    </div>
+                  )}
                   {lastError && (
                     <ErrorDetails>
                       <div className="error-header">
@@ -2422,6 +2513,18 @@ function App() {
                           }
                         }}
                       />
+                      {socketStatus !== 'connected' && (
+                        <ExportButton 
+                          onClick={fetchData}
+                          disabled={loading}
+                          style={{ 
+                            background: loading ? '#e2e8f0' : 'rgba(255, 255, 255, 0.9)',
+                            color: loading ? '#94a3b8' : '#475569'
+                          }}
+                        >
+                          {loading ? 'กำลังโหลด...' : '🔄 รีเฟรช'}
+                        </ExportButton>
+                      )}
                       <ExportButton onClick={exportToCSV}>ส่งออก CSV</ExportButton>
                       <ExportButton $primary onClick={exportToJSON}>
                         ส่งออก JSON
