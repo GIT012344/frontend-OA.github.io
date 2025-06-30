@@ -1536,7 +1536,6 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [socketStatus, setSocketStatus] = useState('disconnected'); // 'connected', 'disconnected', 'error'
   const rowsPerPage = 5;
   
   const { token, user, logout } = useAuth();
@@ -2231,20 +2230,7 @@ function App() {
       }
     })();
 
-    const socketText = (() => {
-      switch (socketStatus) {
-        case 'connected':
-          return ' | 🔄 Real-time Active';
-        case 'error':
-          return ' | ⚠️ Real-time Unavailable';
-        case 'disconnected':
-          return ' | 🔌 Real-time Disabled';
-        default:
-          return '';
-      }
-    })();
-
-    return backendText + socketText;
+    return backendText;
   };
 
   // Manual retry function
@@ -2403,33 +2389,6 @@ function App() {
     jsonLink.click();
     document.body.removeChild(jsonLink);
   };
-
-  // Count tickets by status
-  const getStatusCounts = () => {
-    const counts = {
-      Pending: 0,
-      Scheduled: 0,
-      "In Progress": 0,
-      Waiting: 0,
-      Completed: 0,
-    };
-
-    data.forEach((ticket) => {
-      if (counts.hasOwnProperty(ticket["สถานะ"])) {
-        counts[ticket["สถานะ"]]++;
-      }
-    });
-
-    return counts;
-  };
-
-  const filterByEmail = (email) => {
-    setSearchTerm(email);
-    setActiveTab("list");
-    scrollToList();
-  };
-
-  const statusCounts = getStatusCounts();
 
   // --- Notification Drag Events ---
   useEffect(() => {
@@ -2646,21 +2605,6 @@ function App() {
                       The backend server is experiencing issues. Please try again later.
                     </div>
                   )}
-                  {socketStatus === 'error' && (
-                    <div style={{
-                      textAlign: 'center',
-                      color: '#f59e0b',
-                      fontSize: '0.875rem',
-                      marginBottom: '16px',
-                      padding: '12px',
-                      background: 'rgba(245, 158, 11, 0.1)',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(245, 158, 11, 0.2)'
-                    }}>
-                      <strong>⚠️ Real-time Updates Unavailable</strong><br />
-                      Real-time updates are not available. The app will work normally, but you may need to refresh manually to see updates.
-                    </div>
-                  )}
                   {lastError && (
                     <ErrorDetails>
                       <div className="error-header">
@@ -2712,18 +2656,16 @@ function App() {
                           }
                         }}
                       />
-                      {socketStatus !== 'connected' && (
-                        <ExportButton 
-                          onClick={fetchData}
-                          disabled={loading}
-                          style={{ 
-                            background: loading ? '#e2e8f0' : 'rgba(255, 255, 255, 0.9)',
-                            color: loading ? '#94a3b8' : '#475569'
-                          }}
-                        >
-                          {loading ? 'กำลังโหลด...' : '🔄 รีเฟรช'}
-                        </ExportButton>
-                      )}
+                      <ExportButton 
+                        onClick={fetchData}
+                        disabled={loading}
+                        style={{ 
+                          background: loading ? '#e2e8f0' : 'rgba(255, 255, 255, 0.9)',
+                          color: loading ? '#94a3b8' : '#475569'
+                        }}
+                      >
+                        {loading ? 'กำลังโหลด...' : '🔄 รีเฟรช'}
+                      </ExportButton>
                       <ExportButton onClick={exportToCSV}>ส่งออก CSV</ExportButton>
                       <ExportButton $primary onClick={exportToJSON}>
                         ส่งออก JSON
