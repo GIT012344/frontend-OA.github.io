@@ -1422,6 +1422,85 @@ const AlertItem = styled.div`
   &:last-child { border-bottom: none; }
 `;
 
+// เพิ่ม styled components สำหรับการ์ดอันดับผู้ใช้
+const RankingCard = styled(StatCard)`
+  grid-column: span 2;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+`;
+const RankingHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+`;
+const ToggleButton = styled.button`
+  background: none;
+  border: none;
+  color: #3b82f6;
+  cursor: pointer;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  &:hover { text-decoration: underline; }
+`;
+const RankingList = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 8px;
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-track { background: rgba(241, 245, 249, 0.5); border-radius: 3px; }
+  &::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.3); border-radius: 3px; transition: background 0.2s ease; }
+`;
+const RankingItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #e2e8f0;
+  align-items: center;
+  transition: all 0.2s ease;
+  &:hover { background: #f8fafc; }
+`;
+const RankBadge = styled.div`
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: ${props =>
+    props.$rank === 1 ? '#f59e0b' :
+    props.$rank === 2 ? '#94a3b8' :
+    props.$rank === 3 ? '#b45309' :
+    '#e2e8f0'};
+  color: ${props => props.$rank <= 3 ? 'white' : '#475569'};
+  font-weight: 600;
+  margin-right: 12px;
+`;
+const UserInfo = styled.div`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+`;
+const UserEmail = styled.div`
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  &:hover { text-decoration: underline; color: #3b82f6; }
+`;
+const TicketCount = styled.div`
+  background: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+`;
+
 function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [data, setData] = useState([]);
@@ -1473,6 +1552,9 @@ function App() {
 
   // เพิ่ม state สำหรับเก็บ ticket ที่ถูกเลือก
   const [selectedTicket, setSelectedTicket] = useState(null);
+
+  // เพิ่ม state สำหรับควบคุมการแสดงอันดับผู้ใช้
+  const [showAllRankings, setShowAllRankings] = useState(false);
 
   // Update selectedUserRef when selectedUser changes
   useEffect(() => {
@@ -2440,6 +2522,24 @@ function App() {
     return overdueTickets.sort((a, b) => b.hoursOverdue - a.hoursOverdue);
   };
 
+  // ฟังก์ชันคำนวณอันดับผู้ใช้
+  const getUserRankings = () => {
+    const userMap = {};
+    data.forEach(ticket => {
+      const email = ticket["อีเมล"] || "ไม่ระบุอีเมล";
+      userMap[email] = (userMap[email] || 0) + 1;
+    });
+    const rankings = Object.entries(userMap)
+      .map(([email, count]) => ({ email, count }))
+      .sort((a, b) => b.count - a.count);
+    return rankings;
+  };
+  // ฟังก์ชันกรองข้อมูลที่จะแสดง (5 อันดับแรกหรือทั้งหมด)
+  const getDisplayRankings = () => {
+    const rankings = getUserRankings();
+    return showAllRankings ? rankings : rankings.slice(0, 5);
+  };
+
   return (
     <Router>
       <Routes>
@@ -2750,6 +2850,61 @@ function App() {
                         ))}
                       </div>
                     </StatCard>
+
+                    {/* 5. อันดับผู้ใช้ Ticket มากที่สุด */}
+                    <RankingCard $accent="linear-gradient(90deg, #8b5cf6, #7c3aed)">
+                      <RankingHeader>
+                        <StatTitle>อันดับผู้ใช้ Ticket มากที่สุด</StatTitle>
+                        <ToggleButton onClick={() => setShowAllRankings(!showAllRankings)}>
+                          {showAllRankings ? (
+                            <>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 15l7-7 7 7" /></svg>
+                              แสดงเฉพาะ 5 อันดับแรก
+                            </>
+                          ) : (
+                            <>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 9l-7 7-7-7" /></svg>
+                              แสดงทั้งหมด
+                            </>
+                          )}
+                        </ToggleButton>
+                      </RankingHeader>
+                      <RankingList>
+                        {getDisplayRankings().map((user, index) => (
+                          <RankingItem key={user.email}>
+                            <UserInfo>
+                              <RankBadge $rank={index + 1}>{index + 1}</RankBadge>
+                              <UserEmail
+                                title={user.email}
+                                onClick={() => {
+                                  setSearchTerm(user.email);
+                                  setActiveTab("list");
+                                  scrollToList();
+                                }}
+                              >
+                                {user.email}
+                              </UserEmail>
+                            </UserInfo>
+                            <TicketCount>{user.count} Tickets</TicketCount>
+                          </RankingItem>
+                        ))}
+                        {getUserRankings().length === 0 && (
+                          <div style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
+                            ไม่มีข้อมูลผู้ใช้
+                          </div>
+                        )}
+                      </RankingList>
+                      {!showAllRankings && getUserRankings().length > 5 && (
+                        <div style={{
+                          textAlign: 'center',
+                          color: '#64748b',
+                          fontSize: '0.75rem',
+                          marginTop: '8px'
+                        }}>
+                          + อีก {getUserRankings().length - 5} รายการ
+                        </div>
+                      )}
+                    </RankingCard>
                   </Dashboard>
                 </div>
                 <div ref={listRef}>
