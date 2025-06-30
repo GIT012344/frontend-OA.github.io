@@ -232,23 +232,35 @@ const TableHeaderCell = styled.th`
 const TableRow = styled.tr`
   transition: all 0.2s ease;
   background-color: ${(props) => props.$bgColor || ""};
-
+  ${(props) => props.$isSelected && `
+    box-shadow: inset 0 0 0 2px #3b82f6;
+    background-color: ${props.$bgColor ? `${props.$bgColor} !important` : '#f0f7ff !important'};
+    position: relative;
+    &::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 0;
+      height: 100%;
+      width: 4px;
+      background-color: #3b82f6;
+    }
+  `}
   &:nth-child(even) {
     background-color: ${(props) =>
-    props.$bgColor ? props.$bgColor : "rgba(248, 250, 252, 0.5)"};
+      props.$bgColor ? props.$bgColor : "rgba(248, 250, 252, 0.5)"};
   }
-
   &:hover {
     background-color: ${(props) =>
-    props.$bgColor
-      ? props.$bgColor === "#ffebee"
-        ? "#ffcdd2"
-        : props.$bgColor === "#fff3e0"
-          ? "#ffe0b2"
-          : props.$bgColor === "#fffde7"
-            ? "#fff59d"
-            : "rgba(241, 245, 249, 0.8)"
-      : "rgba(241, 245, 249, 0.8)"};
+      props.$bgColor
+        ? props.$bgColor === "#ffebee"
+          ? "#ffcdd2"
+          : props.$bgColor === "#fff3e0"
+            ? "#ffe0b2"
+            : props.$bgColor === "#fffde7"
+              ? "#fff59d"
+              : "rgba(241, 245, 249, 0.8)"
+        : "rgba(241, 245, 249, 0.8)"};
     transform: scale(1.001);
   }
 `;
@@ -678,6 +690,10 @@ const UserSelect = styled.select`
     border-color: #64748b;
     box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.1);
     background: white;
+  }
+  option:checked {
+    background-color: #3b82f6;
+    color: white;
   }
 `;
 
@@ -1397,6 +1413,9 @@ function App() {
   // Add offline mode handling
   const [offlineData, setOfflineData] = useState([]);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
+
+  // เพิ่ม state สำหรับเก็บ ticket ที่ถูกเลือก
+  const [selectedTicket, setSelectedTicket] = useState(null);
 
   // Update selectedUserRef when selectedUser changes
   useEffect(() => {
@@ -2806,7 +2825,17 @@ function App() {
                               row["สถานะ"]
                             );
                             return (
-                              <TableRow key={i} $bgColor={rowColor}>
+                              <TableRow
+                                key={i}
+                                $bgColor={rowColor}
+                                $isSelected={selectedTicket === row["Ticket ID"]}
+                                onClick={() => {
+                                  setSelectedTicket(row["Ticket ID"]);
+                                  setSelectedUser(row["Ticket ID"]);
+                                  setActiveTab("chat");
+                                  scrollToChat();
+                                }}
+                              >
                                 <TableCell>{row["Ticket ID"] || "None"}</TableCell>
                                 <TableCell>{row["อีเมล"] || "None"}</TableCell>
                                 <TableCell>{row["ชื่อ"] || "None"}</TableCell>
