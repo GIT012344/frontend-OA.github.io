@@ -2491,26 +2491,33 @@ function App() {
   // --- Chat polling for real-time updates ---
   useEffect(() => {
     const pollMessages = async () => {
-      if (!selectedUser) return;
+      if (!selectedUser || selectedUser === "announcement") return;
       setLoadingMessages(true);
       try {
         const response = await axios.get(
           "https://backend-oa-pqy2.onrender.com/api/messages",
-          { params: { ticket_id: selectedUser } }
+          { params: { user_id: selectedUser } }
         );
         setMessages(response.data);
-        // Mark messages as read
         if (response.data.length > 0) {
           await axios.post(
             "https://backend-oa-pqy2.onrender.com/api/messages/mark-read",
             {
-              ticket_id: selectedUser,
+              user_id: selectedUser,
               admin_id: adminId
             }
           );
         }
       } catch (err) {
         console.error("Failed to poll messages:", err);
+        if (selectedUser !== "announcement") {
+          setBackendStatus('error');
+          setLastError({
+            status: err.response?.status || 'NETWORK',
+            message: err.response?.data?.error || err.message,
+            details: 'Failed to fetch messages'
+          });
+        }
       } finally {
         setLoadingMessages(false);
       }
