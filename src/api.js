@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://your-backend-url';
+const API_BASE_URL = 'https://backend-oa-pqy2.onrender.com';
 
 export const fetchMessages = async (ticketId) => {
   const response = await axios.get(`${API_BASE_URL}/api/messages`, {

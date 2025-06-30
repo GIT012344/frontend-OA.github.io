@@ -343,13 +343,14 @@ const BackendStatusIndicator = styled.div`
   justify-content: center;
   gap: 8px;
   font-size: 0.875rem;
-  padding: 8px 16px;
+  padding: 12px 20px;
   border-radius: 20px;
   backdrop-filter: blur(10px);
   width: fit-content;
   margin: 0 auto 16px;
   font-weight: 500;
   border: 1px solid;
+  transition: all 0.3s ease;
 
   ${(props) => {
     switch (props.$status) {
@@ -358,6 +359,7 @@ const BackendStatusIndicator = styled.div`
           color: #10b981;
           background: rgba(16, 185, 129, 0.1);
           border-color: rgba(16, 185, 129, 0.2);
+          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
           &::before {
             content: "";
             width: 8px;
@@ -372,6 +374,7 @@ const BackendStatusIndicator = styled.div`
           color: #ef4444;
           background: rgba(239, 68, 68, 0.1);
           border-color: rgba(239, 68, 68, 0.2);
+          box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
           &::before {
             content: "";
             width: 8px;
@@ -386,6 +389,7 @@ const BackendStatusIndicator = styled.div`
           color: #f59e0b;
           background: rgba(245, 158, 11, 0.1);
           border-color: rgba(245, 158, 11, 0.2);
+          box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1);
           &::before {
             content: "";
             width: 8px;
@@ -447,14 +451,54 @@ const RetryButton = styled.button`
 const ErrorDetails = styled.div`
   background: rgba(239, 68, 68, 0.05);
   border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 12px;
+  padding: 16px;
   margin: 8px 0;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: #ef4444;
   max-width: 600px;
   margin-left: auto;
   margin-right: auto;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
+
+  .error-header {
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .error-content {
+    background: rgba(255, 255, 255, 0.5);
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 8px;
+    border-left: 3px solid #ef4444;
+  }
+
+  .error-item {
+    margin-bottom: 6px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .error-label {
+    font-weight: 500;
+    min-width: 80px;
+  }
+
+  .error-value {
+    color: #dc2626;
+  }
+
+  .retry-info {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(239, 68, 68, 0.2);
+    font-size: 0.8rem;
+    color: #dc2626;
+  }
 `;
 
 const ChatContainer = styled.div`
@@ -1304,6 +1348,39 @@ function App() {
   const listRef = useRef(null);
   const chatRef = useRef(null);
 
+  // Add offline mode handling
+  const [offlineData, setOfflineData] = useState([]);
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
+
+  // Load cached data from localStorage when backend is offline
+  useEffect(() => {
+    if (backendStatus === 'offline' || backendStatus === 'error') {
+      const cachedData = localStorage.getItem('cachedTicketData');
+      if (cachedData) {
+        try {
+          const parsedData = JSON.parse(cachedData);
+          setOfflineData(parsedData);
+          setIsOfflineMode(true);
+          console.log("📱 Using cached data in offline mode");
+        } catch (error) {
+          console.error("Error parsing cached data:", error);
+          setOfflineData([]);
+        }
+      } else {
+        setOfflineData([]);
+      }
+    } else {
+      setIsOfflineMode(false);
+      // Cache current data when backend is connected
+      if (data.length > 0) {
+        localStorage.setItem('cachedTicketData', JSON.stringify(data));
+      }
+    }
+  }, [backendStatus, data]);
+
+  // Use offline data when backend is unavailable
+  const displayData = isOfflineMode ? offlineData : data;
+
   // Add these scroll functions
   const scrollToDashboard = () => {
     dashboardRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1345,14 +1422,29 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data");
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
+          timeout: 10000, // 10 second timeout
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
         setData(Array.isArray(response.data) ? response.data : []);
         setLastSync(new Date());
         setBackendStatus('connected');
         setLastError(null);
+        setRetryCount(0); // Reset retry count on success
       } catch (error) {
         console.error("Error fetching data:", error);
-        if (error.response) {
+        
+        // Handle different types of errors
+        if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+          setBackendStatus('offline');
+          setLastError({
+            status: 'NETWORK',
+            message: 'Network connection failed',
+            details: 'Unable to connect to backend server. Please check your internet connection.'
+          });
+        } else if (error.response) {
           console.error("Server error:", error.response.status, error.response.data);
           if (error.response.status === 500) {
             setBackendStatus('error');
@@ -1361,13 +1453,27 @@ function App() {
               message: error.response.data?.message || 'Database transaction error',
               details: error.response.data?.error || 'Unknown server error'
             });
+          } else if (error.response.status === 404) {
+            setBackendStatus('error');
+            setLastError({
+              status: error.response.status,
+              message: 'API endpoint not found',
+              details: 'The requested API endpoint does not exist'
+            });
+          } else {
+            setBackendStatus('error');
+            setLastError({
+              status: error.response.status,
+              message: `HTTP ${error.response.status} Error`,
+              details: error.response.data?.message || 'Server error occurred'
+            });
           }
         } else if (error.request) {
           setBackendStatus('offline');
           setLastError({
             status: 'NETWORK',
             message: 'No response from server',
-            details: 'Backend server may be down or unreachable'
+            details: 'Backend server may be down or unreachable. Please try again later.'
           });
         } else {
           setBackendStatus('error');
@@ -1379,10 +1485,19 @@ function App() {
         }
       }
     };
+    
     fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    
+    // Retry logic with exponential backoff
+    const retryInterval = setInterval(() => {
+      if (backendStatus === 'offline' || backendStatus === 'error') {
+        setRetryCount(prev => prev + 1);
+        fetchData();
+      }
+    }, Math.min(30000 * Math.pow(2, retryCount), 300000)); // Max 5 minutes
+    
+    return () => clearInterval(retryInterval);
+  }, [backendStatus, retryCount]);
 
   useEffect(() => {
     if (isDragging) {
@@ -1444,33 +1559,48 @@ function App() {
   }, [data]);
 
   useEffect(() => {
-    const fetchNotifications = () => {
-      axios
-        .get("https://backend-oa-pqy2.onrender.com/api/notifications")
-        .then((res) => {
-          setNotifications(res.data);
-          // Check if there are any unread notifications
-          const unread = res.data.some((notification) => !notification.read);
-          setHasUnread(unread);
-        })
-        .catch((err) => {
-          console.error("Error fetching notifications:", err);
-          if (err.response) {
-            console.error("Server error:", err.response.status, err.response.data);
-          } else if (err.request) {
-            console.error("Network error - no response from server");
-          } else {
-            console.error("Request setup error:", err.message);
+    const fetchNotifications = async () => {
+      try {
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/notifications", {
+          timeout: 5000, // 5 second timeout for notifications
+          headers: {
+            'Content-Type': 'application/json',
           }
-          // Don't show error to user for notifications
         });
+        setNotifications(response.data);
+        // Check if there are any unread notifications
+        const unread = response.data.some((notification) => !notification.read);
+        setHasUnread(unread);
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+        
+        // Don't show error to user for notifications, but log it
+        if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+          console.warn("Network error while fetching notifications - server may be offline");
+        } else if (error.response) {
+          console.error("Server error:", error.response.status, error.response.data);
+        } else if (error.request) {
+          console.warn("No response from server for notifications");
+        } else {
+          console.error("Request setup error:", error.message);
+        }
+        
+        // Keep existing notifications if fetch fails
+        // Don't clear notifications on network error
+      }
     };
 
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 15000); // Check every 15 seconds
+    
+    // Only retry notifications if backend is connected
+    const interval = setInterval(() => {
+      if (backendStatus === 'connected') {
+        fetchNotifications();
+      }
+    }, 15000); // Check every 15 seconds
 
     return () => clearInterval(interval);
-  }, []);
+  }, [backendStatus]);
 
   const fetchDataByDate = () => {
     if (!startDate) return;
@@ -1527,8 +1657,8 @@ function App() {
     }
   };
   // Filter data based on search and filters
-  const filteredData = Array.isArray(data)
-    ? data.filter((row) => {
+  const filteredData = Array.isArray(displayData)
+    ? displayData.filter((row) => {
       // Search filter
       const matchesSearch =
         searchTerm === "" ||
@@ -1552,7 +1682,7 @@ function App() {
     : [];
 
   // Get unique types for filter dropdown
-  const uniqueTypes = [...new Set(data.map((item) => item["Type"] || "None"))];
+  const uniqueTypes = [...new Set(displayData.map((item) => item["Type"] || "None"))];
 
   // อัปเดตสถานะ
   const handleStatusChange = (ticketId, newStatus) => {
@@ -1836,27 +1966,54 @@ function App() {
   const handleManualRetry = async () => {
     setIsRetrying(true);
     setRetryCount(prev => prev + 1);
+    
     try {
-      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data");
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
+        timeout: 15000, // 15 second timeout for manual retry
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
       setData(Array.isArray(response.data) ? response.data : []);
       setBackendStatus('connected');
       setRetryCount(0);
       setLastError(null);
       setLastSync(new Date());
+      
+      // Show success message
+      console.log("✅ Manual retry successful - backend reconnected");
+      
     } catch (error) {
-      if (error.response?.status === 500) {
+      console.error("❌ Manual retry failed:", error);
+      
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        setBackendStatus('offline');
+        setLastError({
+          status: 'NETWORK',
+          message: 'Network connection failed',
+          details: 'Unable to connect to backend server. Please check your internet connection and try again.'
+        });
+      } else if (error.response?.status === 500) {
         setBackendStatus('error');
         setLastError({
           status: error.response.status,
           message: error.response.data?.message || 'Database transaction error',
-          details: error.response.data?.error || 'Unknown server error'
+          details: error.response.data?.error || 'Server is experiencing issues. Please try again later.'
+        });
+      } else if (error.response?.status === 404) {
+        setBackendStatus('error');
+        setLastError({
+          status: error.response.status,
+          message: 'API endpoint not found',
+          details: 'The requested API endpoint does not exist. Please contact support.'
         });
       } else {
         setBackendStatus('offline');
         setLastError({
-          status: 'NETWORK',
-          message: 'No response from server',
-          details: 'Backend server may be down or unreachable'
+          status: 'ERROR',
+          message: error.message || 'Connection failed',
+          details: 'Unable to reach the server. Please check your connection and try again.'
         });
       }
     } finally {
@@ -2080,13 +2237,70 @@ function App() {
                       </RetryButton>
                     )}
                   </BackendStatusIndicator>
+                  {backendStatus === 'offline' && (
+                    <div style={{
+                      textAlign: 'center',
+                      color: '#f59e0b',
+                      fontSize: '0.875rem',
+                      marginBottom: '16px',
+                      padding: '12px',
+                      background: 'rgba(245, 158, 11, 0.1)',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(245, 158, 11, 0.2)'
+                    }}>
+                      <strong>⚠️ Backend Server Offline</strong><br />
+                      The backend server is currently unavailable. Some features may not work properly.
+                      {retryCount > 0 && (
+                        <div style={{ marginTop: '8px', fontSize: '0.8rem' }}>
+                          Auto-retry attempts: {retryCount}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {backendStatus === 'error' && (
+                    <div style={{
+                      textAlign: 'center',
+                      color: '#ef4444',
+                      fontSize: '0.875rem',
+                      marginBottom: '16px',
+                      padding: '12px',
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(239, 68, 68, 0.2)'
+                    }}>
+                      <strong>🔴 Backend Server Error</strong><br />
+                      The backend server is experiencing issues. Please try again later.
+                    </div>
+                  )}
                   {lastError && (
                     <ErrorDetails>
-                      <strong>Error Details:</strong><br />
-                      Status: {lastError.status}<br />
-                      Message: {lastError.message}<br />
-                      Details: {lastError.details}<br />
-                      {retryCount > 0 && <span>Retry attempts: {retryCount}</span>}
+                      <div className="error-header">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                          <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z"/>
+                          <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
+                        </svg>
+                        <span>Error Details</span>
+                      </div>
+                      <div className="error-content">
+                        <div className="error-item">
+                          <span className="error-label">Status:</span>
+                          <span className="error-value">{lastError.status}</span>
+                        </div>
+                        <div className="error-item">
+                          <span className="error-label">Message:</span>
+                          <span className="error-value">{lastError.message}</span>
+                        </div>
+                        <div className="error-item">
+                          <span className="error-label">Details:</span>
+                          <span className="error-value">{lastError.details}</span>
+                        </div>
+                        {retryCount > 0 && (
+                          <div className="retry-info">
+                            <span className="error-label">Retry attempts:</span>
+                            <span className="error-value">{retryCount}</span>
+                          </div>
+                        )}
+                      </div>
                     </ErrorDetails>
                   )}
                   <HeaderSection>
