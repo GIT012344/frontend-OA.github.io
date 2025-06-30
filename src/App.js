@@ -1435,7 +1435,7 @@ const RankingHeader = styled.div`
   align-items: center;
   margin-bottom: 12px;
 `;
-const ToggleButton = styled.button`
+const RankingToggleButton = styled.button`
   background: none;
   border: none;
   color: #3b82f6;
@@ -1446,7 +1446,7 @@ const ToggleButton = styled.button`
   gap: 4px;
   &:hover { text-decoration: underline; }
 `;
-const RankingList = styled.div`
+const UserRankingList = styled.div`
   flex: 1;
   overflow-y: auto;
   padding-right: 8px;
@@ -1454,7 +1454,7 @@ const RankingList = styled.div`
   &::-webkit-scrollbar-track { background: rgba(241, 245, 249, 0.5); border-radius: 3px; }
   &::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.3); border-radius: 3px; transition: background 0.2s ease; }
 `;
-const RankingItem = styled.div`
+const UserRankingItem = styled.div`
   display: flex;
   justify-content: space-between;
   padding: 12px 0;
@@ -1463,7 +1463,7 @@ const RankingItem = styled.div`
   transition: all 0.2s ease;
   &:hover { background: #f8fafc; }
 `;
-const RankBadge = styled.div`
+const UserRankBadge = styled.div`
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -1479,20 +1479,20 @@ const RankBadge = styled.div`
   font-weight: 600;
   margin-right: 12px;
 `;
-const UserInfo = styled.div`
+const UserRankingInfo = styled.div`
   flex: 1;
   display: flex;
   align-items: center;
   min-width: 0;
 `;
-const UserEmail = styled.div`
+const UserRankingEmail = styled.div`
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
   &:hover { text-decoration: underline; color: #3b82f6; }
 `;
-const TicketCount = styled.div`
+const UserTicketCount = styled.div`
   background: #f1f5f9;
   padding: 4px 8px;
   border-radius: 12px;
@@ -2855,7 +2855,7 @@ function App() {
                     <RankingCard $accent="linear-gradient(90deg, #8b5cf6, #7c3aed)">
                       <RankingHeader>
                         <StatTitle>อันดับผู้ใช้ Ticket มากที่สุด</StatTitle>
-                        <ToggleButton onClick={() => setShowAllRankings(!showAllRankings)}>
+                        <RankingToggleButton onClick={() => setShowAllRankings(!showAllRankings)}>
                           {showAllRankings ? (
                             <>
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 15l7-7 7 7" /></svg>
@@ -2867,14 +2867,14 @@ function App() {
                               แสดงทั้งหมด
                             </>
                           )}
-                        </ToggleButton>
+                        </RankingToggleButton>
                       </RankingHeader>
-                      <RankingList>
+                      <UserRankingList>
                         {getDisplayRankings().map((user, index) => (
-                          <RankingItem key={user.email}>
-                            <UserInfo>
-                              <RankBadge $rank={index + 1}>{index + 1}</RankBadge>
-                              <UserEmail
+                          <UserRankingItem key={user.email}>
+                            <UserRankingInfo>
+                              <UserRankBadge $rank={index + 1}>{index + 1}</UserRankBadge>
+                              <UserRankingEmail
                                 title={user.email}
                                 onClick={() => {
                                   setSearchTerm(user.email);
@@ -2883,17 +2883,17 @@ function App() {
                                 }}
                               >
                                 {user.email}
-                              </UserEmail>
-                            </UserInfo>
-                            <TicketCount>{user.count} Tickets</TicketCount>
-                          </RankingItem>
+                              </UserRankingEmail>
+                            </UserRankingInfo>
+                            <UserTicketCount>{user.count} Tickets</UserTicketCount>
+                          </UserRankingItem>
                         ))}
                         {getUserRankings().length === 0 && (
                           <div style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
                             ไม่มีข้อมูลผู้ใช้
                           </div>
                         )}
-                      </RankingList>
+                      </UserRankingList>
                       {!showAllRankings && getUserRankings().length > 5 && (
                         <div style={{
                           textAlign: 'center',
