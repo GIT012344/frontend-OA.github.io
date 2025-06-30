@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import styled from "styled-components";
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { io } from "socket.io-client";
 import Login from './Login';
 import { useAuth } from './AuthContext';
 import './styles.css';
@@ -1393,7 +1392,6 @@ function App() {
   const dashboardRef = useRef(null);
   const listRef = useRef(null);
   const chatRef = useRef(null);
-  const socketRef = useRef(null);
   const selectedUserRef = useRef(selectedUser);
 
   // Add offline mode handling
@@ -1542,182 +1540,34 @@ function App() {
     fetchData();
   }, [fetchData]);
 
-  // Socket.io setup for real-time updates
+  // --- Polling แทน Socket.IO ---
   useEffect(() => {
-    let socket = null;
-    let connectionTimeout = null;
-    
-    const connectSocket = () => {
+    // ฟังก์ชันดึงข้อมูล ticket
+    const pollData = async () => {
       try {
-        console.log("🔌 Attempting Socket.io connection...");
-        
-        // Try to connect to Socket.io with timeout and error handling
-        socket = io("https://backend-oa-pqy2.onrender.com", {
-          timeout: 10000, // Increased timeout to 10 seconds
-          transports: ['polling', 'websocket'],
-          forceNew: true,
-          reconnection: true, // Enable reconnection
-          reconnectionAttempts: 3,
-          reconnectionDelay: 1000,
-          reconnectionDelayMax: 5000,
-          maxReconnectionAttempts: 3
-        });
-
-        socketRef.current = socket;
-
-        // Set connection timeout
-        connectionTimeout = setTimeout(() => {
-          if (socket && !socket.connected) {
-            console.warn("⚠️ Socket.io connection timeout");
-            setSocketStatus('error');
-            socket.disconnect();
-            socketRef.current = null;
-          }
-        }, 15000); // 15 second timeout
-
-        // Add connection event handlers
-        socket.on("connect", () => {
-          console.log("✅ Socket.io connected successfully");
-          setSocketStatus('connected');
-          if (connectionTimeout) {
-            clearTimeout(connectionTimeout);
-            connectionTimeout = null;
-          }
-        });
-
-        socket.on("connect_error", (error) => {
-          console.warn("⚠️ Socket.io connection failed:", error.message);
-          setSocketStatus('error');
-          socketRef.current = null;
-          if (connectionTimeout) {
-            clearTimeout(connectionTimeout);
-            connectionTimeout = null;
-          }
-        });
-
-        socket.on("disconnect", (reason) => {
-          console.log("🔌 Socket.io disconnected:", reason);
-          setSocketStatus('disconnected');
-          socketRef.current = null;
-          if (connectionTimeout) {
-            clearTimeout(connectionTimeout);
-            connectionTimeout = null;
-          }
-        });
-
-        socket.on("reconnect", (attemptNumber) => {
-          console.log("🔄 Socket.io reconnected after", attemptNumber, "attempts");
-          setSocketStatus('connected');
-        });
-
-        socket.on("reconnect_error", (error) => {
-          console.warn("⚠️ Socket.io reconnection failed:", error.message);
-          setSocketStatus('error');
-        });
-
-        socket.on("reconnect_failed", () => {
-          console.error("❌ Socket.io reconnection failed after all attempts");
-          setSocketStatus('error');
-          socketRef.current = null;
-        });
-
-        // Only add event listeners if connection is successful
-        socket.on("refresh_data", () => {
-          console.log("🔄 Socket.io: refresh_data received");
-          fetchData();
-        });
-        
-        socket.on("ticket_added", () => {
-          console.log("🆕 Socket.io: ticket_added received");
-          fetchData();
-        });
-        
-        socket.on("ticket_updated", () => {
-          console.log("✏️ Socket.io: ticket_updated received");
-          fetchData();
-        });
-        
-        socket.on("ticket_deleted", () => {
-          console.log("🗑️ Socket.io: ticket_deleted received");
-          fetchData();
-        });
-        
-        socket.on("new_message", (data) => {
-          console.log("💬 Socket.io: new_message received", data);
-          if (selectedUserRef.current && data && data.ticket_id === selectedUserRef.current) {
-            axios.get("https://backend-oa-pqy2.onrender.com/api/messages", { 
-              params: { ticket_id: selectedUserRef.current } 
-            })
-              .then((response) => setMessages(response.data))
-              .catch((err) => console.error("Failed to load messages (new_message):", err));
-          }
-        });
-
+        const response = await fetch("https://backend-oa-pqy2.onrender.com/api/data");
+        const data = await response.json();
+        setData(Array.isArray(data) ? data : []);
+        setLastSync(new Date());
+        setBackendStatus('connected');
+        setLastError(null);
       } catch (error) {
-        console.warn("⚠️ Socket.io initialization failed:", error.message);
-        setSocketStatus('error');
-        socketRef.current = null;
-        if (connectionTimeout) {
-          clearTimeout(connectionTimeout);
-          connectionTimeout = null;
-        }
+        console.error('Polling error:', error);
+        setBackendStatus('offline');
+        setLastError({
+          status: 'NETWORK',
+          message: 'Polling error',
+          details: error.message
+        });
       }
     };
 
-    // Only attempt connection if backend is available
-    if (backendStatus === 'connected' || backendStatus === 'loading') {
-      connectSocket();
-    }
-
-    return () => {
-      if (connectionTimeout) {
-        clearTimeout(connectionTimeout);
-      }
-      if (socket) {
-        console.log("🔌 Cleaning up Socket.io connection");
-        socket.disconnect();
-        socketRef.current = null;
-      }
-      setSocketStatus('disconnected');
-    };
-  }, [fetchData, backendStatus]);
-
-  // Fallback polling mechanism when Socket.io is not available
-  useEffect(() => {
-    let pollingInterval = null;
-    
-    // Only start polling if Socket.io is not connected and backend is available
-    if (socketStatus === 'error' || socketStatus === 'disconnected') {
-      if (backendStatus === 'connected') {
-        console.log("🔄 Starting fallback polling mechanism");
-        
-        // Poll every 30 seconds as fallback
-        pollingInterval = setInterval(() => {
-          console.log("🔄 Fallback polling: fetching data");
-          fetchData();
-        }, 30000);
-      }
-    }
-
-    return () => {
-      if (pollingInterval) {
-        console.log("🔄 Stopping fallback polling mechanism");
-        clearInterval(pollingInterval);
-      }
-    };
-  }, [socketStatus, backendStatus, fetchData]);
-
-  // Retry logic with exponential backoff
-  useEffect(() => {
-    const retryInterval = setInterval(() => {
-      if (backendStatus === 'offline' || backendStatus === 'error') {
-        setRetryCount(prev => prev + 1);
-        fetchData();
-      }
-    }, Math.min(30000 * Math.pow(2, retryCount), 300000)); // Max 5 minutes
-    
-    return () => clearInterval(retryInterval);
-  }, [backendStatus, retryCount, fetchData]);
+    // Poll ทันทีเมื่อโหลดหน้า
+    pollData();
+    // Poll ทุก 5 วินาที
+    const interval = setInterval(pollData, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleMouseMove = useCallback(
     (e) => {
