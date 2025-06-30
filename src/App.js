@@ -2832,8 +2832,6 @@ function App() {
                                 onClick={() => {
                                   setSelectedTicket(row["Ticket ID"]);
                                   setSelectedUser(row["Ticket ID"]);
-                                  setActiveTab("chat");
-                                  scrollToChat();
                                 }}
                               >
                                 <TableCell>{row["Ticket ID"] || "None"}</TableCell>
