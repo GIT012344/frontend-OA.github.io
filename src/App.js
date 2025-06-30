@@ -166,14 +166,6 @@ const StatTitle = styled.h3`
   letter-spacing: 0.05em;
 `;
 
-const StatValue = styled.p`
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin: 0;
-  color: #1e293b;
-  line-height: 1;
-`;
-
 const TableContainer = styled.div`
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(20px);
@@ -605,43 +597,64 @@ const Message = styled.div`
   position: relative;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 
-  ${(props) =>
-    props.$isAI
-      ? `
-    align-self: flex-start;
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-bottom-left-radius: 0;
-    
-    &::before {
-      content: "";
-      position: absolute;
-      bottom: 0;
-      left: -8px;
-      width: 0;
-      height: 0;
-      border-right: 8px solid white;
-      border-top: 8px solid transparent;
-      filter: drop-shadow(-2px 2px 1px rgba(0,0,0,0.05));
+  ${(props) => {
+    if (props.$isAI) {
+      return `
+        align-self: flex-start;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-bottom-left-radius: 0;
+        
+        &::before {
+          content: "";
+          position: absolute;
+          bottom: 0;
+          left: -8px;
+          width: 0;
+          height: 0;
+          border-right: 8px solid white;
+          border-top: 8px solid transparent;
+          filter: drop-shadow(-2px 2px 1px rgba(0,0,0,0.05));
+        }
+      `;
+    } else if (props.$isUser) {
+      return `
+        align-self: flex-start;
+        background: #f0f7ff;
+        border: 1px solid #d0e3ff;
+        border-bottom-left-radius: 0;
+        
+        &::before {
+          content: "";
+          position: absolute;
+          bottom: 0;
+          left: -8px;
+          width: 0;
+          height: 0;
+          border-right: 8px solid #f0f7ff;
+          border-top: 8px solid transparent;
+        }
+      `;
+    } else {
+      return `
+        align-self: flex-end;
+        background: linear-gradient(135deg, #475569 0%, #64748b 100%);
+        color: white;
+        border-bottom-right-radius: 0;
+        
+        &::before {
+          content: "";
+          position: absolute;
+          bottom: 0;
+          right: -8px;
+          width: 0;
+          height: 0;
+          border-left: 8px solid #475569;
+          border-top: 8px solid transparent;
+        }
+      `;
     }
-  `
-      : `
-    align-self: flex-end;
-    background: linear-gradient(135deg, #475569 0%, #64748b 100%);
-    color: white;
-    border-bottom-right-radius: 0;
-    
-    &::before {
-      content: "";
-      position: absolute;
-      bottom: 0;
-      right: -8px;
-      width: 0;
-      height: 0;
-      border-left: 8px solid #475569;
-      border-top: 8px solid transparent;
-    }
-  `}
+  }}
 `;
 
 const MessageTime = styled.div`
@@ -1524,7 +1537,6 @@ function App() {
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [messages, setMessages] = useState([]);
   const [adminId] = useState("admin01");
-  const [emailRankings, setEmailRankings] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarHover, setSidebarHover] = useState(false);
   const [backendStatus, setBackendStatus] = useState('connected'); // 'connected', 'error', 'offline'
@@ -1776,29 +1788,6 @@ function App() {
     }
     return ""; // ไม่มีสี (ค่าปกติ)
   };
-
-  useEffect(() => {
-    const fetchEmailRankings = async () => {
-      try {
-        const response = await axios.get(
-          "https://backend-oa-pqy2.onrender.com/api/email-rankings"
-        );
-        setEmailRankings(response.data);
-      } catch (error) {
-        console.error("Error fetching email rankings:", error);
-        if (error.response) {
-          console.error("Server error:", error.response.status, error.response.data);
-        } else if (error.request) {
-          console.error("Network error - no response from server");
-        } else {
-          console.error("Request setup error:", error.message);
-        }
-        setEmailRankings([]);
-      }
-    };
-
-    fetchEmailRankings();
-  }, [data]);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -2498,6 +2487,38 @@ function App() {
     const rankings = getUserRankings();
     return showAllRankings ? rankings : rankings.slice(0, 5);
   };
+
+  // --- Chat polling for real-time updates ---
+  useEffect(() => {
+    const pollMessages = async () => {
+      if (!selectedUser) return;
+      setLoadingMessages(true);
+      try {
+        const response = await axios.get(
+          "https://backend-oa-pqy2.onrender.com/api/messages",
+          { params: { ticket_id: selectedUser } }
+        );
+        setMessages(response.data);
+        // Mark messages as read
+        if (response.data.length > 0) {
+          await axios.post(
+            "https://backend-oa-pqy2.onrender.com/api/messages/mark-read",
+            {
+              ticket_id: selectedUser,
+              admin_id: adminId
+            }
+          );
+        }
+      } catch (err) {
+        console.error("Failed to poll messages:", err);
+      } finally {
+        setLoadingMessages(false);
+      }
+    };
+    pollMessages();
+    const interval = setInterval(pollMessages, 5000); // Poll every 5 seconds
+    return () => clearInterval(interval);
+  }, [selectedUser, adminId]);
 
   return (
     <Router>
@@ -3202,8 +3223,14 @@ function App() {
                         </div>
                       )}
                       {messages.map((msg) => (
-                        <Message key={msg.id} $isAI={!msg.is_admin_message}>
-                          <div style={{ fontWeight: "bold" }}>{msg.sender_name}</div>
+                        <Message 
+                          key={msg.id} 
+                          $isAI={!msg.is_admin_message}
+                          $isUser={msg.sender_name !== "Admin"}
+                        >
+                          <div style={{ fontWeight: "bold" }}>
+                            {msg.sender_name}
+                          </div>
                           <ExpandableCell text={msg.message} />
                           <MessageTime $isAI={!msg.is_admin_message}>
                             {new Date(msg.timestamp).toLocaleTimeString()}
