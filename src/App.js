@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import styled from "styled-components";
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { io } from "socket.io-client";
 import Login from './Login';
 import { useAuth } from './AuthContext';
 import './styles.css';
@@ -1312,6 +1313,43 @@ const LogoutButton = styled.button`
   }
 `;
 
+// ExpandableCell component for handling long text
+function ExpandableCell({ text, maxLines = 4 }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!text || text === "None") return <span>None</span>;
+  
+  const lines = text.split(/\r?\n/).flatMap(line => {
+    if (line.length <= 80) return [line];
+    const chunks = [];
+    for (let i = 0; i < line.length; i += 80) {
+      chunks.push(line.slice(i, i + 80));
+    }
+    return chunks;
+  });
+  
+  const isLong = lines.length > maxLines;
+  
+  return (
+    <div style={{ whiteSpace: "pre-line", wordBreak: "break-word", background: "#fff", position: "relative", minHeight: 0 }}>
+      {expanded || !isLong
+        ? lines.join("\n")
+        : lines.slice(0, maxLines).join("\n") + "..."}
+      {isLong && !expanded && (
+        <span
+          style={{ color: "#2563eb", fontWeight: 500, cursor: "pointer", marginLeft: 8 }}
+          onClick={e => { e.stopPropagation(); setExpanded(true); }}
+        > ดูเพิ่มเติม</span>
+      )}
+      {isLong && expanded && (
+        <span
+          style={{ color: "#ef4444", fontWeight: 500, cursor: "pointer", marginLeft: 8 }}
+          onClick={e => { e.stopPropagation(); setExpanded(false); }}
+        > ย่อ</span>
+      )}
+    </div>
+  );
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [data, setData] = useState([]);
@@ -1342,15 +1380,29 @@ function App() {
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
   const [lastError, setLastError] = useState(null);
+  
+  // New state variables for pagination and loading
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const rowsPerPage = 5;
+  
   const { token, user, logout } = useAuth();
 
   const dashboardRef = useRef(null);
   const listRef = useRef(null);
   const chatRef = useRef(null);
+  const socketRef = useRef(null);
+  const selectedUserRef = useRef(selectedUser);
 
   // Add offline mode handling
   const [offlineData, setOfflineData] = useState([]);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
+
+  // Update selectedUserRef when selectedUser changes
+  useEffect(() => {
+    selectedUserRef.current = selectedUser;
+  }, [selectedUser]);
 
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
@@ -1393,6 +1445,117 @@ function App() {
   const scrollToChat = () => {
     chatRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  // Updated fetchData function with loading state
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
+        timeout: 10000, // 10 second timeout
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      setData(Array.isArray(response.data) ? response.data : []);
+      setLastSync(new Date());
+      setBackendStatus('connected');
+      setLastError(null);
+      setRetryCount(0); // Reset retry count on success
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      
+      // Handle different types of errors
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        setBackendStatus('offline');
+        setLastError({
+          status: 'NETWORK',
+          message: 'Network connection failed',
+          details: 'Unable to connect to backend server. Please check your internet connection.'
+        });
+      } else if (error.response) {
+        console.error("Server error:", error.response.status, error.response.data);
+        if (error.response.status === 500) {
+          setBackendStatus('error');
+          setLastError({
+            status: error.response.status,
+            message: error.response.data?.message || 'Database transaction error',
+            details: error.response.data?.error || 'Unknown server error'
+          });
+        } else if (error.response.status === 404) {
+          setBackendStatus('error');
+          setLastError({
+            status: error.response.status,
+            message: 'API endpoint not found',
+            details: 'The requested API endpoint does not exist'
+          });
+        } else {
+          setBackendStatus('error');
+          setLastError({
+            status: error.response.status,
+            message: `HTTP ${error.response.status} Error`,
+            details: error.response.data?.message || 'Server error occurred'
+          });
+        }
+      } else if (error.request) {
+        setBackendStatus('offline');
+        setLastError({
+          status: 'NETWORK',
+          message: 'No response from server',
+          details: 'Backend server may be down or unreachable. Please try again later.'
+        });
+      } else {
+        setBackendStatus('error');
+        setLastError({
+          status: 'ERROR',
+          message: error.message,
+          details: 'Request setup failed'
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Socket.io setup for real-time updates
+  useEffect(() => {
+    const socket = io("https://backend-oa-pqy2.onrender.com");
+    socketRef.current = socket;
+
+    socket.on("refresh_data", fetchData);
+    socket.on("ticket_added", fetchData);
+    socket.on("ticket_updated", fetchData);
+    socket.on("ticket_deleted", fetchData);
+    socket.on("new_message", (data) => {
+      if (selectedUserRef.current && data && data.ticket_id === selectedUserRef.current) {
+        axios.get("https://backend-oa-pqy2.onrender.com/api/messages", { 
+          params: { ticket_id: selectedUserRef.current } 
+        })
+          .then((response) => setMessages(response.data))
+          .catch((err) => console.error("Failed to load messages (new_message):", err));
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [fetchData]);
+
+  // Retry logic with exponential backoff
+  useEffect(() => {
+    const retryInterval = setInterval(() => {
+      if (backendStatus === 'offline' || backendStatus === 'error') {
+        setRetryCount(prev => prev + 1);
+        fetchData();
+      }
+    }, Math.min(30000 * Math.pow(2, retryCount), 300000)); // Max 5 minutes
+    
+    return () => clearInterval(retryInterval);
+  }, [backendStatus, retryCount, fetchData]);
+
   const handleMouseMove = useCallback(
     (e) => {
       if (!isDragging) return;
@@ -1418,97 +1581,6 @@ function App() {
     },
     [notificationPosition.x, notificationPosition.y]
   );
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
-          timeout: 10000, // 10 second timeout
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-        setData(Array.isArray(response.data) ? response.data : []);
-        setLastSync(new Date());
-        setBackendStatus('connected');
-        setLastError(null);
-        setRetryCount(0); // Reset retry count on success
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        
-        // Handle different types of errors
-        if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
-          setBackendStatus('offline');
-          setLastError({
-            status: 'NETWORK',
-            message: 'Network connection failed',
-            details: 'Unable to connect to backend server. Please check your internet connection.'
-          });
-        } else if (error.response) {
-          console.error("Server error:", error.response.status, error.response.data);
-          if (error.response.status === 500) {
-            setBackendStatus('error');
-            setLastError({
-              status: error.response.status,
-              message: error.response.data?.message || 'Database transaction error',
-              details: error.response.data?.error || 'Unknown server error'
-            });
-          } else if (error.response.status === 404) {
-            setBackendStatus('error');
-            setLastError({
-              status: error.response.status,
-              message: 'API endpoint not found',
-              details: 'The requested API endpoint does not exist'
-            });
-          } else {
-            setBackendStatus('error');
-            setLastError({
-              status: error.response.status,
-              message: `HTTP ${error.response.status} Error`,
-              details: error.response.data?.message || 'Server error occurred'
-            });
-          }
-        } else if (error.request) {
-          setBackendStatus('offline');
-          setLastError({
-            status: 'NETWORK',
-            message: 'No response from server',
-            details: 'Backend server may be down or unreachable. Please try again later.'
-          });
-        } else {
-          setBackendStatus('error');
-          setLastError({
-            status: 'ERROR',
-            message: error.message,
-            details: 'Request setup failed'
-          });
-        }
-      }
-    };
-    
-    fetchData();
-    
-    // Retry logic with exponential backoff
-    const retryInterval = setInterval(() => {
-      if (backendStatus === 'offline' || backendStatus === 'error') {
-        setRetryCount(prev => prev + 1);
-        fetchData();
-      }
-    }, Math.min(30000 * Math.pow(2, retryCount), 300000)); // Max 5 minutes
-    
-    return () => clearInterval(retryInterval);
-  }, [backendStatus, retryCount]);
-
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
-      return () => {
-        window.removeEventListener("mousemove", handleMouseMove);
-        window.removeEventListener("mouseup", handleMouseUp);
-      };
-    }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
 
   const getRowColor = (createdAt, status) => {
     // ถ้าสถานะเป็น Completed ให้แสดงสีเขียวทันที
@@ -1681,6 +1753,30 @@ function App() {
     })
     : [];
 
+  // Pagination logic
+  const sortedFilteredData = [...filteredData].sort((a, b) => {
+    const dateA = a["วันที่แจ้ง"] ? new Date(a["วันที่แจ้ง"]) : new Date(0);
+    const dateB = b["วันที่แจ้ง"] ? new Date(b["วันที่แจ้ง"]) : new Date(0);
+    return dateB - dateA;
+  });
+
+  const paginatedData = sortedFilteredData.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
+
+  const totalPages = Math.ceil(sortedFilteredData.length / rowsPerPage);
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, typeFilter, startDate, isDateFilterActive]);
+
   // Get unique types for filter dropdown
   const uniqueTypes = [...new Set(displayData.map((item) => item["Type"] || "None"))];
 
@@ -1816,6 +1912,7 @@ function App() {
     const loadMessages = async () => {
       if (!selectedUser) return;
 
+      setLoadingMessages(true);
       try {
         const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
           params: { ticket_id: selectedUser },
@@ -1831,6 +1928,8 @@ function App() {
         }
       } catch (err) {
         console.error("Failed to load messages:", err);
+      } finally {
+        setLoadingMessages(false);
       }
     };
 
@@ -2645,14 +2744,14 @@ function App() {
                             <TableHeaderCell>วันที่แจ้ง</TableHeaderCell>
                             <TableHeaderCell>สถานะ</TableHeaderCell>
                             <TableHeaderCell>Appointment</TableHeaderCell>
-                            <TableHeaderCell>Requeste</TableHeaderCell>
-                            <TableHeaderCell>Report</TableHeaderCell>
+                            <TableHeaderCell style={{ width: '260px' }}>REQUESTE</TableHeaderCell>
+                            <TableHeaderCell style={{ width: '260px' }}>REPORT</TableHeaderCell>
                             <TableHeaderCell>Type</TableHeaderCell>
                             <TableHeaderCell>Action</TableHeaderCell>
                           </tr>
                         </TableHeader>
                         <tbody>
-                          {filteredData.map((row, i) => {
+                          {paginatedData.map((row, i) => {
                             const rowColor = getRowColor(
                               row["วันที่แจ้ง"],
                               row["สถานะ"]
@@ -2684,8 +2783,12 @@ function App() {
                                   </StatusSelect>
                                 </StatusCell>
                                 <TableCell>{row["Appointment"] || "None"}</TableCell>
-                                <TableCell>{row["Requeste"] || "None"}</TableCell>
-                                <TableCell>{row["Report"] || "None"}</TableCell>
+                                <TableCell>
+                                  <ExpandableCell text={row["Requeste"] || "None"} maxLines={4} />
+                                </TableCell>
+                                <TableCell>
+                                  <ExpandableCell text={row["Report"] || "None"} maxLines={4} />
+                                </TableCell>
                                 <TableCell>{row["Type"] || "None"}</TableCell>
                                 <TableCell>
                                   <button
@@ -2715,6 +2818,67 @@ function App() {
                         </tbody>
                       </StyledTable>
                     </ScrollContainer>
+
+                    {/* Pagination UI */}
+                    {totalPages > 1 && (
+                      <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0', gap: '8px', alignItems: 'center' }}>
+                        <button 
+                          onClick={() => handlePageChange(currentPage - 1)} 
+                          disabled={currentPage === 1}
+                          style={{ 
+                            padding: '8px 16px', 
+                            background: currentPage === 1 ? '#e2e8f0' : '#64748b',
+                            color: currentPage === 1 ? '#94a3b8' : 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          ก่อนหน้า
+                        </button>
+                        {Array.from({ length: totalPages }, (_, idx) => (
+                          <button
+                            key={idx + 1}
+                            onClick={() => handlePageChange(idx + 1)}
+                            style={{
+                              padding: '8px 12px',
+                              background: currentPage === idx + 1 ? '#64748b' : 'white',
+                              color: currentPage === idx + 1 ? 'white' : '#64748b',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              minWidth: '40px'
+                            }}
+                          >
+                            {idx + 1}
+                          </button>
+                        ))}
+                        <button 
+                          onClick={() => handlePageChange(currentPage + 1)} 
+                          disabled={currentPage === totalPages}
+                          style={{ 
+                            padding: '8px 16px', 
+                            background: currentPage === totalPages ? '#e2e8f0' : '#64748b',
+                            color: currentPage === totalPages ? '#94a3b8' : 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          ถัดไป
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Loading indicator */}
+                    {loading && (
+                      <div style={{ textAlign: 'center', margin: '16px', color: '#64748b', fontSize: '0.95rem' }}>
+                        กำลังโหลดข้อมูล...
+                      </div>
+                    )}
                   </TableContainer>
                 </div>
                 <div ref={chatRef}>
@@ -2780,10 +2944,15 @@ function App() {
                       </UserSelect>
                     </UserSelectContainer>
                     <MessagesContainer>
+                      {loadingMessages && (
+                        <div style={{ textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+                          กำลังโหลดข้อความ...
+                        </div>
+                      )}
                       {messages.map((msg) => (
                         <Message key={msg.id} $isAI={!msg.is_admin_message}>
                           <div style={{ fontWeight: "bold" }}>{msg.sender_name}</div>
-                          {msg.message}
+                          <ExpandableCell text={msg.message} />
                           <MessageTime $isAI={!msg.is_admin_message}>
                             {new Date(msg.timestamp).toLocaleTimeString()}
                           </MessageTime>
