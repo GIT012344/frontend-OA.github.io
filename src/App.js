@@ -1365,6 +1365,63 @@ function ExpandableCell({ text, maxLines = 4 }) {
   );
 }
 
+// Dashboard styled components ใหม่
+const SummaryCard = styled(StatCard)`
+  grid-column: span 2;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+`;
+const SummaryList = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 8px;
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-track { background: rgba(241,245,249,0.5); border-radius: 3px; }
+  &::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.3); border-radius: 3px; }
+`;
+const SummaryItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #e2e8f0;
+  align-items: center;
+`;
+const DayTitle = styled.div`
+  font-weight: 600;
+  color: #1e293b;
+`;
+const TicketCountBadge = styled.span`
+  background: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+`;
+const AlertCard = styled(StatCard)`
+  background: ${props => props.$alert ? '#ffebee' : 'white'};
+  border-left: ${props => props.$alert ? '4px solid #ef4444' : 'none'};
+`;
+const AlertTitle = styled.div`
+  color: ${props => props.$alert ? '#ef4444' : '#1e293b'};
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  &::before {
+    content: "${props => props.$alert ? '⚠️' : ''}";
+  }
+`;
+const AlertItem = styled.div`
+  padding: 8px 0;
+  border-bottom: 1px dashed #e2e8f0;
+  font-size: 0.875rem;
+  color: ${props => props.$alert ? '#ef4444' : '#64748b'};
+  &:last-child { border-bottom: none; }
+`;
+
 function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [data, setData] = useState([]);
@@ -1689,8 +1746,6 @@ function App() {
           console.error("Request setup error:", error.message);
         }
         
-        // Keep existing notifications if fetch fails
-        // Don't clear notifications on network error
       }
     };
 
