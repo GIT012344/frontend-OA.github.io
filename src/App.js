@@ -1476,6 +1476,91 @@ const UserTicketCount = styled.div`
   color: #475569;
 `;
 
+// Styled input สำหรับ inline edit
+const EditInput = styled.input`
+  padding: 8px 12px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: #f8fafc;
+  transition: border 0.2s;
+  width: 100%;
+  &:focus {
+    outline: none;
+    border-color: #2563eb;
+    background: #fff;
+  }
+`;
+const EditTextarea = styled.textarea`
+  padding: 8px 12px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: #f8fafc;
+  transition: border 0.2s;
+  width: 100%;
+  min-height: 40px;
+  max-height: 120px;
+  resize: vertical;
+  &:focus {
+    outline: none;
+    border-color: #2563eb;
+    background: #fff;
+  }
+`;
+const EditSelect = styled.select`
+  padding: 8px 12px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: #f8fafc;
+  transition: border 0.2s;
+  width: 100%;
+  &:focus {
+    outline: none;
+    border-color: #2563eb;
+    background: #fff;
+  }
+`;
+const SaveButton = styled.button`
+  background: linear-gradient(90deg, #10b981, #34d399);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 600;
+  margin-right: 6px;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(16,185,129,0.08);
+  &:hover { background: #059669; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+const CancelButton = styled.button`
+  background: #64748b;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  &:hover { background: #334155; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+const EditButton = styled.button`
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 600;
+  margin-right: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+  &:hover { background: #1d4ed8; }
+`;
+
 function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [data, setData] = useState([]);
@@ -2324,22 +2409,24 @@ function App() {
       dailySummary[dateKey] = {
         date: date,
         count: 0,
-        pending: 0,
-        inProgress: 0,
-        completed: 0
+        New: 0,
+        'In Progress': 0,
+        Pending: 0,
+        Closed: 0,
+        Cancelled: 0,
+        'On Hold': 0,
+        Rejected: 0,
       };
     }
     data.forEach(ticket => {
       if (!ticket["วันที่แจ้ง"]) return;
       const ticketDate = new Date(ticket["วันที่แจ้ง"]).toISOString().split('T')[0];
+      let status = ticket["สถานะ"];
+      if (status === "Completed" || status === "Complete") status = "Closed";
       if (dailySummary[ticketDate]) {
         dailySummary[ticketDate].count++;
-        if (ticket["สถานะ"] === "Pending") {
-          dailySummary[ticketDate].pending++;
-        } else if (ticket["สถานะ"] === "In Progress") {
-          dailySummary[ticketDate].inProgress++;
-        } else if (ticket["สถานะ"] === "Completed") {
-          dailySummary[ticketDate].completed++;
+        if (dailySummary[ticketDate][status] !== undefined) {
+          dailySummary[ticketDate][status]++;
         }
       }
     });
@@ -2348,19 +2435,22 @@ function App() {
   const getBasicStats = () => {
     const stats = {
       total: data.length,
-      pending: 0,
-      inProgress: 0,
+      New: 0,
+      'In Progress': 0,
+      Pending: 0,
+      Closed: 0,
+      Cancelled: 0,
+      'On Hold': 0,
+      Rejected: 0,
       avgResolutionTime: 0
     };
     let totalResolutionTime = 0;
     let resolvedCount = 0;
     data.forEach(ticket => {
-      if (ticket["สถานะ"] === "Pending") {
-        stats.pending++;
-      } else if (ticket["สถานะ"] === "In Progress") {
-        stats.inProgress++;
-      }
-      if (ticket["สถานะ"] === "Completed" && ticket["วันที่แจ้ง"]) {
+      let status = ticket["สถานะ"];
+      if (status === "Completed" || status === "Complete") status = "Closed";
+      if (stats[status] !== undefined) stats[status]++;
+      if (status === "Closed" && ticket["วันที่แจ้ง"]) {
         const created = new Date(ticket["วันที่แจ้ง"]);
         const now = new Date();
         totalResolutionTime += (now - created) / (1000 * 60 * 60);
@@ -2689,17 +2779,13 @@ function App() {
                                 month: "short"
                               })}
                             </DayTitle>
-                            <div style={{ display: 'flex', gap: '8px' }}>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                               <TicketCountBadge title="ทั้งหมด">{day.count} Tickets</TicketCountBadge>
-                              <TicketCountBadge title="Pending" style={{ background: '#ffebee', color: '#ef4444' }}>
-                                {day.pending}
-                              </TicketCountBadge>
-                              <TicketCountBadge title="In Progress" style={{ background: '#fff3e0', color: '#f59e0b' }}>
-                                {day.inProgress}
-                              </TicketCountBadge>
-                              <TicketCountBadge title="Completed" style={{ background: '#e6f7ee', color: '#10b981' }}>
-                                {day.completed}
-                              </TicketCountBadge>
+                              {STATUS_OPTIONS.map(opt => (
+                                <TicketCountBadge key={opt.value} title={opt.label} style={{ background: opt.color, color: opt.value === 'Closed' ? '#fff' : '#222' }}>
+                                  {day[opt.value] || 0} {opt.label}
+                                </TicketCountBadge>
+                              ))}
                             </div>
                           </SummaryItem>
                         ))}
@@ -2714,16 +2800,14 @@ function App() {
                           <span>ทั้งหมด:</span>
                           <span style={{ fontWeight: '600' }}>{getBasicStats().total}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                          <span>Pending:</span>
-                          <span style={{ fontWeight: '600', color: '#ef4444' }}>{getBasicStats().pending}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                          <span>In Progress:</span>
-                          <span style={{ fontWeight: '600', color: '#f59e0b' }}>{getBasicStats().inProgress}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>เวลาเฉลี่ยในการแก้ไข:</span>
+                        {STATUS_OPTIONS.map(opt => (
+                          <div key={opt.value} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <span>{opt.label}:</span>
+                            <span style={{ fontWeight: '600', color: opt.color }}>{getBasicStats()[opt.value]}</span>
+                          </div>
+                        ))}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
+                          <span>เวลาเฉลี่ยในการแก้ไข (เฉพาะ Closed):</span>
                           <span style={{ fontWeight: '600' }}>
                             {getBasicStats().avgResolutionTime > 0 
                               ? `${getBasicStats().avgResolutionTime} ชั่วโมง` 
@@ -3015,72 +3099,72 @@ function App() {
                                 <TableCell>{row["Ticket ID"] || "None"}</TableCell>
                                 <TableCell>
                                   {isEditing ? (
-                                    <input type="text" value={editForm.email} onChange={e => handleEditFormChange("email", e.target.value)} disabled={editLoading} />
+                                    <EditInput type="text" value={editForm.email} onChange={e => handleEditFormChange("email", e.target.value)} disabled={editLoading} />
                                   ) : (row["อีเมล"] || "None")}
                                 </TableCell>
                                 <TableCell>
                                   {isEditing ? (
-                                    <input type="text" value={editForm.name} onChange={e => handleEditFormChange("name", e.target.value)} disabled={editLoading} />
+                                    <EditInput type="text" value={editForm.name} onChange={e => handleEditFormChange("name", e.target.value)} disabled={editLoading} />
                                   ) : (row["ชื่อ"] || "None")}
                                 </TableCell>
                                 <TableCell>
                                   {isEditing ? (
-                                    <input type="text" value={editForm.phone} onChange={e => handleEditFormChange("phone", e.target.value)} disabled={editLoading} />
+                                    <EditInput type="text" value={editForm.phone} onChange={e => handleEditFormChange("phone", e.target.value)} disabled={editLoading} />
                                   ) : (row["เบอร์ติดต่อ"] || "None")}
                                 </TableCell>
                                 <TableCell>
                                   {isEditing ? (
-                                    <input type="text" value={editForm.department} onChange={e => handleEditFormChange("department", e.target.value)} disabled={editLoading} />
+                                    <EditInput type="text" value={editForm.department} onChange={e => handleEditFormChange("department", e.target.value)} disabled={editLoading} />
                                   ) : (row["แผนก"] || "None")}
                                 </TableCell>
                                 <TableCell>
                                   {isEditing ? (
-                                    <input type="text" value={editForm.date} onChange={e => handleEditFormChange("date", e.target.value)} disabled={editLoading} />
+                                    <EditInput type="text" value={editForm.date} onChange={e => handleEditFormChange("date", e.target.value)} disabled={editLoading} />
                                   ) : (row["วันที่แจ้ง"] || "None")}
                                 </TableCell>
                                 <StatusCell title={row["สถานะ"] || "None"}>
                                   {isEditing ? (
-                                    <select value={editForm.status} onChange={e => handleEditFormChange("status", e.target.value)} disabled={editLoading}>
+                                    <EditSelect value={editForm.status} onChange={e => handleEditFormChange("status", e.target.value)} disabled={editLoading}>
                                       {STATUS_OPTIONS.map(opt => (
                                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                                       ))}
-                                    </select>
+                                    </EditSelect>
                                   ) : (
                                     row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None"
                                   )}
                                 </StatusCell>
                                 <TableCell>
                                   {isEditing ? (
-                                    <input type="text" value={editForm.appointment} onChange={e => handleEditFormChange("appointment", e.target.value)} disabled={editLoading} />
+                                    <EditInput type="text" value={editForm.appointment} onChange={e => handleEditFormChange("appointment", e.target.value)} disabled={editLoading} />
                                   ) : (row["Appointment"] || "None")}
                                 </TableCell>
                                 <TableCell>
                                   {isEditing ? (
-                                    <textarea value={editForm.request} onChange={e => handleEditFormChange("request", e.target.value)} disabled={editLoading} />
+                                    <EditTextarea value={editForm.request} onChange={e => handleEditFormChange("request", e.target.value)} disabled={editLoading} />
                                   ) : <ExpandableCell text={row["Requeste"] || "None"} maxLines={4} />}
                                 </TableCell>
                                 <TableCell>
                                   {isEditing ? (
-                                    <textarea value={editForm.report} onChange={e => handleEditFormChange("report", e.target.value)} disabled={editLoading} />
+                                    <EditTextarea value={editForm.report} onChange={e => handleEditFormChange("report", e.target.value)} disabled={editLoading} />
                                   ) : <ExpandableCell text={row["Report"] || "None"} maxLines={4} />}
                                 </TableCell>
                                 <TableCell>
                                   {isEditing ? (
-                                    <input type="text" value={editForm.type} onChange={e => handleEditFormChange("type", e.target.value)} disabled={editLoading} />
+                                    <EditInput type="text" value={editForm.type} onChange={e => handleEditFormChange("type", e.target.value)} disabled={editLoading} />
                                   ) : (row["Type"] || "None")}
                                 </TableCell>
                                 <TableCell>
                                   {isEditing ? (
                                     <>
-                                      <button onClick={() => handleSaveEdit(row["Ticket ID"])} disabled={editLoading} style={{ background: "#10b981", color: "white", marginRight: 4 }}>Save</button>
-                                      <button onClick={handleCancelEdit} disabled={editLoading} style={{ background: "#64748b", color: "white" }}>Cancel</button>
+                                      <SaveButton onClick={() => handleSaveEdit(row["Ticket ID"])} disabled={editLoading}>Save</SaveButton>
+                                      <CancelButton onClick={handleCancelEdit} disabled={editLoading}>Cancel</CancelButton>
                                     </>
                                   ) : (
                                     <>
-                                      <button onClick={() => handleEditTicket(row)} style={{ background: "#2563eb", color: "white", marginRight: 4 }}>Edit</button>
+                                      <EditButton onClick={() => handleEditTicket(row)}>Edit</EditButton>
                                       <button
                                         onClick={() => handleDeleteTicket(row["Ticket ID"])}
-                                        style={{ background: "#ef4444", color: "white" }}
+                                        style={{ background: "#ef4444", color: "white", borderRadius: 8, padding: '8px 16px', fontWeight: 600 }}
                                         onMouseOver={e => (e.target.style.opacity = "0.8")}
                                         onMouseOut={e => (e.target.style.opacity = "1")}
                                       >
