@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import ChatComponent from './ChatComponent';
 
 const TicketDetail = ({ ticketId }) => {
   const [ticket, setTicket] = useState(null);
@@ -10,7 +9,7 @@ const TicketDetail = ({ ticketId }) => {
     const fetchTicket = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`https://your-backend-url/api/ticket/${ticketId}`);
+        const response = await axios.get(`https://backend-oa-pqy2.onrender.com/api/ticket/${ticketId}`);
         setTicket(response.data);
       } catch (error) {
         console.error('Error fetching ticket:', error);
@@ -33,10 +32,10 @@ const TicketDetail = ({ ticketId }) => {
       <p>Status: {ticket.status}</p>
       <p>Name: {ticket.name}</p>
       <p>Department: {ticket.department}</p>
-      {/* ส่วนแสดงประวัติการสนทนา */}
+      {/* Chat functionality is now available in the main dashboard */}
       <div className="chat-section">
-        <h3>Conversation History</h3>
-        <ChatComponent ticketId={ticketId} />
+        <h3>Ticket Information</h3>
+        <p>Use the Chat tab in the main dashboard to communicate with users.</p>
       </div>
     </div>
   );

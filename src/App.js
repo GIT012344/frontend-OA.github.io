@@ -1481,8 +1481,6 @@ function App() {
   const [data, setData] = useState([]);
   const [textboxInputs, setTextboxInputs] = useState({}); // eslint-disable-line no-unused-vars
   const [lastSync, setLastSync] = useState(null);
-  const [selectedUser, setSelectedUser] = useState("");
-  const [chatMessage, setChatMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -1497,8 +1495,6 @@ function App() {
   });
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
-  const [messages, setMessages] = useState([]);
-  const [adminId] = useState("admin01");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarHover, setSidebarHover] = useState(false);
   const [backendStatus, setBackendStatus] = useState('connected'); // 'connected', 'error', 'offline'
@@ -1509,15 +1505,23 @@ function App() {
   // New state variables for pagination and loading
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [loadingMessages, setLoadingMessages] = useState(false);
   const rowsPerPage = 5;
+  
+  // New Chat System State
+  const [selectedChatUser, setSelectedChatUser] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [loadingChat, setLoadingChat] = useState(false);
+  const [chatUsers, setChatUsers] = useState([]);
+  
+  // Announcement System State (preserved)
+  const [announcementMessage, setAnnouncementMessage] = useState("");
   
   const { token, user, logout } = useAuth();
 
   const dashboardRef = useRef(null);
   const listRef = useRef(null);
   const chatRef = useRef(null);
-  const selectedUserRef = useRef(selectedUser);
 
   // Add offline mode handling
   const [offlineData, setOfflineData] = useState([]);
@@ -1528,11 +1532,6 @@ function App() {
 
   // เพิ่ม state สำหรับควบคุมการแสดงอันดับผู้ใช้
   const [showAllRankings, setShowAllRankings] = useState(false);
-
-  // Update selectedUserRef when selectedUser changes
-  useEffect(() => {
-    selectedUserRef.current = selectedUser;
-  }, [selectedUser]);
 
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
@@ -1927,15 +1926,19 @@ function App() {
       .catch((err) => console.error("❌ Failed to update status:", err));
   };
 
-  // Handle user selection
+  // Remove old chat functions and replace with new chat system
   const handleUserSelect = (e) => {
-    setSelectedUser(e.target.value);
-    // Load existing message if any
-    if (e.target.value) {
-      const ticket = data.find((item) => item["Ticket ID"] === e.target.value);
-      setChatMessage(ticket?.TEXTBOX || "");
+    const selectedValue = e.target.value;
+    if (selectedValue === "announcement") {
+      setSelectedChatUser("announcement");
+      setAnnouncementMessage("");
     } else {
-      setChatMessage("");
+      setSelectedChatUser(selectedValue);
+      setNewMessage("");
+      // Load chat messages for selected user
+      if (selectedValue) {
+        loadChatMessages(selectedValue);
+      }
     }
   };
 
@@ -1982,183 +1985,156 @@ function App() {
     }
   };
 
-  const handleClearChat = async () => {
-    if (!selectedUser) return;
+  // New Chat Functions
+  const loadChatMessages = async (userId) => {
+    if (!userId || userId === "announcement") return;
+    
+    setLoadingChat(true);
+    try {
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
+        params: { user_id: userId }
+      });
+      setChatMessages(response.data || []);
+    } catch (error) {
+      console.error("Failed to load chat messages:", error);
+      setChatMessages([]);
+    } finally {
+      setLoadingChat(false);
+    }
+  };
+
+  const sendChatMessage = async () => {
+    if (!selectedChatUser || !newMessage.trim() || selectedChatUser === "announcement") return;
+
+    try {
+      setLoadingChat(true);
+      const response = await axios.post("https://backend-oa-pqy2.onrender.com/api/messages", {
+        user_id: selectedChatUser,
+        admin_id: user?.id || "admin01",
+        sender_name: "Admin",
+        message: newMessage,
+        is_admin_message: true,
+        timestamp: new Date().toISOString()
+      });
+
+      // Add new message to local state
+      setChatMessages(prev => [...prev, {
+        id: response.data.id || Date.now(),
+        user_id: selectedChatUser,
+        admin_id: user?.id || "admin01",
+        sender_name: "Admin",
+        message: newMessage,
+        is_admin_message: true,
+        timestamp: new Date().toISOString()
+      }]);
+
+      setNewMessage("");
+    } catch (error) {
+      console.error("Failed to send chat message:", error);
+      alert("Failed to send message. Please try again.");
+    } finally {
+      setLoadingChat(false);
+    }
+  };
+
+  const clearChatHistory = async () => {
+    if (!selectedChatUser || selectedChatUser === "announcement") return;
 
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบประวัติการสนทนาทั้งหมด?")) {
       try {
-        // ลบข้อความทั้งหมดในตาราง messages ที่เกี่ยวข้องกับ ticket_id นี้
-        await axios.post(
-          "https://backend-oa-pqy2.onrender.com/api/messages/delete",
-          {
-            ticket_id: selectedUser,
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        // อัปเดต state เพื่อลบข้อความออกจาก UI
-        setMessages([]);
-
-        // อัปเดต textbox ในตาราง tickets เป็นค่าว่าง
-        await axios.post(
-          "https://backend-oa-pqy2.onrender.com/update-textbox",
-          {
-            ticket_id: selectedUser,
-            textbox: "",
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        // อัปเดต local state
-        setChatMessage("");
+        await axios.post("https://backend-oa-pqy2.onrender.com/api/messages/delete", {
+          user_id: selectedChatUser
+        });
+        setChatMessages([]);
         alert("ลบประวัติการสนทนาสำเร็จ");
-      } catch (err) {
-        console.error("❌ Failed to clear messages:", err);
+      } catch (error) {
+        console.error("Failed to clear chat history:", error);
         alert("เกิดข้อผิดพลาดในการลบประวัติการสนทนา");
       }
     }
   };
 
-  useEffect(() => {
-    const loadMessages = async () => {
-      if (!selectedUser) return;
+  // Announcement Functions (preserved)
+  const sendAnnouncement = async () => {
+    if (!announcementMessage.trim()) return;
 
-      setLoadingMessages(true);
-      try {
-        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
-          params: { user_id: selectedUser } // Changed from ticket_id to user_id
-        });
-        setMessages(response.data);
-
-        // Mark messages as read
-        if (response.data.length > 0) {
-          await axios.post("https://backend-oa-pqy2.onrender.com/api/messages/mark-read", {
-            user_id: selectedUser,
-            admin_id: adminId
-          });
-        }
-      } catch (err) {
-        console.error("Failed to load messages:", err);
-      } finally {
-        setLoadingMessages(false);
-      }
-    };
-
-    loadMessages();
-  }, [selectedUser, adminId]);
-
-  const handleChatSubmit = async () => {
-    if (!selectedUser || !chatMessage.trim()) return;
-
-    if (selectedUser === "announcement") {
-      if (
-        !window.confirm(
-          "คุณแน่ใจหรือไม่ว่าต้องการส่งประกาศนี้ไปยังสมาชิกทั้งหมด?"
-        )
-      ) {
-        return;
-      }
-
-      try {
-        const response = await axios.post(
-          "https://backend-oa-pqy2.onrender.com/send-announcement",
-          { message: chatMessage },
-          { headers: { "Content-Type": "application/json" } }
-        );
-
-        if (response.data.success) {
-          alert(`ส่งประกาศสำเร็จไปยัง ${response.data.recipient_count} คน`);
-          setChatMessage("");
-
-          setNotifications((prev) => [
-            {
-              id: Date.now(),
-              message: `ประกาศใหม่: ${chatMessage}`,
-              timestamp: new Date().toISOString(),
-              read: false,
-            },
-            ...prev,
-          ]);
-          setHasUnread(true);
-        } else {
-          alert("เกิดข้อผิดพลาดในการส่งประกาศ");
-        }
-      } catch (err) {
-        console.error("❌ Failed to send announcement:", err);
-        alert("เกิดข้อผิดพลาดในการส่งประกาศ");
-      }
+    if (!window.confirm("คุณแน่ใจหรือไม่ว่าต้องการส่งประกาศนี้ไปยังสมาชิกทั้งหมด?")) {
       return;
     }
 
     try {
-      // 1. อัปเดต Textbox
-      await axios.post(
-        "https://backend-oa-pqy2.onrender.com/update-textbox",
-        {
-          ticket_id: selectedUser,
-          textbox: chatMessage,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
+      const response = await axios.post(
+        "https://backend-oa-pqy2.onrender.com/send-announcement",
+        { message: announcementMessage },
+        { headers: { "Content-Type": "application/json" } }
+      );
+
+      if (response.data.success) {
+        alert(`ส่งประกาศสำเร็จไปยัง ${response.data.recipient_count} คน`);
+        setAnnouncementMessage("");
+
+        setNotifications((prev) => [
+          {
+            id: Date.now(),
+            message: `ประกาศใหม่: ${announcementMessage}`,
+            timestamp: new Date().toISOString(),
+            read: false,
           },
-        }
-      );
-
-      // 2. เพิ่มข้อความใหม่ในระบบ messages
-      const messageResponse = await axios.post(
-        "https://backend-oa-pqy2.onrender.com/api/messages",
-        {
-          ticket_id: selectedUser,
-          admin_id: adminId,
-          sender_name: "Admin",
-          message: chatMessage,
-          is_admin_message: true,
-        }
-      );
-
-      setChatMessage("");
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: messageResponse.data.id,
-          ticket_id: selectedUser,
-          admin_id: adminId,
-          sender_name: "Admin",
-          message: chatMessage,
-          timestamp: messageResponse.data.timestamp,
-          is_read: true,
-          is_admin_message: true,
-        },
-      ]);
-
-      // 4. Clear the textbox in the database
-      await axios.post(
-        "https://backend-oa-pqy2.onrender.com/update-textbox",
-        {
-          ticket_id: selectedUser,
-          textbox: "",
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+          ...prev,
+        ]);
+        setHasUnread(true);
+      } else {
+        alert("เกิดข้อผิดพลาดในการส่งประกาศ");
+      }
     } catch (err) {
-      console.error("❌ Failed to send message:", err);
-      alert("เกิดข้อผิดพลาดในการส่งข้อความ");
+      console.error("❌ Failed to send announcement:", err);
+      alert("เกิดข้อผิดพลาดในการส่งประกาศ");
     }
   };
+
+  // Load chat users from ticket data
+  useEffect(() => {
+    if (data.length > 0) {
+      const users = Array.from(new Set(data.map(item => item["user_id"])))
+        .filter(user_id => user_id)
+        .map(user_id => {
+          const userTicket = data.find(item => item["user_id"] === user_id);
+          return {
+            id: user_id,
+            email: userTicket["อีเมล"] || "No Email",
+            name: userTicket["ชื่อ"] || "No Name"
+          };
+        });
+      setChatUsers(users);
+    }
+  }, [data]);
+
+  // Polling for new messages
+  useEffect(() => {
+    if (!selectedChatUser || selectedChatUser === "announcement") return;
+
+    const pollMessages = async () => {
+      try {
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
+          params: { user_id: selectedChatUser }
+        });
+        
+        if (response.data && Array.isArray(response.data)) {
+          setChatMessages(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to poll messages:", error);
+      }
+    };
+
+    // Poll immediately
+    pollMessages();
+    
+    // Set up polling every 3 seconds
+    const interval = setInterval(pollMessages, 3000);
+    
+    return () => clearInterval(interval);
+  }, [selectedChatUser]);
 
   // Format last sync time
   const formatLastSync = () => {
@@ -2243,23 +2219,7 @@ function App() {
     }
   };
 
-  const handleRefreshChat = async () => {
-    if (!selectedUser) return;
 
-    try {
-      const response = await axios.post(
-        "https://backend-oa-pqy2.onrender.com/refresh-messages",
-        {
-          ticket_id: selectedUser,
-          admin_id: adminId,
-        }
-      );
-
-      setMessages(response.data.messages);
-    } catch (err) {
-      console.error("Failed to refresh messages:", err);
-    }
-  };
 
   // Export functions using native browser APIs
   const exportToCSV = () => {
@@ -2449,45 +2409,6 @@ function App() {
     const rankings = getUserRankings();
     return showAllRankings ? rankings : rankings.slice(0, 5);
   };
-
-  // --- Chat polling for real-time updates ---
-  useEffect(() => {
-    const pollMessages = async () => {
-      if (!selectedUser || selectedUser === "announcement") return;
-      setLoadingMessages(true);
-      try {
-        const response = await axios.get(
-          "https://backend-oa-pqy2.onrender.com/api/messages",
-          { params: { user_id: selectedUser } }
-        );
-        setMessages(response.data);
-        if (response.data.length > 0) {
-          await axios.post(
-            "https://backend-oa-pqy2.onrender.com/api/messages/mark-read",
-            {
-              user_id: selectedUser,
-              admin_id: adminId
-            }
-          );
-        }
-      } catch (err) {
-        console.error("Failed to poll messages:", err);
-        if (selectedUser !== "announcement") {
-          setBackendStatus('error');
-          setLastError({
-            status: err.response?.status || 'NETWORK',
-            message: err.response?.data?.error || err.message,
-            details: 'Failed to fetch messages'
-          });
-        }
-      } finally {
-        setLoadingMessages(false);
-      }
-    };
-    pollMessages();
-    const interval = setInterval(pollMessages, 5000); // Poll every 5 seconds
-    return () => clearInterval(interval);
-  }, [selectedUser, adminId]);
 
   return (
     <Router>
@@ -2997,7 +2918,6 @@ function App() {
                                 $isSelected={selectedTicket === row["Ticket ID"]}
                                 onClick={() => {
                                   setSelectedTicket(row["Ticket ID"]);
-                                  setSelectedUser(row["Ticket ID"]);
                                 }}
                               >
                                 <TableCell>{row["Ticket ID"] || "None"}</TableCell>
@@ -3129,103 +3049,109 @@ function App() {
                       <div
                         style={{ display: "flex", alignItems: "center", gap: "12px" }}
                       >
-                        <ChatTitle>Admin</ChatTitle>
-                        <button
-                          onClick={handleRefreshChat}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            padding: "6px",
-                            borderRadius: "50%",
-                            transition: "all 0.2s ease",
-                          }}
-                          title="Refresh Chat"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="#64748b"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M21.5 2v6h-6M2.5 22v-6h6M22 11.5A10 10 0 0 0 9.004 3.5M2 12.5a10 10 0 0 0 13 8.5" />
-                          </svg>
-                        </button>
+                        <ChatTitle>Admin Chat</ChatTitle>
                       </div>
                       <ChatStatus>Online</ChatStatus>
                     </ChatHeader>
 
                     <UserSelectContainer>
-                      <UserSelect value={selectedUser} onChange={handleUserSelect}>
-                        <option value="">-- Select User --</option>
+                      <UserSelect value={selectedChatUser || ""} onChange={handleUserSelect}>
+                        <option value="">-- Select User to Chat --</option>
                         <option value="announcement">
                           📢 Announcement to All Members
                         </option>
-                        {Array.from(new Set(data.map(item => item["user_id"])))
-                          .filter(user_id => user_id)
-                          .map(user_id => {
-                            const userTicket = data.find(item => item["user_id"] === user_id);
-                            return (
-                              <option key={user_id} value={user_id}>
-                                {userTicket["อีเมล"] || "No Email"} ({userTicket["ชื่อ"] || "No Name"})
-                              </option>
-                            );
-                          })}
+                        {chatUsers.map((chatUser) => (
+                          <option key={chatUser.id} value={chatUser.id}>
+                            {chatUser.email} ({chatUser.name})
+                          </option>
+                        ))}
                       </UserSelect>
                     </UserSelectContainer>
-                    <MessagesContainer>
-                      {loadingMessages && (
-                        <div style={{ textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
-                          Loading messages...
+                    
+                    {selectedChatUser === "announcement" ? (
+                      // Announcement UI
+                      <div>
+                        <div style={{ padding: "20px", textAlign: "center", color: "#64748b" }}>
+                          <h3>📢 Send Announcement to All Members</h3>
+                          <p>This message will be sent to all registered users.</p>
                         </div>
-                      )}
-                      {messages.length === 0 && !loadingMessages && (
-                        <div style={{ textAlign: 'center', color: '#64748b' }}>
-                          No messages yet
+                        <InputContainer>
+                          <InputWrapper>
+                            <ChatTextArea
+                              value={announcementMessage}
+                              onChange={(e) => setAnnouncementMessage(e.target.value)}
+                              placeholder="Type your announcement here..."
+                            />
+                            <SendButton onClick={sendAnnouncement}>
+                              Send Announcement
+                            </SendButton>
+                          </InputWrapper>
+                        </InputContainer>
+                      </div>
+                    ) : selectedChatUser ? (
+                      // Chat UI
+                      <>
+                        <MessagesContainer>
+                          {loadingChat && (
+                            <div style={{ textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+                              Loading messages...
+                            </div>
+                          )}
+                          {chatMessages.length === 0 && !loadingChat && (
+                            <div style={{ textAlign: 'center', color: '#64748b' }}>
+                              No messages yet. Start the conversation!
+                            </div>
+                          )}
+                          {chatMessages.map((msg) => (
+                            <MessageBubble 
+                              key={msg.id} 
+                              $isAdmin={msg.is_admin_message}
+                            >
+                              <MessageSender $isAdmin={msg.is_admin_message}>
+                                {msg.is_admin_message ? 'Admin' : msg.sender_name || 'User'}
+                              </MessageSender>
+                              <div>{msg.message}</div>
+                              <MessageTimeStyled $isAdmin={msg.is_admin_message}>
+                                {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
+                              </MessageTimeStyled>
+                            </MessageBubble>
+                          ))}
+                        </MessagesContainer>
+                        <InputContainer>
+                          <InputWrapper>
+                            <ChatTextArea
+                              value={newMessage}
+                              onChange={(e) => setNewMessage(e.target.value)}
+                              placeholder="Type your message here..."
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  sendChatMessage();
+                                }
+                              }}
+                            />
+                            <ClearButton onClick={clearChatHistory}>Clear History</ClearButton>
+                            <SendButton onClick={sendChatMessage} disabled={!newMessage.trim()}>
+                              Send
+                            </SendButton>
+                          </InputWrapper>
+                        </InputContainer>
+                      </>
+                    ) : (
+                      // No user selected
+                      <div style={{ 
+                        padding: "40px", 
+                        textAlign: "center", 
+                        color: "#64748b",
+                        fontSize: "1.1rem"
+                      }}>
+                        <div style={{ marginBottom: "16px" }}>
+                          💬 Select a user from the dropdown above to start chatting
                         </div>
-                      )}
-                      {messages.map((msg) => (
-                        <MessageBubble 
-                          key={msg.id} 
-                          $isAdmin={msg.is_admin_message}
-                        >
-                          <MessageSender $isAdmin={msg.is_admin_message}>
-                            {msg.is_admin_message ? 'Admin' : msg.sender_name || 'User'}
-                          </MessageSender>
-                          <div>{msg.message}</div>
-                          <MessageTimeStyled $isAdmin={msg.is_admin_message}>
-                            {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
-                          </MessageTimeStyled>
-                        </MessageBubble>
-                      ))}
-                    </MessagesContainer>
-                    {selectedUser && (
-                      <InputContainer>
-                        <InputWrapper>
-                          <ChatTextArea
-                            value={chatMessage}
-                            onChange={(e) => setChatMessage(e.target.value)}
-                            placeholder={
-                              selectedUser === "announcement"
-                                ? "Type your announcement here..."
-                                : "Type your message here..."
-                            }
-                          />
-                          <ClearButton onClick={handleClearChat}>Clear</ClearButton>
-                          <SendButton onClick={handleChatSubmit}>
-                            {selectedUser === "announcement"
-                              ? "Send Announcement"
-                              : "Send"}
-                          </SendButton>
-                        </InputWrapper>
-                      </InputContainer>
+                        <div style={{ fontSize: "0.9rem", opacity: 0.7 }}>
+                          Or choose "Announcement" to send a message to all members
+                        </div>
+                      </div>
                     )}
                   </ChatContainer>
                 </div>

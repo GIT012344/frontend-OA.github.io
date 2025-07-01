@@ -63,9 +63,9 @@ export const testConnection = async () => {
 
 export default apiClient;
 
-export const fetchMessages = async (ticketId) => {
+export const fetchMessages = async (userId) => {
   const response = await apiClient.get('/api/messages', {
-    params: { ticket_id: ticketId }
+    params: { user_id: userId }
   });
   return response.data;
 };
