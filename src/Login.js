@@ -188,10 +188,8 @@ function Login() {
         </PinHint>
         
         <TestPins>
-          <TestPinsTitle>🔑 รหัส PIN สำหรับทดสอบ:</TestPinsTitle>
-          <TestPinItem>• 123456 - ผู้ดูแลระบบ (Admin) - ใช้งานได้</TestPinItem>
-          <TestPinItem>• 654321 - ผู้ใช้งานทั่วไป (User)</TestPinItem>
-          <TestPinItem>• 111111 - ผู้ทดสอบ (Test)</TestPinItem>
+          <TestPinsTitle>🔑 รหัส PIN สำหรับเข้าสู่ระบบ:</TestPinsTitle>
+          <TestPinItem>• ****** - ผู้ดูแลระบบ (Admin)</TestPinItem>
         </TestPins>
       </LoginForm>
     </LoginContainer>

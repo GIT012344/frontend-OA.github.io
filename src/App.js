@@ -1561,6 +1561,33 @@ const ActionButtonGroup = styled.div`
   gap: 10px;
 `;
 
+const EditButton = styled.button`
+  background: linear-gradient(90deg, #60a5fa, #3b82f6);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(59,130,246,0.08);
+  transition: background 0.2s;
+  &:hover { background: #2563eb; }
+`;
+const DeleteButton = styled.button`
+  background: #fee2e2;
+  color: #ef4444;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(239,68,68,0.08);
+  transition: background 0.2s;
+  &:hover { background: #fecaca; color: #b91c1c; }
+`;
+
 function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [data, setData] = useState([]);
