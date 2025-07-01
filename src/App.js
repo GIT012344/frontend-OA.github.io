@@ -2008,30 +2008,33 @@ function App() {
 
     try {
       setLoadingChat(true);
-      const response = await axios.post("https://backend-oa-pqy2.onrender.com/api/messages", {
+      const payload = {
         user_id: selectedChatUser,
-        admin_id: user?.id || "admin01",
-        sender_name: "Admin",
-        message: newMessage,
-        is_admin_message: true,
-        timestamp: new Date().toISOString()
-      });
+        sender_type: 'admin', // ต้องเป็น 'admin' (ตัวเล็ก)
+        message: newMessage
+      };
+      const response = await axios.post("https://backend-oa-pqy2.onrender.com/api/messages", payload);
 
-      // Add new message to local state
-      setChatMessages(prev => [...prev, {
-        id: response.data.id || Date.now(),
-        user_id: selectedChatUser,
-        admin_id: user?.id || "admin01",
-        sender_name: "Admin",
-        message: newMessage,
-        is_admin_message: true,
-        timestamp: new Date().toISOString()
-      }]);
-
+      // Add new message to local state (ถ้า backend ส่งกลับ message ใหม่)
+      setChatMessages(prev => [
+        ...prev,
+        response.data || {
+          id: Date.now(),
+          user_id: selectedChatUser,
+          sender_type: 'admin',
+          message: newMessage,
+          timestamp: new Date().toISOString()
+        }
+      ]);
       setNewMessage("");
     } catch (error) {
       console.error("Failed to send chat message:", error);
-      alert("Failed to send message. Please try again.");
+      if (error.response && error.response.data) {
+        console.error("Backend error message:", error.response.data);
+        alert("Error: " + (error.response.data.error || JSON.stringify(error.response.data)));
+      } else {
+        alert("Failed to send message. Please try again.");
+      }
     } finally {
       setLoadingChat(false);
     }
