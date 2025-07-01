@@ -3104,15 +3104,14 @@ function App() {
                             </div>
                           )}
                           {chatMessages.map((msg) => (
-                            <MessageBubble 
-                              key={msg.id} 
-                              $isAdmin={msg.is_admin_message}
-                            >
-                              <MessageSender $isAdmin={msg.is_admin_message}>
-                                {msg.is_admin_message ? 'Admin' : msg.sender_name || 'User'}
+                            <MessageBubble key={msg.id} $isAdmin={msg.sender_type === 'admin'}>
+                              <MessageSender $isAdmin={msg.sender_type === 'admin'}>
+                                {msg.sender_type === 'admin'
+                                  ? 'Admin'
+                                  : chatUsers.find(u => u.user_id === msg.user_id)?.name || 'User'}
                               </MessageSender>
                               <div>{msg.message}</div>
-                              <MessageTimeStyled $isAdmin={msg.is_admin_message}>
+                              <MessageTimeStyled $isAdmin={msg.sender_type === 'admin'}>
                                 {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
                               </MessageTimeStyled>
                             </MessageBubble>
