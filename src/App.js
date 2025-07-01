@@ -2092,22 +2092,20 @@ function App() {
     }
   };
 
-  // Load chat users from ticket data
+  // Add this useEffect to fetch chat users from /api/chat-users
   useEffect(() => {
-    if (data.length > 0) {
-      const users = Array.from(new Set(data.map(item => item["user_id"])))
-        .filter(user_id => user_id)
-        .map(user_id => {
-          const userTicket = data.find(item => item["user_id"] === user_id);
-          return {
-            id: user_id,
-            email: userTicket["อีเมล"] || "No Email",
-            name: userTicket["ชื่อ"] || "No Name"
-          };
-        });
-      setChatUsers(users);
-    }
-  }, [data]);
+    const fetchChatUsers = async () => {
+      try {
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/chat-users");
+        // response.data should be an array of { user_id, name }
+        setChatUsers(Array.isArray(response.data) ? response.data : []);
+      } catch (error) {
+        console.error("Failed to fetch chat users:", error);
+        setChatUsers([]);
+      }
+    };
+    fetchChatUsers();
+  }, []);
 
   // Polling for new messages
   useEffect(() => {
@@ -3061,8 +3059,8 @@ function App() {
                           📢 Announcement to All Members
                         </option>
                         {chatUsers.map((chatUser) => (
-                          <option key={chatUser.id} value={chatUser.id}>
-                            {chatUser.email} ({chatUser.name})
+                          <option key={chatUser.user_id} value={chatUser.user_id}>
+                            {chatUser.name}
                           </option>
                         ))}
                       </UserSelect>
