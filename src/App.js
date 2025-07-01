@@ -1533,6 +1533,13 @@ function App() {
   // เพิ่ม state สำหรับควบคุมการแสดงอันดับผู้ใช้
   const [showAllRankings, setShowAllRankings] = useState(false);
 
+  // เพิ่ม state สำหรับแก้ไข ticket
+  const [editingTicketId, setEditingTicketId] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editSuccess, setEditSuccess] = useState("");
+
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
     if (backendStatus === 'offline' || backendStatus === 'error') {
@@ -1725,29 +1732,21 @@ function App() {
     [notificationPosition.x, notificationPosition.y]
   );
 
+  // ฟังก์ชัน mapping สถานะใหม่และสีใหม่
+  const STATUS_OPTIONS = [
+    { value: "New", label: "New", color: "#e0f2fe" }, // ฟ้าอ่อน
+    { value: "In Progress", label: "In Progress", color: "#2563eb" }, // ฟ้าเข้ม
+    { value: "Pending", label: "Pending", color: "#fbbf24" }, // ส้ม
+    { value: "Closed", label: "Closed", color: "#76BC43" }, // เขียว (แทน Complete)
+    { value: "Cancelled", label: "Cancelled", color: "#64748b" }, // เทาเข้ม
+    { value: "On Hold", label: "On Hold", color: "#a78bfa" }, // ม่วง
+    { value: "Rejected", label: "Rejected", color: "#ef4444" }, // แดง (ถ้ามี)
+  ];
   const getRowColor = (createdAt, status) => {
-    // ถ้าสถานะเป็น Completed ให้แสดงสีเขียวทันที
-    if (status === "Completed") {
-      return "#76BC43"; // สีเขียวอ่อน
-    }
-
-    if (!createdAt) return "";
-
-    const createdDate = new Date(createdAt);
-    const now = new Date();
-    const diffInMinutes = (now - createdDate) / (1000 * 60);
-
-    if (diffInMinutes > 14400) {
-      // 15 นาที (5+5+5) มากกว่า 10 วัน
-      return "#F26665"; // สีแดง
-    } else if (diffInMinutes > 7200) {
-      // 10 นาที (5+5) มากกว่า 5 วัน
-      return "#FFD0A7"; // สีส้ม
-    } else if (diffInMinutes > 5760) {
-      // 5 นาที มากกว่า 3 วัน
-      return "#FBEE95"; // สีเหลือง
-    }
-    return ""; // ไม่มีสี (ค่าปกติ)
+    // mapping สีใหม่ตามสถานะ
+    const statusObj = STATUS_OPTIONS.find(s => s.value === status);
+    if (statusObj) return statusObj.color;
+    return "";
   };
 
   useEffect(() => {
@@ -2411,6 +2410,97 @@ function App() {
     return showAllRankings ? rankings : rankings.slice(0, 5);
   };
 
+  // ฟังก์ชันเริ่มแก้ไข
+  const handleEditTicket = (ticket) => {
+    setEditingTicketId(ticket["Ticket ID"]);
+    setEditForm({
+      email: ticket["อีเมล"] || "",
+      name: ticket["ชื่อ"] || "",
+      phone: ticket["เบอร์ติดต่อ"] || "",
+      department: ticket["แผนก"] || "",
+      date: ticket["วันที่แจ้ง"] || "",
+      appointment: ticket["Appointment"] || "",
+      request: ticket["Requeste"] || "",
+      report: ticket["Report"] || "",
+      type: ticket["Type"] || "",
+      status: ticket["สถานะ"] === "Completed" || ticket["สถานะ"] === "Complete" ? "Closed" : ticket["สถานะ"] || "New",
+    });
+    setEditError("");
+    setEditSuccess("");
+  };
+  // ฟังก์ชันยกเลิกแก้ไข
+  const handleCancelEdit = () => {
+    setEditingTicketId(null);
+    setEditForm({});
+    setEditError("");
+    setEditSuccess("");
+  };
+  // ฟังก์ชันเปลี่ยนค่าในฟอร์มแก้ไข
+  const handleEditFormChange = (field, value) => {
+    setEditForm((prev) => ({ ...prev, [field]: value }));
+  };
+  // ฟังก์ชันบันทึกการแก้ไข
+  const handleSaveEdit = async (ticketId) => {
+    setEditLoading(true);
+    setEditError("");
+    setEditSuccess("");
+    try {
+      const payload = {
+        ticket_id: ticketId,
+        email: editForm.email,
+        name: editForm.name,
+        phone: editForm.phone,
+        department: editForm.department,
+        date: editForm.date,
+        appointment: editForm.appointment,
+        request: editForm.request,
+        report: editForm.report,
+        type: editForm.type,
+        status: editForm.status,
+      };
+      const response = await axios.post("https://backend-oa-pqy2.onrender.com/update-ticket", payload, {
+        headers: { "Content-Type": "application/json" },
+      });
+      if (response.data.deleted) {
+        setData((prev) => prev.filter((item) => item["Ticket ID"] !== ticketId));
+        setEditSuccess("Ticket ถูกลบ (Cancelled)");
+        setTimeout(() => {
+          setEditingTicketId(null);
+          setEditForm({});
+          setEditSuccess("");
+        }, 1200);
+      } else {
+        setData((prev) => prev.map((item) =>
+          item["Ticket ID"] === ticketId
+            ? {
+                ...item,
+                "อีเมล": editForm.email,
+                "ชื่อ": editForm.name,
+                "เบอร์ติดต่อ": editForm.phone,
+                "แผนก": editForm.department,
+                "วันที่แจ้ง": editForm.date,
+                "Appointment": editForm.appointment,
+                "Requeste": editForm.request,
+                "Report": editForm.report,
+                "Type": editForm.type,
+                "สถานะ": editForm.status,
+              }
+            : item
+        ));
+        setEditSuccess("บันทึกสำเร็จ");
+        setTimeout(() => {
+          setEditingTicketId(null);
+          setEditForm({});
+          setEditSuccess("");
+        }, 1200);
+      }
+    } catch (err) {
+      setEditError("เกิดข้อผิดพลาดในการบันทึก: " + (err.response?.data?.error || err.message));
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   return (
     <Router>
       <Routes>
@@ -2912,6 +3002,7 @@ function App() {
                               row["วันที่แจ้ง"],
                               row["สถานะ"]
                             );
+                            const isEditing = editingTicketId === row["Ticket ID"];
                             return (
                               <TableRow
                                 key={i}
@@ -2922,58 +3013,81 @@ function App() {
                                 }}
                               >
                                 <TableCell>{row["Ticket ID"] || "None"}</TableCell>
-                                <TableCell>{row["อีเมล"] || "None"}</TableCell>
-                                <TableCell>{row["ชื่อ"] || "None"}</TableCell>
-                                <TableCell>{row["เบอร์ติดต่อ"] || "None"}</TableCell>
-                                <TableCell>{row["แผนก"] || "None"}</TableCell>
-                                <TableCell>{row["วันที่แจ้ง"] || "None"}</TableCell>
+                                <TableCell>
+                                  {isEditing ? (
+                                    <input type="text" value={editForm.email} onChange={e => handleEditFormChange("email", e.target.value)} disabled={editLoading} />
+                                  ) : (row["อีเมล"] || "None")}
+                                </TableCell>
+                                <TableCell>
+                                  {isEditing ? (
+                                    <input type="text" value={editForm.name} onChange={e => handleEditFormChange("name", e.target.value)} disabled={editLoading} />
+                                  ) : (row["ชื่อ"] || "None")}
+                                </TableCell>
+                                <TableCell>
+                                  {isEditing ? (
+                                    <input type="text" value={editForm.phone} onChange={e => handleEditFormChange("phone", e.target.value)} disabled={editLoading} />
+                                  ) : (row["เบอร์ติดต่อ"] || "None")}
+                                </TableCell>
+                                <TableCell>
+                                  {isEditing ? (
+                                    <input type="text" value={editForm.department} onChange={e => handleEditFormChange("department", e.target.value)} disabled={editLoading} />
+                                  ) : (row["แผนก"] || "None")}
+                                </TableCell>
+                                <TableCell>
+                                  {isEditing ? (
+                                    <input type="text" value={editForm.date} onChange={e => handleEditFormChange("date", e.target.value)} disabled={editLoading} />
+                                  ) : (row["วันที่แจ้ง"] || "None")}
+                                </TableCell>
                                 <StatusCell title={row["สถานะ"] || "None"}>
-                                  <StatusSelect
-                                    value={row["สถานะ"] || "None"}
-                                    onChange={(e) =>
-                                      handleStatusChange(
-                                        row["Ticket ID"],
-                                        e.target.value
-                                      )
-                                    }
-                                  >
-                                    <option value="None">None</option>
-                                    <option value="Pending">Pending</option>
-                                    <option value="Scheduled">Scheduled</option>
-                                    <option value="In Progress">In Progress</option>
-                                    <option value="Waiting">Waiting</option>
-                                    <option value="Completed">Completed</option>
-                                  </StatusSelect>
+                                  {isEditing ? (
+                                    <select value={editForm.status} onChange={e => handleEditFormChange("status", e.target.value)} disabled={editLoading}>
+                                      {STATUS_OPTIONS.map(opt => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None"
+                                  )}
                                 </StatusCell>
-                                <TableCell>{row["Appointment"] || "None"}</TableCell>
                                 <TableCell>
-                                  <ExpandableCell text={row["Requeste"] || "None"} maxLines={4} />
+                                  {isEditing ? (
+                                    <input type="text" value={editForm.appointment} onChange={e => handleEditFormChange("appointment", e.target.value)} disabled={editLoading} />
+                                  ) : (row["Appointment"] || "None")}
                                 </TableCell>
                                 <TableCell>
-                                  <ExpandableCell text={row["Report"] || "None"} maxLines={4} />
+                                  {isEditing ? (
+                                    <textarea value={editForm.request} onChange={e => handleEditFormChange("request", e.target.value)} disabled={editLoading} />
+                                  ) : <ExpandableCell text={row["Requeste"] || "None"} maxLines={4} />}
                                 </TableCell>
-                                <TableCell>{row["Type"] || "None"}</TableCell>
                                 <TableCell>
-                                  <button
-                                    onClick={() =>
-                                      handleDeleteTicket(row["Ticket ID"])
-                                    }
-                                    style={{
-                                      background: "#ef4444",
-                                      color: "white",
-                                      border: "none",
-                                      padding: "8px 12px",
-                                      borderRadius: "6px",
-                                      cursor: "pointer",
-                                      transition: "all 0.2s ease",
-                                    }}
-                                    onMouseOver={(e) =>
-                                      (e.target.style.opacity = "0.8")
-                                    }
-                                    onMouseOut={(e) => (e.target.style.opacity = "1")}
-                                  >
-                                    ลบ
-                                  </button>
+                                  {isEditing ? (
+                                    <textarea value={editForm.report} onChange={e => handleEditFormChange("report", e.target.value)} disabled={editLoading} />
+                                  ) : <ExpandableCell text={row["Report"] || "None"} maxLines={4} />}
+                                </TableCell>
+                                <TableCell>
+                                  {isEditing ? (
+                                    <input type="text" value={editForm.type} onChange={e => handleEditFormChange("type", e.target.value)} disabled={editLoading} />
+                                  ) : (row["Type"] || "None")}
+                                </TableCell>
+                                <TableCell>
+                                  {isEditing ? (
+                                    <>
+                                      <button onClick={() => handleSaveEdit(row["Ticket ID"])} disabled={editLoading} style={{ background: "#10b981", color: "white", marginRight: 4 }}>Save</button>
+                                      <button onClick={handleCancelEdit} disabled={editLoading} style={{ background: "#64748b", color: "white" }}>Cancel</button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button onClick={() => handleEditTicket(row)} style={{ background: "#2563eb", color: "white", marginRight: 4 }}>Edit</button>
+                                      <button
+                                        onClick={() => handleDeleteTicket(row["Ticket ID"])}
+                                        style={{ background: "#ef4444", color: "white" }}
+                                        onMouseOver={e => (e.target.style.opacity = "0.8")}
+                                        onMouseOut={e => (e.target.style.opacity = "1")}
+                                      >
+                                        ลบ
+                                      </button>
+                                    </>
+                                  )}
                                 </TableCell>
                               </TableRow>
                             );
@@ -3247,6 +3361,12 @@ function App() {
                     <EmptyNotifications>ไม่มีการแจ้งเตือน</EmptyNotifications>
                   )}
                 </NotificationDropdown>
+                {editError && (
+                  <div style={{ color: '#ef4444', textAlign: 'center', margin: '8px' }}>{editError}</div>
+                )}
+                {editSuccess && (
+                  <div style={{ color: '#10b981', textAlign: 'center', margin: '8px' }}>{editSuccess}</div>
+                )}
               </Container>
             </MainContent>
           </>
