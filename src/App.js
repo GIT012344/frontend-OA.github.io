@@ -1552,17 +1552,13 @@ const CancelButton = styled.button`
   &:hover { background: #334155; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
-const EditButton = styled.button`
-  background: linear-gradient(90deg, #2563eb, #60a5fa);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-weight: 600;
-  margin-right: 6px;
-  cursor: pointer;
-  transition: background 0.2s;
-  &:hover { background: #1d4ed8; }
+
+// เพิ่ม ActionButtonGroup, EditButton, DeleteButton
+const ActionButtonGroup = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
 `;
 
 function App() {
@@ -3159,24 +3155,17 @@ function App() {
                                     <EditInput type="text" value={editForm.type} onChange={e => handleEditFormChange("type", e.target.value)} disabled={editLoading} />
                                   ) : (row["Type"] || "None")}
                                 </TableCell>
-                                <TableCell>
+                                <TableCell $isEditing={isEditing}>
                                   {isEditing ? (
-                                    <>
+                                    <ActionButtonGroup>
                                       <SaveButton onClick={() => handleSaveEdit(row["Ticket ID"])} disabled={editLoading}>Save</SaveButton>
                                       <CancelButton onClick={handleCancelEdit} disabled={editLoading}>Cancel</CancelButton>
-                                    </>
+                                    </ActionButtonGroup>
                                   ) : (
-                                    <>
+                                    <ActionButtonGroup>
                                       <EditButton onClick={() => handleEditTicket(row)}>Edit</EditButton>
-                                      <button
-                                        onClick={() => handleDeleteTicket(row["Ticket ID"])}
-                                        style={{ background: "#ef4444", color: "white", borderRadius: 8, padding: '8px 16px', fontWeight: 600 }}
-                                        onMouseOver={e => (e.target.style.opacity = "0.8")}
-                                        onMouseOut={e => (e.target.style.opacity = "1")}
-                                      >
-                                        ลบ
-                                      </button>
-                                    </>
+                                      <DeleteButton onClick={() => handleDeleteTicket(row["Ticket ID"])}>ลบ</DeleteButton>
+                                    </ActionButtonGroup>
                                   )}
                                 </TableCell>
                               </TableRow>
