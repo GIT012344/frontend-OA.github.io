@@ -1558,19 +1558,19 @@ const ActionButtonGroup = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 `;
 
 const EditButton = styled.button`
-  background: linear-gradient(90deg, #60a5fa, #3b82f6);
+  background: linear-gradient(90deg, #93c5fd, #3b82f6);
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 8px 18px;
+  border-radius: 7px;
+  padding: 6px 14px;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.95rem;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(59,130,246,0.08);
+  box-shadow: 0 1px 4px rgba(59,130,246,0.08);
   transition: background 0.2s;
   &:hover { background: #2563eb; }
 `;
@@ -1578,14 +1578,25 @@ const DeleteButton = styled.button`
   background: #fee2e2;
   color: #ef4444;
   border: none;
-  border-radius: 8px;
-  padding: 8px 18px;
+  border-radius: 7px;
+  padding: 6px 14px;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.95rem;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(239,68,68,0.08);
+  box-shadow: 0 1px 4px rgba(239,68,68,0.08);
   transition: background 0.2s;
   &:hover { background: #fecaca; color: #b91c1c; }
+`;
+
+// ปรับ TableCell สำหรับ REQUESTE/REPORT
+const RequestReportCell = styled.td`
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  color: #334155;
+  white-space: pre-line;
+  word-break: break-word;
+  background: transparent !important;
+  border: none;
 `;
 
 function App() {
@@ -3167,16 +3178,16 @@ function App() {
                                     <EditInput type="text" value={editForm.appointment} onChange={e => handleEditFormChange("appointment", e.target.value)} disabled={editLoading} />
                                   ) : (row["Appointment"] || "None")}
                                 </TableCell>
-                                <TableCell>
+                                <RequestReportCell $isEditing={isEditing}>
                                   {isEditing ? (
                                     <EditTextarea value={editForm.request} onChange={e => handleEditFormChange("request", e.target.value)} disabled={editLoading} />
-                                  ) : <ExpandableCell text={row["Requeste"] || "None"} maxLines={4} />}
-                                </TableCell>
-                                <TableCell>
+                                  ) : <span>{row["Requeste"] || "None"}</span>}
+                                </RequestReportCell>
+                                <RequestReportCell $isEditing={isEditing}>
                                   {isEditing ? (
                                     <EditTextarea value={editForm.report} onChange={e => handleEditFormChange("report", e.target.value)} disabled={editLoading} />
-                                  ) : <ExpandableCell text={row["Report"] || "None"} maxLines={4} />}
-                                </TableCell>
+                                  ) : <span>{row["Report"] || "None"}</span>}
+                                </RequestReportCell>
                                 <TableCell>
                                   {isEditing ? (
                                     <EditInput type="text" value={editForm.type} onChange={e => handleEditFormChange("type", e.target.value)} disabled={editLoading} />
