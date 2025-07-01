@@ -223,7 +223,7 @@ const TableHeaderCell = styled.th`
 
 const TableRow = styled.tr`
   transition: all 0.2s ease;
-  background-color: ${(props) => props.$bgColor || ""};
+  background-color: ${(props) => props.$bgColor || "#fcfcfc"};
   ${(props) => props.$isSelected && `
     box-shadow: inset 0 0 0 2px #3b82f6;
     background-color: ${props.$bgColor ? `${props.$bgColor} !important` : '#f0f7ff !important'};
@@ -240,33 +240,34 @@ const TableRow = styled.tr`
   `}
   &:nth-child(even) {
     background-color: ${(props) =>
-      props.$bgColor ? props.$bgColor : "rgba(248, 250, 252, 0.5)"};
+      props.$bgColor ? props.$bgColor : "#f8fafc"};
   }
   &:hover {
     background-color: ${(props) =>
       props.$bgColor
-        ? props.$bgColor === "#ffebee"
-          ? "#ffcdd2"
-          : props.$bgColor === "#fff3e0"
-            ? "#ffe0b2"
-            : props.$bgColor === "#fffde7"
-              ? "#fff59d"
-              : "rgba(241, 245, 249, 0.8)"
-        : "rgba(241, 245, 249, 0.8)"};
+        ? props.$bgColor === "#fee2e2"
+          ? "#ffeaea"
+          : props.$bgColor === "#fff7e6"
+            ? "#fff3d1"
+            : props.$bgColor === "#e6f7ee"
+              ? "#d1fae5"
+              : "#f3f4f6"
+        : "#f3f4f6"};
     transform: scale(1.001);
   }
 `;
 
 const TableCell = styled.td`
-  padding: 16px 20px;
+  padding: 18px 18px;
   border-bottom: 1px solid rgba(226, 232, 240, 0.5);
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   color: #334155;
-  line-height: 1.5;
+  line-height: 1.6;
   max-width: 180px;
   word-break: break-word;
   white-space: normal;
   overflow-wrap: anywhere;
+  background: ${props => props.$isEditing ? '#f1f5f9' : 'transparent'};
 `;
 
 // เพิ่มคลาสสำหรับสถานะโดยเฉพาะ
@@ -1367,12 +1368,15 @@ const DayTitle = styled.div`
   color: #1e293b;
 `;
 const TicketCountBadge = styled.span`
-  background: #f1f5f9;
-  padding: 4px 8px;
+  background: ${props => props.color || '#f1f5f9'};
+  padding: 4px 10px;
   border-radius: 12px;
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   font-weight: 600;
-  color: #475569;
+  color: ${props => props.textcolor || '#475569'};
+  margin-right: 6px;
+  margin-bottom: 4px;
+  display: inline-block;
 `;
 const AlertCard = styled(StatCard)`
   background: ${props => props.$alert ? '#ffebee' : 'white'};
@@ -1819,13 +1823,13 @@ function App() {
 
   // ฟังก์ชัน mapping สถานะใหม่และสีใหม่
   const STATUS_OPTIONS = [
-    { value: "New", label: "New", color: "#e0f2fe" }, // ฟ้าอ่อน
-    { value: "In Progress", label: "In Progress", color: "#2563eb" }, // ฟ้าเข้ม
-    { value: "Pending", label: "Pending", color: "#fbbf24" }, // ส้ม
-    { value: "Closed", label: "Closed", color: "#76BC43" }, // เขียว (แทน Complete)
-    { value: "Cancelled", label: "Cancelled", color: "#64748b" }, // เทาเข้ม
-    { value: "On Hold", label: "On Hold", color: "#a78bfa" }, // ม่วง
-    { value: "Rejected", label: "Rejected", color: "#ef4444" }, // แดง (ถ้ามี)
+    { value: "New", label: "New", color: "#e3f2fd" }, // ฟ้าอ่อนมาก
+    { value: "In Progress", label: "In Progress", color: "#dbeafe" }, // ฟ้าเข้มอ่อน
+    { value: "Pending", label: "Pending", color: "#fff7e6" }, // ส้มอ่อน
+    { value: "Closed", label: "Closed", color: "#e6f7ee" }, // เขียวอ่อน
+    { value: "Cancelled", label: "Cancelled", color: "#f3f4f6" }, // เทาอ่อน
+    { value: "On Hold", label: "On Hold", color: "#ede9fe" }, // ม่วงอ่อน
+    { value: "Rejected", label: "Rejected", color: "#fee2e2" }, // แดงอ่อน
   ];
   const getRowColor = (createdAt, status) => {
     // mapping สีใหม่ตามสถานะ
@@ -2779,10 +2783,10 @@ function App() {
                                 month: "short"
                               })}
                             </DayTitle>
-                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                              <TicketCountBadge title="ทั้งหมด">{day.count} Tickets</TicketCountBadge>
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                              <TicketCountBadge>{day.count} Tickets</TicketCountBadge>
                               {STATUS_OPTIONS.map(opt => (
-                                <TicketCountBadge key={opt.value} title={opt.label} style={{ background: opt.color, color: opt.value === 'Closed' ? '#fff' : '#222' }}>
+                                <TicketCountBadge key={opt.value} color={opt.color} textcolor={opt.value === 'Closed' ? '#059669' : '#334155'}>
                                   {day[opt.value] || 0} {opt.label}
                                 </TicketCountBadge>
                               ))}
@@ -2801,9 +2805,11 @@ function App() {
                           <span style={{ fontWeight: '600' }}>{getBasicStats().total}</span>
                         </div>
                         {STATUS_OPTIONS.map(opt => (
-                          <div key={opt.value} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <div key={opt.value} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
                             <span>{opt.label}:</span>
-                            <span style={{ fontWeight: '600', color: opt.color }}>{getBasicStats()[opt.value]}</span>
+                            <TicketCountBadge color={opt.color} textcolor={opt.value === 'Closed' ? '#059669' : '#334155'}>
+                              {getBasicStats()[opt.value]}
+                            </TicketCountBadge>
                           </div>
                         ))}
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
