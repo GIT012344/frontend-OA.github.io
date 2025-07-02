@@ -1599,6 +1599,15 @@ const RequestReportCell = styled.td`
   border: none;
 `;
 
+// เพิ่ม CSS สำหรับกระพริบ
+const BlinkingRow = styled(TableRow)`
+  animation: blink 1s linear infinite;
+  @keyframes blink {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.5); }
+  }
+`;
+
 function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [data, setData] = useState([]);
@@ -2548,6 +2557,7 @@ function App() {
       department: ticket["แผนก"] || "",
       date: ticket["วันที่แจ้ง"] || "",
       appointment: ticket["Appointment"] || "",
+      appointment_datetime: ticket["appointment_datetime"] ? ticket["appointment_datetime"].slice(0,16) : "",
       request: ticket["Requeste"] || "",
       report: ticket["Report"] || "",
       type: ticket["Type"] || "",
@@ -2581,6 +2591,7 @@ function App() {
         department: editForm.department,
         date: editForm.date,
         appointment: editForm.appointment,
+        appointment_datetime: editForm.appointment_datetime,
         request: editForm.request,
         report: editForm.report,
         type: editForm.type,
@@ -2985,52 +2996,56 @@ function App() {
                       {data
                         .filter((ticket) => ticket["Appointment"])
                         .sort((a, b) => {
-                          // Sort by either the "วันที่แจ้ง" field or by the appointment date itself
-                          const dateA = new Date(a["วันที่แจ้ง"] || a["Appointment"]);
-                          const dateB = new Date(b["วันที่แจ้ง"] || b["Appointment"]);
+                          // Sort by appointment_datetime ถ้ามี, ไม่งั้นใช้วันที่แจ้ง
+                          const dateA = a["appointment_datetime"] ? new Date(a["appointment_datetime"]) : new Date(a["วันที่แจ้ง"] || a["Appointment"]);
+                          const dateB = b["appointment_datetime"] ? new Date(b["appointment_datetime"]) : new Date(b["วันที่แจ้ง"] || b["Appointment"]);
                           return dateB - dateA; // Newest first
                         })
-                        .slice(0, 3) // Show only the 3 most recent
-                        .map((ticket) => (
-                          <div
-                            key={ticket["Ticket ID"]}
-                            style={{
-                              marginBottom: "12px",
-                              padding: "12px",
-                              background: "rgba(241, 245, 249, 0.5)",
-                              borderRadius: "8px",
-                            }}
-                          >
-                            <div style={{ fontWeight: "600" }}>
-                              {ticket["ชื่อ"]} (Ticket ID: {ticket["Ticket ID"]})
-                            </div>
-                            <div style={{ fontSize: "0.875rem", color: "#475569" }}>
-                              {new Date(ticket["Appointment"]).toLocaleString(
-                                "th-TH",
-                                {
-                                  dateStyle: "full",
-                                  timeStyle: "short",
-                                }
-                              )}
-                            </div>
+                        .slice(0, 3)
+                        .map((ticket) => {
+                          // logic highlight
+                          let apptSoon = false, apptNow = false;
+                          if (ticket["appointment_datetime"]) {
+                            const now = new Date();
+                            const appt = new Date(ticket["appointment_datetime"]);
+                            const diff = appt - now;
+                            if (diff > 0 && diff < 60 * 60 * 1000) apptSoon = true;
+                            if (Math.abs(diff) < 5 * 60 * 1000) apptNow = true;
+                          }
+                          return (
                             <div
+                              key={ticket["Ticket ID"]}
                               style={{
-                                fontSize: "0.75rem",
-                                color: "#64748b",
-                                marginTop: "4px",
+                                marginBottom: "12px",
+                                padding: "12px",
+                                background: apptNow ? "#fef08a" : apptSoon ? "#fef9c3" : "rgba(241, 245, 249, 0.5)",
+                                borderRadius: "8px",
+                                animation: apptNow ? "blink 1s linear infinite" : undefined,
                               }}
                             >
-                              {ticket["แผนก"]} • {ticket["สถานะ"]} • แจ้งเมื่อ:{" "}
-                              {new Date(ticket["วันที่แจ้ง"]).toLocaleString(
-                                "th-TH",
-                                {
-                                  dateStyle: "short",
-                                  timeStyle: "short",
-                                }
-                              )}
+                              <div style={{ fontWeight: "600" }}>
+                                {ticket["ชื่อ"]} (Ticket ID: {ticket["Ticket ID"]})
+                              </div>
+                              <div style={{ fontSize: "0.875rem", color: "#475569" }}>
+                                {ticket["Appointment"] || "-"}
+                                {ticket["appointment_datetime"] && (
+                                  <span style={{ marginLeft: 8, color: "#64748b" }}>
+                                    ({new Date(ticket["appointment_datetime"]).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })})
+                                  </span>
+                                )}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "0.75rem",
+                                  color: "#64748b",
+                                  marginTop: "4px",
+                                }}
+                              >
+                                {ticket["แผนก"]} • {ticket["สถานะ"]} • เวลานัดหมาย: {ticket["Appointment"]}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                     </div>
                   </StatCard>
                   <TableContainer>
@@ -3127,14 +3142,21 @@ function App() {
                               row["สถานะ"]
                             );
                             const isEditing = editingTicketId === row["Ticket ID"];
+                            // appointment_datetime logic
+                            let apptSoon = false, apptNow = false;
+                            if (row["appointment_datetime"]) {
+                              const now = new Date();
+                              const appt = new Date(row["appointment_datetime"]);
+                              const diff = appt - now;
+                              if (diff > 0 && diff < 60 * 60 * 1000) apptSoon = true; // ภายใน 1 ชม.
+                              if (Math.abs(diff) < 5 * 60 * 1000) apptNow = true; // ถึงแล้ว (±5นาที)
+                            }
+                            const RowComponent = apptNow ? BlinkingRow : TableRow;
                             return (
-                              <TableRow
+                              <RowComponent
                                 key={i}
-                                $bgColor={rowColor}
+                                $bgColor={apptSoon && !apptNow ? '#fef9c3' : rowColor}
                                 $isSelected={selectedTicket === row["Ticket ID"]}
-                                onClick={() => {
-                                  setSelectedTicket(row["Ticket ID"]);
-                                }}
                               >
                                 <TableCell>{row["Ticket ID"] || "None"}</TableCell>
                                 <TableCell>
@@ -3173,10 +3195,34 @@ function App() {
                                     row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None"
                                   )}
                                 </StatusCell>
-                                <TableCell>
+                                <TableCell $isEditing={isEditing}>
                                   {isEditing ? (
-                                    <EditInput type="text" value={editForm.appointment} onChange={e => handleEditFormChange("appointment", e.target.value)} disabled={editLoading} />
-                                  ) : (row["Appointment"] || "None")}
+                                    <>
+                                      <EditInput
+                                        type="text"
+                                        value={editForm.appointment}
+                                        onChange={e => handleEditFormChange("appointment", e.target.value)}
+                                        disabled={editLoading}
+                                        placeholder="ข้อความนัดหมาย (เช่น 1 ก.ค. 2025 15:00-16:00)"
+                                      />
+                                      <EditInput
+                                        type="datetime-local"
+                                        value={editForm.appointment_datetime || ''}
+                                        onChange={e => handleEditFormChange("appointment_datetime", e.target.value)}
+                                        disabled={editLoading}
+                                        style={{ marginTop: 6 }}
+                                      />
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span>{row["Appointment"] || "None"}</span>
+                                      {row["appointment_datetime"] && (
+                                        <div style={{ fontSize: '0.85em', color: '#64748b' }}>
+                                          ({new Date(row["appointment_datetime"]).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })})
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
                                 </TableCell>
                                 <RequestReportCell $isEditing={isEditing}>
                                   {isEditing ? (
@@ -3206,7 +3252,7 @@ function App() {
                                     </ActionButtonGroup>
                                   )}
                                 </TableCell>
-                              </TableRow>
+                              </RowComponent>
                             );
                           })}
                         </tbody>
