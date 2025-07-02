@@ -1628,7 +1628,7 @@ function App() {
   // New state variables for pagination and loading
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const rowsPerPage = 5;
+  const rowsPerPage = 10;
   
   // New Chat System State
   const [selectedChatUser, setSelectedChatUser] = useState(null);
