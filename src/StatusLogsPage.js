@@ -159,7 +159,7 @@ function StatusLogsPage() {
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://127.0.0.1:5001/api/log-status-change', {
+      const response = await axios.get('https://backend-oa-pqy2.onrender.com/api/log-status-change', {
         params: { ticket_id: filterTicketId }
       });
       setLogs(response.data);

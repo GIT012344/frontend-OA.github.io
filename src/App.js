@@ -2312,8 +2312,7 @@ function App() {
     if (!selectedChatUser || selectedChatUser === "announcement") return;
 
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบประวัติการสนทนาทั้งหมด?")) {
-      try {
-        await axios.post("https://backend-oa-pqy2.onrender.com/api/messages/delete", {
+      try        await axios.post("https://backend-oa-pqy2.onrender.com/api/messages/delete", {
           user_id: selectedChatUser
         });
         setChatMessages([]);

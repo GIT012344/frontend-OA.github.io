@@ -80,7 +80,7 @@ export function AuthProvider({ children }) {
       } else {
         // ถ้า PIN ไม่ถูกต้อง ให้ลองเรียก Backend API
         try {
-          const response = await axios.post('http://127.0.0.1:5001/api/login', {
+          const response = await axios.post('https://backend-oa-pqy2.onrender.com/api/login', {
             pin_code: pinCode
           }, {
             headers: {
