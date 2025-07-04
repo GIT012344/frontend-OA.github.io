@@ -86,4 +86,28 @@ export const updateTicketStatus = async (ticketId, newStatus) => {
     status: newStatus
   });
   return response.data;
-}; 
+};
+
+// ------------------------------------------------------------
+// 🆕 Status change log endpoints
+// ------------------------------------------------------------
+
+// Log a status change (POST /api/log-status-change)
+export const logStatusChange = async ({ ticket_id, old_status, new_status, changed_by, change_timestamp }) => {
+  const response = await apiClient.post('/api/log-status-change', {
+    ticket_id,
+    old_status,
+    new_status,
+    changed_by,
+    change_timestamp,
+  });
+  return response.data;
+};
+
+// Fetch status change history for a given ticket (GET /api/log-status-change)
+export const fetchStatusChangeHistory = async (ticketId) => {
+  const response = await apiClient.get('/api/log-status-change', {
+    params: { ticket_id: ticketId },
+  });
+  return response.data;
+};
