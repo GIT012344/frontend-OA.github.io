@@ -2157,6 +2157,8 @@ function App() {
   const uniqueTypes = [...new Set(displayData.map((item) => item["Type"] || "None"))];
 
   // --- ฟังก์ชัน handleStatusChange ---
+  const [statusChangeLoading, setStatusChangeLoading] = useState(false); // เพิ่ม state loading
+  const [statusChangeError, setStatusChangeError] = useState(""); // error modal
   const handleStatusChange = (ticketId, newStatus) => {
     const target = data.find((d) => d["Ticket ID"] === ticketId);
     const oldStatus = target?.status || target?.สถานะ || "";
@@ -2169,10 +2171,17 @@ function App() {
       remarks: "",
       internalNotes: ""
     });
+    setStatusChangeError("");
   };
 
   const confirmStatusChange = async () => {
     const { ticketId, newStatus, oldStatus, remarks, internalNotes } = statusChangeModal;
+    if (!remarks.trim()) {
+      setStatusChangeError("กรุณากรอกหมายเหตุ (remarks) ก่อนยืนยัน");
+      return;
+    }
+    setStatusChangeLoading(true);
+    setStatusChangeError("");
     try {
       const response = await axios.post(
         "https://backend-oa-pqy2.onrender.com/update-status",
@@ -2215,10 +2224,13 @@ function App() {
           remarks: "",
           internalNotes: ""
         });
+      } else {
+        setStatusChangeError(response.data.error || "เกิดข้อผิดพลาดในการอัปเดตสถานะ");
       }
     } catch (err) {
-      console.error("Failed to update status:", err);
-      alert("Failed to update status: " + (err.response?.data?.error || err.message));
+      setStatusChangeError("Failed to update status: " + (err.response?.data?.error || err.message));
+    } finally {
+      setStatusChangeLoading(false);
     }
   };
 
@@ -2231,6 +2243,8 @@ function App() {
       remarks: "",
       internalNotes: ""
     });
+    setStatusChangeError("");
+    setStatusChangeLoading(false);
   };
 
   const deleteNotification = async (id) => {
@@ -3434,6 +3448,7 @@ function App() {
                                 marginBottom: '16px'
                               }}
                               placeholder="กรอกหมายเหตุที่จะแสดงให้ลูกค้าเห็น..."
+                              disabled={statusChangeLoading}
                             />
                             <label style={{ display: 'block', marginBottom: '8px', color: '#64748b' }}>
                               หมายเหตุภายใน:
@@ -3452,8 +3467,14 @@ function App() {
                                 minHeight: '80px'
                               }}
                               placeholder="กรอกหมายเหตุภายใน (ไม่แสดงให้ลูกค้าเห็น)..."
+                              disabled={statusChangeLoading}
                             />
                           </div>
+                          {statusChangeError && (
+                            <div style={{ color: '#ef4444', marginBottom: 8, fontWeight: 500 }}>
+                              {statusChangeError}
+                            </div>
+                          )}
                         </div>
                         <div style={{
                           display: 'flex',
@@ -3469,8 +3490,9 @@ function App() {
                               color: '#64748b',
                               border: 'none',
                               borderRadius: '8px',
-                              cursor: 'pointer'
+                              cursor: statusChangeLoading ? 'not-allowed' : 'pointer'
                             }}
+                            disabled={statusChangeLoading}
                           >
                             ยกเลิก
                           </button>
@@ -3482,10 +3504,12 @@ function App() {
                               color: 'white',
                               border: 'none',
                               borderRadius: '8px',
-                              cursor: 'pointer'
+                              cursor: statusChangeLoading || !statusChangeModal.remarks.trim() ? 'not-allowed' : 'pointer',
+                              opacity: statusChangeLoading || !statusChangeModal.remarks.trim() ? 0.6 : 1
                             }}
+                            disabled={statusChangeLoading || !statusChangeModal.remarks.trim()}
                           >
-                            ยืนยันการเปลี่ยนสถานะ
+                            {statusChangeLoading ? 'กำลังบันทึก...' : 'ยืนยันการเปลี่ยนสถานะ'}
                           </button>
                         </div>
                       </div>
