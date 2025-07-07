@@ -2216,7 +2216,7 @@ function App() {
         }
       );
       // --- เพิ่ม debug log ---
-      // console.log("DEBUG update-status response", response.data);
+      console.log("update-status response", response.data);
       if (response.data.success) {
         setData((prevData) =>
           prevData.map((item) =>
