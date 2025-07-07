@@ -2843,6 +2843,13 @@ function App() {
     }
   };
 
+  // --- เพิ่มฟังก์ชัน handleUserSelect สำหรับ Chat ---
+  const handleUserSelect = (e) => {
+    setSelectedChatUser(e.target.value);
+    setChatMessages([]); // reset ข้อความเมื่อเปลี่ยน user
+    setNewMessage("");
+  };
+
   return (
 
     <Routes>
