@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://127.0.0.1:5001';
+const API_BASE_URL = 'https://backend-oa-pqy2.onrender.com';
 
 // Create axios instance with default configuration
 const apiClient = axios.create({

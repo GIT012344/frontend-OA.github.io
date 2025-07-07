@@ -172,7 +172,7 @@ function StatusLogsPage() {
       setLoading(true);
       setError(null);
   
-      const baseUrl = 'http://127.0.0.1:5001/api/log-status-change';
+      const baseUrl = 'https://backend-oa-pqy2.onrender.com/api/log-status-change';
       
       // ลองเรียก API โดยไม่ใช้ parameter
       const response = await axios.get(baseUrl, {
