@@ -61,6 +61,11 @@ const Container = styled.div`
     opacity: 0.03;
     z-index: 0;
   }
+
+  @media (max-width: 768px) {
+    padding: 8px 2px;
+    min-width: 0;
+  }
 `;
 
 const Title = styled.h1`
@@ -83,6 +88,11 @@ const Title = styled.h1`
     border-radius: 2px;
     opacity: 0.6;
   }
+
+  @media (max-width: 768px) {
+    font-size: 1.5rem;
+    margin-bottom: 24px;
+  }
 `;
 
 const HeaderSection = styled.div`
@@ -100,6 +110,11 @@ const ExportSection = styled.div`
   display: flex;
   gap: 12px;
   align-items: center;
+  @media (max-width: 768px) {
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+  }
 `;
 
 const ExportButton = styled.button`
@@ -148,6 +163,11 @@ const ExportButton = styled.button`
     background-size: contain;
     background-repeat: no-repeat;
   }
+
+  @media (max-width: 768px) {
+    font-size: 0.92rem;
+    padding: 8px 12px;
+  }
 `;
 
 const Dashboard = styled.div`
@@ -157,6 +177,10 @@ const Dashboard = styled.div`
   margin-bottom: 40px;
   position: relative;
   z-index: 1;
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 `;
 
 const StatCard = styled.div`
@@ -185,6 +209,11 @@ const StatCard = styled.div`
     transform: translateY(-4px);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
     background: rgba(255, 255, 255, 0.85);
+  }
+
+  @media (max-width: 768px) {
+    padding: 16px 8px;
+    min-width: 0;
   }
 `;
 
@@ -217,6 +246,11 @@ const TableContainer = styled.div`
     height: 1px;
     background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
   }
+
+  @media (max-width: 768px) {
+    padding: 8px 2px;
+    border-radius: 0;
+  }
 `;
 
 const TableTitle = styled.h2`
@@ -232,6 +266,11 @@ const StyledTable = styled.table`
   border-collapse: collapse;
   border-radius: 12px;
   overflow: hidden;
+  min-width: 700px;
+  @media (max-width: 768px) {
+    min-width: 600px;
+    font-size: 0.92rem;
+  }
 `;
 
 const TableHeader = styled.thead`
@@ -388,6 +427,12 @@ const StatusSelect = styled.select`
     box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.1);
     background: white;
   }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    font-size: 1rem;
+    margin-bottom: 4px;
+  }
 `;
 
 const SyncIndicator = styled.div`
@@ -535,6 +580,11 @@ const RetryButton = styled.button`
     background-size: contain;
     background-repeat: no-repeat;
   }
+
+  @media (max-width: 768px) {
+    font-size: 0.92rem;
+    padding: 8px 12px;
+  }
 `;
 
 const ErrorDetails = styled.div`
@@ -614,6 +664,12 @@ const ChatContainer = styled.div`
     background: linear-gradient(90deg, #64748b, #94a3b8);
     border-radius: 16px 16px 0 0;
     opacity: 0.6;
+  }
+
+  @media (max-width: 768px) {
+    height: 350px;
+    padding: 0;
+    border-radius: 0;
   }
 `;
 
@@ -754,6 +810,11 @@ const UserSelect = styled.select`
     background-color: #3b82f6;
     color: white;
   }
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+    padding: 10px 8px;
+  }
 `;
 
 const ChatTextArea = styled.textarea`
@@ -781,6 +842,11 @@ const ChatTextArea = styled.textarea`
   &::placeholder {
     color: #94a3b8;
     opacity: 0.6;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+    padding: 10px 8px;
   }
 `;
 
@@ -818,6 +884,12 @@ const SendButton = styled.button`
     background-size: contain;
     background-repeat: no-repeat;
   }
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+    padding: 10px 8px;
+    height: 40px;
+  }
 `;
 
 const ScrollContainer = styled.div`
@@ -841,6 +913,11 @@ const ScrollContainer = styled.div`
 
   &::-webkit-scrollbar-thumb:hover {
     background: rgba(100, 116, 139, 0.5);
+  }
+
+  @media (max-width: 768px) {
+    border-radius: 0;
+    padding: 0;
   }
 `;
 
@@ -871,6 +948,12 @@ const SearchInput = styled.input`
   &::placeholder {
     color: #94a3b8;
   }
+
+  @media (max-width: 768px) {
+    min-width: 0;
+    width: 100%;
+    font-size: 1rem;
+  }
 `;
 
 const FilterSelect = styled.select`
@@ -893,6 +976,12 @@ const FilterSelect = styled.select`
     border-color: #64748b;
     box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.1);
     background: white;
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    font-size: 1rem;
+    margin-bottom: 4px;
   }
 `;
 
@@ -975,6 +1064,16 @@ const NotificationDropdown = styled.div`
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: move;
   user-select: none;
+
+  @media (max-width: 768px) {
+    width: 98vw;
+    max-width: 98vw;
+    left: 1vw !important;
+    right: auto !important;
+    top: 60px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+  }
 `;
 
 const NotificationHeader = styled.div`
@@ -1158,6 +1257,12 @@ const ClearButton = styled.button`
     background-size: contain;
     background-repeat: no-repeat;
   }
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+    padding: 10px 8px;
+    height: 40px;
+  }
 `;
 
 const Sidebar = styled.div`
@@ -1182,6 +1287,25 @@ const Sidebar = styled.div`
   &:hover {
     transform: translateX(0);
     width: 240px;
+  }
+
+  @media (max-width: 768px) {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: auto;
+    width: 100vw;
+    height: 56px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 8px;
+    z-index: 200;
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    overflow-x: auto;
+    background: white;
+    transition: none;
   }
 `;
 
@@ -1303,6 +1427,11 @@ const ToggleButton = styled.button`
 const MainContent = styled.div`
   margin-left: 240px;
   width: calc(100% - 240px);
+  @media (max-width: 768px) {
+    margin-left: 0;
+    width: 100vw;
+    padding-top: 56px;
+  }
 `;
 
 const EmailRankingCard = styled(StatCard)`
