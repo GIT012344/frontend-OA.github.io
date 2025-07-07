@@ -3793,6 +3793,7 @@ function App() {
             </MainContent>
           </>
         ) : <Navigate to="/login" />} />
+        <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
         <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
       </Routes>
 

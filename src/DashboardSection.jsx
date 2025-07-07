@@ -136,7 +136,7 @@ function buildBarData(dailyRaw) {
   }));
   return { labels, datasets };
 }
-
+// ลบ DashboardWrapper ออกเนื่องจากมี Sidebar อยู่แล้วใน App.js
 // ---------- Main Component ----------
 export default function DashboardSection({ stats, daily, upcoming = [], overdue = [] }) {
   if (!stats) return null;

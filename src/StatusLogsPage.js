@@ -146,51 +146,104 @@ const NoData = styled.div`
 
 function StatusLogsPage() {
   const navigate = useNavigate();
+  
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterTicketId, setFilterTicketId] = useState('');
   const [filterDate, setFilterDate] = useState('');
 
+  // ดึง ticket_id จาก URL ถ้ามี
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ticketIdFromUrl = params.get('ticket_id');
+    if (ticketIdFromUrl) {
+      setFilterTicketId(ticketIdFromUrl);
+    }
+  }, []);
+
   useEffect(() => {
     fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('https://backend-oa-pqy2.onrender.com/api/log-status-change', {
-        params: { ticket_id: filterTicketId }
-      });
-      setLogs(response.data);
       setError(null);
+  
+      const baseUrl = 'https://backend-oa-pqy2.onrender.com/api/log-status-change';
+      
+      // ลองเรียก API โดยไม่ใช้ parameter
+      const response = await axios.get(baseUrl, {
+        headers: { 
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
+      });
+  
+      if (response.status !== 200) {
+        throw new Error(`API returned status ${response.status}`);
+      }
+  
+      console.log('Logs response:', response.data);
+      setLogs(Array.isArray(response.data) ? response.data : []);
+      
     } catch (err) {
-      setError('เกิดข้อผิดพลาดในการโหลดข้อมูล log');
+      console.error('Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        config: err.config
+      });
+      
+      let errorMessage = 'เกิดข้อผิดพลาดในการดึงข้อมูล';
+      if (err.response?.status === 404) {
+        errorMessage = 'ไม่พบข้อมูลในระบบ';
+      } else if (err.message.includes('timeout')) {
+        errorMessage = 'การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองใหม่';
+      }
+      
+      setError(errorMessage);
       setLogs([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Filtering logic
+  // ฟังก์ชันสำหรับกรองข้อมูล
   const filteredLogs = logs.filter(log => {
-    const ticketIdMatch = filterTicketId === '' || String(log.ticket_id).includes(filterTicketId);
-    const dateMatch = filterDate === '' || (log.changed_at && log.changed_at.startsWith(filterDate));
+    if (!log) return false;
+    
+    const ticketIdMatch = !filterTicketId || 
+      (log.ticket_id && String(log.ticket_id).includes(filterTicketId));
+    
+    const dateMatch = !filterDate || 
+      (log.changed_at && log.changed_at.startsWith(filterDate));
+    
     return ticketIdMatch && dateMatch;
+  });
+
+  // เรียงลำดับข้อมูลตามเวลาใหม่ไปเก่า
+  const sortedLogs = [...filteredLogs].sort((a, b) => {
+    return new Date(b.changed_at) - new Date(a.changed_at);
   });
 
   return (
     <PageContainer>
       <Header>
-        <Title>Ticket Status Change Logs</Title>
+        <Title>ประวัติการเปลี่ยนสถานะ</Title>
         <BackButton onClick={() => navigate(-1)}>&larr; กลับ</BackButton>
       </Header>
+      
       <FilterSection>
         <FilterInput
           type="text"
-          placeholder="ค้นหา Ticket ID..."
+          placeholder="ระบุ Ticket ID..."
           value={filterTicketId}
           onChange={e => setFilterTicketId(e.target.value)}
+          onKeyPress={e => e.key === 'Enter' && fetchLogs()}
         />
         <DateInput
           type="date"
@@ -198,55 +251,49 @@ function StatusLogsPage() {
           onChange={e => setFilterDate(e.target.value)}
         />
       </FilterSection>
+      
       {loading ? (
         <NoData>กำลังโหลดข้อมูล...</NoData>
       ) : error ? (
         <NoData>{error}</NoData>
+      ) : sortedLogs.length === 0 ? (
+        <NoData>ไม่พบข้อมูล</NoData>
       ) : (
         <Table>
           <thead>
             <tr>
               <Th>Ticket ID</Th>
-              <Th>Old Status</Th>
-              <Th>New Status</Th>
-              <Th>Changed By</Th>
-              <Th>Timestamp</Th>
+              <Th>สถานะเดิม</Th>
+              <Th>สถานะใหม่</Th>
+              <Th>ผู้ดำเนินการ</Th>
+              <Th>วันที่/เวลา</Th>
             </tr>
           </thead>
           <tbody>
-            {filteredLogs.length === 0 ? (
-              <tr><Td colSpan={5}><NoData>ไม่พบข้อมูล</NoData></Td></tr>
-            ) : (
-              filteredLogs.map((log, idx) => (
-                <tr key={log.id || idx}>
-                  <Td>{log.ticket_id}</Td>
-                  <Td>
-                    <StatusBadge status={log.old_status}>{log.old_status}</StatusBadge>
-                  </Td>
-                  <Td>
-                    <StatusBadge status={log.new_status}>{log.new_status}</StatusBadge>
-                  </Td>
-                  <Td>{log.changed_by}</Td>
-                  <Td>{new Date(log.changed_at).toLocaleString('th-TH')}</Td>
-                </tr>
-              ))
-            )}
-            {filteredLogs.map((log) => (
-              <tr key={log.id}>
+            {sortedLogs.map((log, idx) => (
+              <tr key={log.id || idx}>
                 <Td>{log.ticket_id}</Td>
                 <Td>
                   <StatusBadge status={log.old_status}>
-                    {log.old_status}
+                    {log.old_status || '-'}
                   </StatusBadge>
                 </Td>
                 <Td>
                   <StatusBadge status={log.new_status}>
-                    {log.new_status}
+                    {log.new_status || '-'}
                   </StatusBadge>
                 </Td>
-                <Td>{log.changed_by}</Td>
+                <Td>{log.changed_by || '-'}</Td>
                 <Td>
-                  {new Date(log.changed_at).toLocaleString('th-TH')}
+                  {log.changed_at ? 
+                    new Date(log.changed_at).toLocaleString('th-TH', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : 
+                    '-'}
                 </Td>
               </tr>
             ))}
