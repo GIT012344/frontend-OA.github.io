@@ -2159,9 +2159,22 @@ function App() {
   // --- ฟังก์ชัน handleStatusChange ---
   const [statusChangeLoading, setStatusChangeLoading] = useState(false); // เพิ่ม state loading
   const [statusChangeError, setStatusChangeError] = useState(""); // error modal
+  const isClosedStatus = (status) => status === "Closed" || status === "Cancelled";
   const handleStatusChange = (ticketId, newStatus) => {
     const target = data.find((d) => d["Ticket ID"] === ticketId);
     const oldStatus = target?.status || target?.สถานะ || "";
+    if (isClosedStatus(oldStatus)) {
+      setStatusChangeError("ไม่สามารถเปลี่ยนสถานะ Ticket ที่ปิดแล้วได้");
+      setStatusChangeModal({
+        open: true,
+        ticketId,
+        newStatus: oldStatus,
+        oldStatus,
+        remarks: "",
+        internalNotes: ""
+      });
+      return;
+    }
     if (newStatus === oldStatus) return;
     setStatusChangeModal({
       open: true,
@@ -2176,6 +2189,10 @@ function App() {
 
   const confirmStatusChange = async () => {
     const { ticketId, newStatus, oldStatus, remarks, internalNotes } = statusChangeModal;
+    if (isClosedStatus(oldStatus)) {
+      setStatusChangeError("ไม่สามารถเปลี่ยนสถานะ Ticket ที่ปิดแล้วได้");
+      return;
+    }
     if (!remarks.trim()) {
       setStatusChangeError("กรุณากรอกหมายเหตุ (remarks) ก่อนยืนยัน");
       return;
@@ -3448,7 +3465,7 @@ function App() {
                                 marginBottom: '16px'
                               }}
                               placeholder="กรอกหมายเหตุที่จะแสดงให้ลูกค้าเห็น..."
-                              disabled={statusChangeLoading}
+                              disabled={statusChangeLoading || isClosedStatus(statusChangeModal.oldStatus)}
                             />
                             <label style={{ display: 'block', marginBottom: '8px', color: '#64748b' }}>
                               หมายเหตุภายใน:
@@ -3467,12 +3484,17 @@ function App() {
                                 minHeight: '80px'
                               }}
                               placeholder="กรอกหมายเหตุภายใน (ไม่แสดงให้ลูกค้าเห็น)..."
-                              disabled={statusChangeLoading}
+                              disabled={statusChangeLoading || isClosedStatus(statusChangeModal.oldStatus)}
                             />
                           </div>
                           {statusChangeError && (
                             <div style={{ color: '#ef4444', marginBottom: 8, fontWeight: 500 }}>
                               {statusChangeError}
+                            </div>
+                          )}
+                          {isClosedStatus(statusChangeModal.oldStatus) && (
+                            <div style={{ color: '#ef4444', marginBottom: 8, fontWeight: 500 }}>
+                              ไม่สามารถเปลี่ยนสถานะ Ticket ที่ปิดแล้วได้
                             </div>
                           )}
                         </div>
@@ -3504,10 +3526,10 @@ function App() {
                               color: 'white',
                               border: 'none',
                               borderRadius: '8px',
-                              cursor: statusChangeLoading || !statusChangeModal.remarks.trim() ? 'not-allowed' : 'pointer',
-                              opacity: statusChangeLoading || !statusChangeModal.remarks.trim() ? 0.6 : 1
+                              cursor: statusChangeLoading || !statusChangeModal.remarks.trim() || isClosedStatus(statusChangeModal.oldStatus) ? 'not-allowed' : 'pointer',
+                              opacity: statusChangeLoading || !statusChangeModal.remarks.trim() || isClosedStatus(statusChangeModal.oldStatus) ? 0.6 : 1
                             }}
-                            disabled={statusChangeLoading || !statusChangeModal.remarks.trim()}
+                            disabled={statusChangeLoading || !statusChangeModal.remarks.trim() || isClosedStatus(statusChangeModal.oldStatus)}
                           >
                             {statusChangeLoading ? 'กำลังบันทึก...' : 'ยืนยันการเปลี่ยนสถานะ'}
                           </button>
@@ -3587,6 +3609,7 @@ function App() {
                                   <select
                                     value={editForm.status}
                                     onChange={e => {
+                                      if (isClosedStatus(row["สถานะ"])) return; // ป้องกันเปลี่ยนสถานะ ticket ที่ปิดแล้ว
                                       if (e.target.value !== row["สถานะ"]) {
                                         setStatusChangeModal({
                                           open: true,
@@ -3599,7 +3622,7 @@ function App() {
                                         handleEditFormChange("status", e.target.value);
                                       }
                                     }}
-                                    disabled={editLoading}
+                                    disabled={editLoading || isClosedStatus(row["สถานะ"])}
                                     style={{
                                       width: '100%',
                                       padding: '6px 12px',
@@ -3607,8 +3630,8 @@ function App() {
                                       border: '1px solid #e2e8f0',
                                       fontSize: '0.85rem',
                                       fontWeight: 500,
-                                      backgroundColor: 'white',
-                                      cursor: 'pointer',
+                                      backgroundColor: isClosedStatus(row["สถานะ"]) ? '#f1f5f9' : 'white',
+                                      cursor: isClosedStatus(row["สถานะ"]) ? 'not-allowed' : 'pointer',
                                       appearance: 'none',
                                       backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'%23475569\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
                                       backgroundRepeat: 'no-repeat',
