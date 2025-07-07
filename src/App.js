@@ -242,19 +242,19 @@ const TableRow = styled.tr`
   `}
   &:nth-child(even) {
     background-color: ${(props) =>
-      props.$bgColor ? props.$bgColor : "#f8fafc"};
+    props.$bgColor ? props.$bgColor : "#f8fafc"};
   }
   &:hover {
     background-color: ${(props) =>
-      props.$bgColor
-        ? props.$bgColor === "#fee2e2"
-          ? "#ffeaea"
-          : props.$bgColor === "#fff7e6"
-            ? "#fff3d1"
-            : props.$bgColor === "#e6f7ee"
-              ? "#d1fae5"
-              : "#f3f4f6"
-        : "#f3f4f6"};
+    props.$bgColor
+      ? props.$bgColor === "#fee2e2"
+        ? "#ffeaea"
+        : props.$bgColor === "#fff7e6"
+          ? "#fff3d1"
+          : props.$bgColor === "#e6f7ee"
+            ? "#d1fae5"
+            : "#f3f4f6"
+      : "#f3f4f6"};
     transform: scale(1.001);
   }
 `;
@@ -656,7 +656,7 @@ const MessageBubble = styled.div`
   box-shadow: 0 1px 2px rgba(0,0,0,0.1);
   word-break: break-word;
   margin-bottom: 8px;
-  ${({ $isAdmin }) => $isAdmin 
+  ${({ $isAdmin }) => $isAdmin
     ? `
       align-self: flex-end;
       background: #3b82f6;
@@ -1364,7 +1364,7 @@ const LogoutButton = styled.button`
 function ExpandableCell({ text, maxLines = 4 }) {
   const [expanded, setExpanded] = useState(false);
   if (!text || text === "None") return <span>None</span>;
-  
+
   const lines = text.split(/\r?\n/).flatMap(line => {
     if (line.length <= 80) return [line];
     const chunks = [];
@@ -1373,9 +1373,9 @@ function ExpandableCell({ text, maxLines = 4 }) {
     }
     return chunks;
   });
-  
+
   const isLong = lines.length > maxLines;
-  
+
   return (
     <div style={{ whiteSpace: "pre-line", wordBreak: "break-word", background: "#fff", position: "relative", minHeight: 0 }}>
       {expanded || !isLong
@@ -1507,9 +1507,9 @@ const UserRankBadge = styled.div`
   justify-content: center;
   background: ${props =>
     props.$rank === 1 ? '#f59e0b' :
-    props.$rank === 2 ? '#94a3b8' :
-    props.$rank === 3 ? '#b45309' :
-    '#e2e8f0'};
+      props.$rank === 2 ? '#94a3b8' :
+        props.$rank === 3 ? '#b45309' :
+          '#e2e8f0'};
   color: ${props => props.$rank <= 3 ? 'white' : '#475569'};
   font-weight: 600;
   margin-right: 12px;
@@ -1680,23 +1680,23 @@ function App() {
   const [lastError, setLastError] = useState(null);
   // Current authenticated user info (name, role, etc.) from AuthContext
   const { user: authUser } = useAuth();
-  
+
   // New state variables for pagination and loading
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   // Tickets per page (pagination)
   const rowsPerPage = 5;
-  
+
   // New Chat System State
   const [selectedChatUser, setSelectedChatUser] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [loadingChat, setLoadingChat] = useState(false);
   const [chatUsers, setChatUsers] = useState([]);
-  
+
   // Announcement System State (preserved)
   const [announcementMessage, setAnnouncementMessage] = useState("");
-  
+
   const { token, user, logout } = useAuth();
 
   const dashboardRef = useRef(null);
@@ -1781,7 +1781,7 @@ function App() {
           'Content-Type': 'application/json',
         }
       });
-      
+
       if (response.status === 200) {
         console.log("✅ Backend health check passed");
         return true;
@@ -1810,7 +1810,7 @@ function App() {
       setRetryCount(0); // Reset retry count on success
     } catch (error) {
       console.error("Error fetching data:", error);
-      
+
       // Handle different types of errors
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         setBackendStatus('offline');
@@ -1924,49 +1924,49 @@ function App() {
 
   // สถานะต่างๆ พร้อมการออกแบบที่สวยงาม
   const STATUS_OPTIONS = [
-    { 
-      value: "New", 
-      label: "New", 
+    {
+      value: "New",
+      label: "New",
       color: "#e0f2fe",
       textColor: "#0369a1",
       borderColor: "#bae6fd",
       icon: "🆕"
     },
-    { 
-      value: "In Process", 
-      label: "In Process", 
+    {
+      value: "In Process",
+      label: "In Process",
       color: "#e0e7ff",
       textColor: "#4338ca",
       borderColor: "#c7d2fe",
       icon: "⚙️"
     },
-    { 
-      value: "Pending", 
-      label: "Pending", 
+    {
+      value: "Pending",
+      label: "Pending",
       color: "#fffbeb",
       textColor: "#b45309",
       borderColor: "#fde68a",
       icon: "⏳"
     },
-    { 
-      value: "Closed", 
-      label: "Closed", 
+    {
+      value: "Closed",
+      label: "Closed",
       color: "#ecfdf5",
       textColor: "#047857",
       borderColor: "#a7f3d0",
       icon: "✅"
     },
-    { 
-      value: "Cancelled", 
-      label: "Cancelled", 
+    {
+      value: "Cancelled",
+      label: "Cancelled",
       color: "#f9fafb",
       textColor: "#4b5563",
       borderColor: "#e5e7eb",
       icon: "❌"
     },
-    { 
-      value: "Reject", 
-      label: "Reject", 
+    {
+      value: "Reject",
+      label: "Reject",
       color: "#fef2f2",
       textColor: "#b91c1c",
       borderColor: "#fecaca",
@@ -1976,7 +1976,7 @@ function App() {
   const getStatusStyle = (status) => {
     const statusObj = STATUS_OPTIONS.find(s => s.value === status);
     if (!statusObj) return {};
-    
+
     return {
       backgroundColor: statusObj.color,
       color: statusObj.textColor,
@@ -2018,7 +2018,7 @@ function App() {
         setHasUnread(unread);
       } catch (error) {
         console.error("Error fetching notifications:", error);
-        
+
         // Don't show error to user for notifications, but log it
         if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
           console.warn("Network error while fetching notifications - server may be offline");
@@ -2029,12 +2029,12 @@ function App() {
         } else {
           console.error("Request setup error:", error.message);
         }
-        
+
       }
     };
 
     fetchNotifications();
-    
+
     // Only retry notifications if backend is connected
     const interval = setInterval(() => {
       if (backendStatus === 'connected') {
@@ -2279,7 +2279,7 @@ function App() {
   // New Chat Functions
   const loadChatMessages = async (userId) => {
     if (!userId || userId === "announcement") return;
-    
+
     setLoadingChat(true);
     try {
       const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
@@ -2410,7 +2410,7 @@ function App() {
         const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
           params: { user_id: selectedChatUser }
         });
-        
+
         if (response.data && Array.isArray(response.data)) {
           setChatMessages(response.data);
         }
@@ -2421,10 +2421,10 @@ function App() {
 
     // Poll immediately
     pollMessages();
-    
+
     // Set up polling every 3 seconds
     const interval = setInterval(pollMessages, 3000);
-    
+
     return () => clearInterval(interval);
   }, [selectedChatUser]);
 
@@ -2456,7 +2456,7 @@ function App() {
   const handleManualRetry = async () => {
     setIsRetrying(true);
     setRetryCount(prev => prev + 1);
-    
+
     try {
       const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
         timeout: 15000, // 15 second timeout for manual retry
@@ -2464,19 +2464,19 @@ function App() {
           'Content-Type': 'application/json',
         }
       });
-      
+
       setData(Array.isArray(response.data) ? response.data : []);
       setBackendStatus('connected');
       setRetryCount(0);
       setLastError(null);
       setLastSync(new Date());
-      
+
       // Show success message
       console.log("✅ Manual retry successful - backend reconnected");
-      
+
     } catch (error) {
       console.error("❌ Manual retry failed:", error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         setBackendStatus('offline');
         setLastError({
@@ -2632,7 +2632,7 @@ function App() {
       if (status === "In Progress") status = "In Process";
       if (status === "Rejected") status = "Reject";
       if (status === "Completed" || status === "Complete") status = "Closed";
-      
+
       if (dailySummary[ticketDate]) {
         dailySummary[ticketDate].count++;
         if (dailySummary[ticketDate][status] !== undefined) {
@@ -2684,7 +2684,7 @@ function App() {
       return apptDate.getFullYear() === now.getFullYear() &&
         apptDate.getMonth() === now.getMonth() &&
         apptDate.getDate() === now.getDate();
-    }).sort((a,b) => {
+    }).sort((a, b) => {
       const aDate = parseAppointmentText(a.Appointment || a["appointment text"] || a["appointment_datetime"] || 0);
       const bDate = parseAppointmentText(b.Appointment || b["appointment text"] || b["appointment_datetime"] || 0);
       return aDate - bDate;
@@ -2703,7 +2703,7 @@ function App() {
       const appt = new Date(apptRaw);
       if (isNaN(appt.getTime())) return false;
       return appt < now; // past appointments
-    }).sort((a,b) => {
+    }).sort((a, b) => {
       const dateA = new Date(a.Appointment || a["appointment text"] || a["appointment_datetime"] || 0);
       const dateB = new Date(b.Appointment || b["appointment text"] || b["appointment_datetime"] || 0);
       return dateB - dateA; // Sort by most recent first
@@ -2758,7 +2758,7 @@ function App() {
       department: ticket["แผนก"] || "",
       date: ticket["วันที่แจ้ง"] || "",
       appointment: ticket["Appointment"] || "",
-      appointment_datetime: ticket["appointment_datetime"] ? ticket["appointment_datetime"].slice(0,16) : "",
+      appointment_datetime: ticket["appointment_datetime"] ? ticket["appointment_datetime"].slice(0, 16) : "",
       request: ticket["Requeste"] || "",
       report: ticket["Report"] || "",
       type: ticket["Type"] || "",
@@ -2814,19 +2814,19 @@ function App() {
         setData((prev) => prev.map((item) =>
           item["Ticket ID"] === ticketId
             ? {
-                ...item,
-                "อีเมล": editForm.email,
-                "ชื่อ": editForm.name,
-                "เบอร์ติดต่อ": editForm.phone,
-                "แผนก": editForm.department,
-                "วันที่แจ้ง": editForm.date,
-                "Appointment": editForm.appointment,
-                "Requeste": editForm.request,
-                "Report": editForm.report,
-                "Type": editForm.type,
-                "สถานะ": editForm.status,
-                "remarks": editForm.remarks,
-              }
+              ...item,
+              "อีเมล": editForm.email,
+              "ชื่อ": editForm.name,
+              "เบอร์ติดต่อ": editForm.phone,
+              "แผนก": editForm.department,
+              "วันที่แจ้ง": editForm.date,
+              "Appointment": editForm.appointment,
+              "Requeste": editForm.request,
+              "Report": editForm.report,
+              "Type": editForm.type,
+              "สถานะ": editForm.status,
+              "remarks": editForm.remarks,
+            }
             : item
         ));
         setEditSuccess("บันทึกสำเร็จ");
@@ -2845,979 +2845,1099 @@ function App() {
 
   return (
 
-      <Routes>
-        <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
-        <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <Login />} />
-        <Route path="/dashboard" element={token ? (
-          // Main dashboard content
-          <>
-            <Sidebar
+    <Routes>
+      <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
+      <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <Login />} />
+      <Route path="/dashboard" element={token ? (
+        // Main dashboard content
+        <>
+          <Sidebar
+            $collapsed={!sidebarOpen}
+            $hovered={sidebarHover}
+            onMouseEnter={() => setSidebarHover(true)}
+            onMouseLeave={() => setSidebarHover(false)}
+          >
+            <Logo>{sidebarOpen || sidebarHover ? "Helpdesk-System" : "HS"}</Logo>
+            <ToggleButton
+              onClick={() => setSidebarOpen(!sidebarOpen)}
               $collapsed={!sidebarOpen}
-              $hovered={sidebarHover}
-              onMouseEnter={() => setSidebarHover(true)}
-              onMouseLeave={() => setSidebarHover(false)}
+            />
+            <NavItem
+              $icon="dashboard"
+              $active={activeTab === "dashboard"}
+              onClick={() => {
+                setActiveTab("dashboard");
+                scrollToDashboard();
+              }}
+              $collapsed={!sidebarOpen}
+              data-tooltip="Dashboard"
             >
-              <Logo>{sidebarOpen || sidebarHover ? "Helpdesk-System" : "HS"}</Logo>
-              <ToggleButton
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                $collapsed={!sidebarOpen}
-              />
-              <NavItem
-                $icon="dashboard"
-                $active={activeTab === "dashboard"}
-                onClick={() => {
-                  setActiveTab("dashboard");
-                  scrollToDashboard();
-                }}
-                $collapsed={!sidebarOpen}
-                data-tooltip="Dashboard"
-              >
-                <span>Dashboard</span>
-              </NavItem>
-              <NavItem
-                $icon="list"
-                $active={activeTab === "list"}
-                onClick={() => {
-                  setActiveTab("list");
-                  scrollToList();
-                }}
-                $collapsed={!sidebarOpen}
-                data-tooltip="List"
-              >
-                <span>Ticket List</span>
-              </NavItem>
-              <NavItem
-                $icon="chat"
-                $active={activeTab === "chat"}
-                onClick={() => {
-                  setActiveTab("chat");
-                  scrollToChat();
-                }}
-                $collapsed={!sidebarOpen}
-                data-tooltip="Chat"
-              >
-                <span>Chat</span>
-  </NavItem>
-  <NavItem
-  $icon="history"
-  $active={activeTab === "logs" || location.pathname === "/logs"}
-  onClick={() => {
-    setActiveTab("logs");
-    navigate("/logs");
-  }}
-  $collapsed={!sidebarOpen}
-  data-tooltip="Status Logs"
->
-  <span>Status Logs</span>
-              </NavItem>
-            </Sidebar>
-            <MainContent style={{ marginLeft: sidebarOpen ? "240px" : "80px" }}>
-              <Container>
-                <div ref={dashboardRef}>
-                  <Title>Ticket Management System</Title>
-          <DashboardSection
-            stats={getBasicStats()}
-            daily={getDailySummary()}
-            upcoming={getUpcomingAppointments()}
-            overdue={getOverdueAppointments()}
-          />
-                  <SyncIndicator>{formatLastSync()}</SyncIndicator>
-                  <BackendStatusIndicator $status={backendStatus}>
-                    {getBackendStatusText()}
-                    {(backendStatus === 'error' || backendStatus === 'offline') && (
-                      <RetryButton 
-                        onClick={handleManualRetry} 
-                        disabled={isRetrying}
-                      >
-                        {isRetrying ? 'Retrying...' : 'Retry'}
-                      </RetryButton>
+              <span>Dashboard</span>
+            </NavItem>
+            <NavItem
+              $icon="list"
+              $active={activeTab === "list"}
+              onClick={() => {
+                setActiveTab("list");
+                scrollToList();
+              }}
+              $collapsed={!sidebarOpen}
+              data-tooltip="List"
+            >
+              <span>Ticket List</span>
+            </NavItem>
+            <NavItem
+              $icon="chat"
+              $active={activeTab === "chat"}
+              onClick={() => {
+                setActiveTab("chat");
+                scrollToChat();
+              }}
+              $collapsed={!sidebarOpen}
+              data-tooltip="Chat"
+            >
+              <span>Chat</span>
+            </NavItem>
+            <NavItem
+              $icon="history"
+              $active={activeTab === "logs" || location.pathname === "/logs"}
+              onClick={() => {
+                setActiveTab("logs");
+                navigate("/logs");
+              }}
+              $collapsed={!sidebarOpen}
+              data-tooltip="Status Logs"
+            >
+              <span>Status Logs</span>
+            </NavItem>
+          </Sidebar>
+          <MainContent style={{ marginLeft: sidebarOpen ? "240px" : "80px" }}>
+            <Container>
+              <div ref={dashboardRef}>
+                <Title>Ticket Management System</Title>
+                <DashboardSection
+                  stats={getBasicStats()}
+                  daily={getDailySummary()}
+                  upcoming={getUpcomingAppointments()}
+                  overdue={getOverdueAppointments()}
+                />
+                <SyncIndicator>{formatLastSync()}</SyncIndicator>
+                <BackendStatusIndicator $status={backendStatus}>
+                  {getBackendStatusText()}
+                  {(backendStatus === 'error' || backendStatus === 'offline') && (
+                    <RetryButton
+                      onClick={handleManualRetry}
+                      disabled={isRetrying}
+                    >
+                      {isRetrying ? 'Retrying...' : 'Retry'}
+                    </RetryButton>
+                  )}
+                </BackendStatusIndicator>
+                {backendStatus === 'offline' && (
+                  <div style={{
+                    textAlign: 'center',
+                    color: '#f59e0b',
+                    fontSize: '0.875rem',
+                    marginBottom: '16px',
+                    padding: '12px',
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(245, 158, 11, 0.2)'
+                  }}>
+                    <strong>⚠️ Backend Server Offline</strong><br />
+                    The backend server is currently unavailable. Some features may not work properly.
+                    {retryCount > 0 && (
+                      <div style={{ marginTop: '8px', fontSize: '0.8rem' }}>
+                        Auto-retry attempts: {retryCount}
+                      </div>
                     )}
-                  </BackendStatusIndicator>
-                  {backendStatus === 'offline' && (
-                    <div style={{
-                      textAlign: 'center',
-                      color: '#f59e0b',
-                      fontSize: '0.875rem',
-                      marginBottom: '16px',
-                      padding: '12px',
-                      background: 'rgba(245, 158, 11, 0.1)',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(245, 158, 11, 0.2)'
-                    }}>
-                      <strong>⚠️ Backend Server Offline</strong><br />
-                      The backend server is currently unavailable. Some features may not work properly.
-                      {retryCount > 0 && (
-                        <div style={{ marginTop: '8px', fontSize: '0.8rem' }}>
-                          Auto-retry attempts: {retryCount}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {backendStatus === 'error' && (
-                    <div style={{
-                      textAlign: 'center',
-                      color: '#ef4444',
-                      fontSize: '0.875rem',
-                      marginBottom: '16px',
-                      padding: '12px',
-                      background: 'rgba(239, 68, 68, 0.1)',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(239, 68, 68, 0.2)'
-                    }}>
-                      <strong>🔴 Backend Server Error</strong><br />
-                      The backend server is experiencing issues. Please try again later.
-                    </div>
-                  )}
-                  {lastError && (
-                    <ErrorDetails>
-                      <div className="error-header">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                          <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z"/>
-                          <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
-                        </svg>
-                        <span>Error Details</span>
-                      </div>
-                      <div className="error-content">
-                        <div className="error-item">
-                          <span className="error-label">Status:</span>
-                          <span className="error-value">{lastError.status}</span>
-                        </div>
-                        <div className="error-item">
-                          <span className="error-label">Message:</span>
-                          <span className="error-value">{lastError.message}</span>
-                        </div>
-                        <div className="error-item">
-                          <span className="error-label">Details:</span>
-                          <span className="error-value">{lastError.details}</span>
-                        </div>
-                        {retryCount > 0 && (
-                          <div className="retry-info">
-                            <span className="error-label">Retry attempts:</span>
-                            <span className="error-value">{retryCount}</span>
-                          </div>
-                        )}
-                      </div>
-                    </ErrorDetails>
-                  )}
-                  <HeaderSection>
-                  <UserInfo>
-                  <div>
-                    <strong>{user?.username || user?.name || 'Admin'}</strong> ({user?.role || 'User'})
                   </div>
-                  <LogoutButton onClick={logout}>
-                    ออกจากระบบ
-                  </LogoutButton>
-                </UserInfo>
-                    <div></div>
-                    <ExportSection>
-                      <NotificationBell
-                        $hasUnread={hasUnread}
-                        onClick={() => {
-                          setShowNotifications(!showNotifications);
-                          if (hasUnread && !showNotifications) {
-                            markAsRead();
-                          }
-                        }}
-                      />
-                      <ExportButton 
-                        onClick={fetchData}
-                        disabled={loading}
-                        style={{ 
-                          background: loading ? '#e2e8f0' : 'rgba(255, 255, 255, 0.9)',
-                          color: loading ? '#94a3b8' : '#475569'
-                        }}
-                      >
-                        {loading ? 'กำลังโหลด...' : '🔄 รีเฟรช'}
-                      </ExportButton>
-                      <ExportButton onClick={exportToCSV}>ส่งออก CSV</ExportButton>
-                      <ExportButton $primary onClick={exportToJSON}>
-                        ส่งออก JSON
-                      </ExportButton>
-                    </ExportSection>
-                  </HeaderSection>
-                  {/* Dashboard */}
-                  <Dashboard>
-                    {/* 1. สรุปภาพรวม ticket รายวัน */}
-  
-
-                    
-
-                    
-                    
-
-                    {/* 4. สถิติอื่นๆ ที่มีอยู่เดิม */}
-                    <StatCard $accent="linear-gradient(90deg, #ec4899, #f43f5e)">
-                      <StatTitle>ประเภทของ Ticket</StatTitle>
-                      <div style={{ marginTop: "16px" }}>
-                        {Object.entries(
-                          data.reduce((acc, ticket) => {
-                            const type = ticket["Type"] || "None";
-                            acc[type] = (acc[type] || 0) + 1;
-                            return acc;
-                          }, {})
-                        ).map(([type, count]) => (
-                          <div
-                            key={type}
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              marginBottom: "8px",
-                            }}
-                          >
-                            <span>{type}</span>
-                            <span style={{ fontWeight: "600" }}>{count}</span>
-                          </div>
-                        ))}
+                )}
+                {backendStatus === 'error' && (
+                  <div style={{
+                    textAlign: 'center',
+                    color: '#ef4444',
+                    fontSize: '0.875rem',
+                    marginBottom: '16px',
+                    padding: '12px',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(239, 68, 68, 0.2)'
+                  }}>
+                    <strong>🔴 Backend Server Error</strong><br />
+                    The backend server is experiencing issues. Please try again later.
+                  </div>
+                )}
+                {lastError && (
+                  <ErrorDetails>
+                    <div className="error-header">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z" />
+                        <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z" />
+                      </svg>
+                      <span>Error Details</span>
+                    </div>
+                    <div className="error-content">
+                      <div className="error-item">
+                        <span className="error-label">Status:</span>
+                        <span className="error-value">{lastError.status}</span>
                       </div>
-                    </StatCard>
-
-                    {/* 5. อันดับผู้ใช้ Ticket มากที่สุด */}
-                    <RankingCard $accent="linear-gradient(90deg, #8b5cf6, #7c3aed)">
-                      <RankingHeader>
-                        <StatTitle>อันดับผู้ใช้ Ticket มากที่สุด</StatTitle>
-                        <RankingToggleButton onClick={() => setShowAllRankings(!showAllRankings)}>
-                          {showAllRankings ? (
-                            <>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 15l7-7 7 7" /></svg>
-                              แสดงเฉพาะ 5 อันดับแรก
-                            </>
-                          ) : (
-                            <>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 9l-7 7-7-7" /></svg>
-                              แสดงทั้งหมด
-                            </>
-                          )}
-                        </RankingToggleButton>
-                      </RankingHeader>
-                      <UserRankingList>
-                        {getDisplayRankings().map((user, index) => (
-                          <UserRankingItem key={user.email}>
-                            <UserRankingInfo>
-                              <UserRankBadge $rank={index + 1}>{index + 1}</UserRankBadge>
-                              <UserRankingEmail
-                                title={user.email}
-                                onClick={() => {
-                                  setSearchTerm(user.email);
-                                  setActiveTab("list");
-                                  scrollToList();
-                                }}
-                              >
-                                {user.email}
-                              </UserRankingEmail>
-                            </UserRankingInfo>
-                            <UserTicketCount>{user.count} Tickets</UserTicketCount>
-                          </UserRankingItem>
-                        ))}
-                        {getUserRankings().length === 0 && (
-                          <div style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
-                            ไม่มีข้อมูลผู้ใช้
-                          </div>
-                        )}
-                      </UserRankingList>
-                      {!showAllRankings && getUserRankings().length > 5 && (
-                        <div style={{
-                          textAlign: 'center',
-                          color: '#64748b',
-                          fontSize: '0.75rem',
-                          marginTop: '8px'
-                        }}>
-                          + อีก {getUserRankings().length - 5} รายการ
+                      <div className="error-item">
+                        <span className="error-label">Message:</span>
+                        <span className="error-value">{lastError.message}</span>
+                      </div>
+                      <div className="error-item">
+                        <span className="error-label">Details:</span>
+                        <span className="error-value">{lastError.details}</span>
+                      </div>
+                      {retryCount > 0 && (
+                        <div className="retry-info">
+                          <span className="error-label">Retry attempts:</span>
+                          <span className="error-value">{retryCount}</span>
                         </div>
                       )}
-                    </RankingCard>
-                  </Dashboard>
-                </div>
-                <div ref={listRef}>
-                  <StatCard
-                    $accent="linear-gradient(90deg, #3b82f6, #2563eb)"
-                    style={{ gridColumn: "span 2" }}
-                  >
-  <StatTitle>นัดหมายล่าสุด (Service)</StatTitle>
+                    </div>
+                  </ErrorDetails>
+                )}
+                <HeaderSection>
+                  <UserInfo>
+                    <div>
+                      <strong>{user?.username || user?.name || 'Admin'}</strong> ({user?.role || 'User'})
+                    </div>
+                    <LogoutButton onClick={logout}>
+                      ออกจากระบบ
+                    </LogoutButton>
+                  </UserInfo>
+                  <div></div>
+                  <ExportSection>
+                    <NotificationBell
+                      $hasUnread={hasUnread}
+                      onClick={() => {
+                        setShowNotifications(!showNotifications);
+                        if (hasUnread && !showNotifications) {
+                          markAsRead();
+                        }
+                      }}
+                    />
+                    <ExportButton
+                      onClick={fetchData}
+                      disabled={loading}
+                      style={{
+                        background: loading ? '#e2e8f0' : 'rgba(255, 255, 255, 0.9)',
+                        color: loading ? '#94a3b8' : '#475569'
+                      }}
+                    >
+                      {loading ? 'กำลังโหลด...' : '🔄 รีเฟรช'}
+                    </ExportButton>
+                    <ExportButton onClick={exportToCSV}>ส่งออก CSV</ExportButton>
+                    <ExportButton $primary onClick={exportToJSON}>
+                      ส่งออก JSON
+                    </ExportButton>
+                  </ExportSection>
+                </HeaderSection>
+                {/* Dashboard */}
+                <Dashboard>
+                  {/* 1. สรุปภาพรวม ticket รายวัน */}
+
+
+
+
+
+
+
+                  {/* 4. สถิติอื่นๆ ที่มีอยู่เดิม */}
+                  <StatCard $accent="linear-gradient(90deg, #ec4899, #f43f5e)">
+                    <StatTitle>ประเภทของ Ticket</StatTitle>
                     <div style={{ marginTop: "16px" }}>
-    {(() => {
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                      {Object.entries(
+                        data.reduce((acc, ticket) => {
+                          const type = ticket["Type"] || "None";
+                          acc[type] = (acc[type] || 0) + 1;
+                          return acc;
+                        }, {})
+                      ).map(([type, count]) => (
+                        <div
+                          key={type}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          <span>{type}</span>
+                          <span style={{ fontWeight: "600" }}>{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </StatCard>
 
-      const filtered = data.filter((ticket) => {
-        // ตรวจสอบประเภทและสถานะ
-        if (ticket["Type"] !== "Service") return false;
-        if (ticket["สถานะ"] !== "New" && ticket["สถานะ"] !== "Pending") return false;
-        
-        // ตรวจสอบการนัดหมาย
-        if (!ticket["Appointment"]) return false;
+                  {/* 5. อันดับผู้ใช้ Ticket มากที่สุด */}
+                  <RankingCard $accent="linear-gradient(90deg, #8b5cf6, #7c3aed)">
+                    <RankingHeader>
+                      <StatTitle>อันดับผู้ใช้ Ticket มากที่สุด</StatTitle>
+                      <RankingToggleButton onClick={() => setShowAllRankings(!showAllRankings)}>
+                        {showAllRankings ? (
+                          <>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 15l7-7 7 7" /></svg>
+                            แสดงเฉพาะ 5 อันดับแรก
+                          </>
+                        ) : (
+                          <>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 9l-7 7-7-7" /></svg>
+                            แสดงทั้งหมด
+                          </>
+                        )}
+                      </RankingToggleButton>
+                    </RankingHeader>
+                    <UserRankingList>
+                      {getDisplayRankings().map((user, index) => (
+                        <UserRankingItem key={user.email}>
+                          <UserRankingInfo>
+                            <UserRankBadge $rank={index + 1}>{index + 1}</UserRankBadge>
+                            <UserRankingEmail
+                              title={user.email}
+                              onClick={() => {
+                                setSearchTerm(user.email);
+                                setActiveTab("list");
+                                scrollToList();
+                              }}
+                            >
+                              {user.email}
+                            </UserRankingEmail>
+                          </UserRankingInfo>
+                          <UserTicketCount>{user.count} Tickets</UserTicketCount>
+                        </UserRankingItem>
+                      ))}
+                      {getUserRankings().length === 0 && (
+                        <div style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
+                          ไม่มีข้อมูลผู้ใช้
+                        </div>
+                      )}
+                    </UserRankingList>
+                    {!showAllRankings && getUserRankings().length > 5 && (
+                      <div style={{
+                        textAlign: 'center',
+                        color: '#64748b',
+                        fontSize: '0.75rem',
+                        marginTop: '8px'
+                      }}>
+                        + อีก {getUserRankings().length - 5} รายการ
+                      </div>
+                    )}
+                  </RankingCard>
+                </Dashboard>
+              </div>
+              <div ref={listRef}>
+                <StatCard
+                  $accent="linear-gradient(90deg, #3b82f6, #2563eb)"
+                  style={{ gridColumn: "span 2" }}
+                >
+                  <StatTitle>นัดหมายล่าสุด (Service)</StatTitle>
+                  <div style={{ marginTop: "16px" }}>
+                    {(() => {
+                      const now = new Date();
+                      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-        try {
-          // แปลงวันที่จาก "2025-07-03 15:00-16:00" เป็น Date object
-          const [dateStr, timeRange] = ticket["Appointment"].split(' ');
-          const [startTime] = timeRange.split('-');
-          const [hours, minutes] = startTime.split(':');
-          
-          const apptDate = new Date(dateStr);
-          apptDate.setHours(parseInt(hours), parseInt(minutes));
+                      const filtered = data.filter((ticket) => {
+                        // ตรวจสอบประเภทและสถานะ
+                        if (ticket["Type"] !== "Service") return false;
+                        if (ticket["สถานะ"] !== "New" && ticket["สถานะ"] !== "Pending") return false;
 
-          if (isNaN(apptDate.getTime())) return false;
+                        // ตรวจสอบการนัดหมาย
+                        if (!ticket["Appointment"]) return false;
 
-          const isToday = apptDate.toDateString() === today.toDateString();
-          const isOverdue = apptDate < now;
+                        try {
+                          // แปลงวันที่จาก "2025-07-03 15:00-16:00" เป็น Date object
+                          const [dateStr, timeRange] = ticket["Appointment"].split(' ');
+                          const [startTime] = timeRange.split('-');
+                          const [hours, minutes] = startTime.split(':');
 
-          return isToday || isOverdue;
-        } catch (error) {
-          console.error("Error parsing date:", error);
-          return false;
-        }
-      });
+                          const apptDate = new Date(dateStr);
+                          apptDate.setHours(parseInt(hours), parseInt(minutes));
 
-      const sorted = filtered.sort((a, b) => {
-        const getDateTime = (str) => {
-          const [dateStr, timeRange] = str.split(' ');
-          const [startTime] = timeRange.split('-');
-          const [hours, minutes] = startTime.split(':');
-          const date = new Date(dateStr);
-          date.setHours(parseInt(hours), parseInt(minutes));
-          return date;
-        };
-        return getDateTime(a["Appointment"]) - getDateTime(b["Appointment"]);
-      });
+                          if (isNaN(apptDate.getTime())) return false;
 
-      if (sorted.length === 0) {
-        return (
-          <div style={{ 
-            textAlign: 'center', 
-            color: '#64748b', 
-            padding: '16px',
-            background: '#f8fafc',
-            borderRadius: '8px'
-          }}>
-            ไม่พบการนัดหมาย
-          </div>
-        );
-      }
+                          const isToday = apptDate.toDateString() === today.toDateString();
+                          const isOverdue = apptDate < now;
 
-      return sorted.map((ticket) => {
-        const [dateStr, timeRange] = ticket["Appointment"].split(' ');
-        const [startTime] = timeRange.split('-');
-        const [hours, minutes] = startTime.split(':');
-        const apptDate = new Date(dateStr);
-        apptDate.setHours(parseInt(hours), parseInt(minutes));
+                          return isToday || isOverdue;
+                        } catch (error) {
+                          console.error("Error parsing date:", error);
+                          return false;
+                        }
+                      });
 
-        const isOverdue = apptDate < now;
-        const isToday = apptDate.toDateString() === today.toDateString();
-        const isPending = ticket["สถานะ"] === "Pending";
+                      const sorted = filtered.sort((a, b) => {
+                        const getDateTime = (str) => {
+                          const [dateStr, timeRange] = str.split(' ');
+                          const [startTime] = timeRange.split('-');
+                          const [hours, minutes] = startTime.split(':');
+                          const date = new Date(dateStr);
+                          date.setHours(parseInt(hours), parseInt(minutes));
+                          return date;
+                        };
+                        return getDateTime(a["Appointment"]) - getDateTime(b["Appointment"]);
+                      });
 
-        const colors = isPending ? {
-          bg: isOverdue ? "#fff1f2" : "#f0f9ff",
-          border: isOverdue ? "#fb7185" : "#38bdf8",
-          text: isOverdue ? "#e11d48" : "#0284c7"
-        } : {
-          bg: isOverdue ? "#fee2e2" : "#fef9c3",
-          border: isOverdue ? "#ef4444" : "#f59e0b",
-          text: isOverdue ? "#ef4444" : "#d97706"
-        };
+                      if (sorted.length === 0) {
+                        return (
+                          <div style={{
+                            textAlign: 'center',
+                            color: '#64748b',
+                            padding: '16px',
+                            background: '#f8fafc',
+                            borderRadius: '8px'
+                          }}>
+                            ไม่พบการนัดหมาย
+                          </div>
+                        );
+                      }
 
-        return (
+                      return sorted.map((ticket) => {
+                        const [dateStr, timeRange] = ticket["Appointment"].split(' ');
+                        const [startTime] = timeRange.split('-');
+                        const [hours, minutes] = startTime.split(':');
+                        const apptDate = new Date(dateStr);
+                        apptDate.setHours(parseInt(hours), parseInt(minutes));
+
+                        const isOverdue = apptDate < now;
+                        const isToday = apptDate.toDateString() === today.toDateString();
+                        const isPending = ticket["สถานะ"] === "Pending";
+
+                        const colors = isPending ? {
+                          bg: isOverdue ? "#fff1f2" : "#f0f9ff",
+                          border: isOverdue ? "#fb7185" : "#38bdf8",
+                          text: isOverdue ? "#e11d48" : "#0284c7"
+                        } : {
+                          bg: isOverdue ? "#fee2e2" : "#fef9c3",
+                          border: isOverdue ? "#ef4444" : "#f59e0b",
+                          text: isOverdue ? "#ef4444" : "#d97706"
+                        };
+
+                        return (
                           <div
                             key={ticket["Ticket ID"]}
                             style={{
                               marginBottom: "12px",
                               padding: "12px",
-              background: colors.bg,
+                              background: colors.bg,
                               borderRadius: "8px",
-              borderLeft: `4px solid ${colors.border}`,
-              animation: isOverdue ? "blink 1s linear infinite" : "none",
-            }}
-          >
-            <div style={{ fontWeight: "600", display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <div>
-                <div>{ticket["ชื่อ"] || "ไม่ระบุชื่อ"} (Ticket ID: {ticket["Ticket ID"]})</div>
-                <div style={{ fontSize: '0.8rem', color: '#4b5563', fontWeight: 'normal' }}>
-                  ผู้แจ้ง: {ticket["Requested"] || ticket["Requeste"] || "ไม่ระบุผู้แจ้ง"}
-                            </div>
-              </div>
-              {isOverdue && (
-                <span style={{ 
-                  color: colors.text,
-                  fontWeight: 600,
-                  background: `${colors.bg}dd`,
-                  padding: "2px 8px",
-                  borderRadius: "4px"
-                }}>
-                  เลยกำหนด
-                </span>
+                              borderLeft: `4px solid ${colors.border}`,
+                              animation: isOverdue ? "blink 1s linear infinite" : "none",
+                            }}
+                          >
+                            <div style={{ fontWeight: "600", display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                              <div>
+                                <div>{ticket["ชื่อ"] || "ไม่ระบุชื่อ"} (Ticket ID: {ticket["Ticket ID"]})</div>
+                                <div style={{ fontSize: '0.8rem', color: '#4b5563', fontWeight: 'normal' }}>
+                                  ผู้แจ้ง: {ticket["Requested"] || ticket["Requeste"] || "ไม่ระบุผู้แจ้ง"}
+                                </div>
+                              </div>
+                              {isOverdue && (
+                                <span style={{
+                                  color: colors.text,
+                                  fontWeight: 600,
+                                  background: `${colors.bg}dd`,
+                                  padding: "2px 8px",
+                                  borderRadius: "4px"
+                                }}>
+                                  เลยกำหนด
+                                </span>
                               )}
                             </div>
-            <div style={{ fontSize: "0.875rem", color: "#475569", margin: '4px 0' }}>
-              <div style={{ marginBottom: '4px' }}>
-                <span style={{ fontWeight: 500 }}>วันที่แจ้ง:</span>{' '}
-                {ticket["วันที่แจ้ง"]}
-              </div>
-              <div>
-                <span style={{ fontWeight: 500 }}>นัดหมาย:</span>{' '}
-                {ticket["Appointment"]}
-              </div>
-            </div>
-            <div style={{
-                                fontSize: "0.75rem",
-                                color: "#64748b",
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <span>
-                {ticket["แผนก"] || "ไม่ระบุแผนก"} • 
-                <span style={{
-                  display: 'inline-block',
-                  padding: "2px 8px",
-                  borderRadius: "4px",
-                  backgroundColor: colors.bg,
-                  color: colors.text,
-                  marginLeft: "4px",
-                  fontWeight: 500
-                }}>
-                  {ticket["สถานะ"]}
-                </span>
-              </span>
-              {isToday && !isOverdue && (
-                <span style={{ 
-                  background: colors.bg,
-                  color: colors.text,
-                  padding: "2px 6px",
-                  borderRadius: "4px",
-                  fontSize: "0.7rem",
-                  fontWeight: 500
-                }}>
-                  วันนี้
-                </span>
+                            <div style={{ fontSize: "0.875rem", color: "#475569", margin: '4px 0' }}>
+                              <div style={{ marginBottom: '4px' }}>
+                                <span style={{ fontWeight: 500 }}>วันที่แจ้ง:</span>{' '}
+                                {ticket["วันที่แจ้ง"]}
+                              </div>
+                              <div>
+                                <span style={{ fontWeight: 500 }}>นัดหมาย:</span>{' '}
+                                {ticket["Appointment"]}
+                              </div>
+                            </div>
+                            <div style={{
+                              fontSize: "0.75rem",
+                              color: "#64748b",
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}>
+                              <span>
+                                {ticket["แผนก"] || "ไม่ระบุแผนก"} •
+                                <span style={{
+                                  display: 'inline-block',
+                                  padding: "2px 8px",
+                                  borderRadius: "4px",
+                                  backgroundColor: colors.bg,
+                                  color: colors.text,
+                                  marginLeft: "4px",
+                                  fontWeight: 500
+                                }}>
+                                  {ticket["สถานะ"]}
+                                </span>
+                              </span>
+                              {isToday && !isOverdue && (
+                                <span style={{
+                                  background: colors.bg,
+                                  color: colors.text,
+                                  padding: "2px 6px",
+                                  borderRadius: "4px",
+                                  fontSize: "0.7rem",
+                                  fontWeight: 500
+                                }}>
+                                  วันนี้
+                                </span>
                               )}
                             </div>
                           </div>
-        );
-      });
-    })()}
-                    </div>
-                  </StatCard>
-                  <TableContainer>
-                    <TableTitle>รายการ Ticket ทั้งหมด</TableTitle>
+                        );
+                      });
+                    })()}
+                  </div>
+                </StatCard>
+                <TableContainer>
+                  <TableTitle>รายการ Ticket ทั้งหมด</TableTitle>
 
-                    {/* Search and Filter Section */}
-                    <SearchAndFilterContainer>
-                      <SearchInput
-                        type="text"
-                        placeholder="ค้นหา Ticket..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                  {/* Search and Filter Section */}
+                  <SearchAndFilterContainer>
+                    <SearchInput
+                      type="text"
+                      placeholder="ค้นหา Ticket..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+
+                    {/* Date Filter - Moved here */}
+                    <DateFilterContainer>
+                      <FilterLabel>วันที่:</FilterLabel>
+                      <DateInput
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
                       />
-
-                      {/* Date Filter - Moved here */}
-                      <DateFilterContainer>
-                        <FilterLabel>วันที่:</FilterLabel>
-                        <DateInput
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                        />
-                        <FilterButton onClick={fetchDataByDate} disabled={!startDate}>
-                          กรอง
-                        </FilterButton>
-                        <ResetButton onClick={resetDateFilter}>รีเซ็ต</ResetButton>
-                        {isDateFilterActive && (
-                          <div
-                            style={{
-                              marginTop: "8px",
-                              color: "#475569",
-                              fontSize: "0.875rem",
-                            }}
-                          >
-                            กำลังแสดงข้อมูลวันที่:{" "}
-                            {new Date(startDate).toLocaleDateString("th-TH")}
-                          </div>
-                        )}
-                      </DateFilterContainer>
-
-                      <FilterGroup>
-                        <FilterLabel>สถานะ:</FilterLabel>
-                        <FilterSelect
-                          value={statusFilter}
-                          onChange={(e) => setStatusFilter(e.target.value)}
-                        >
-                          <option value="all">ทั้งหมด</option>
-                          <option value="Pending">Pending</option>
-                          <option value="Scheduled">Scheduled</option>
-                          <option value="In Progress">In Progress</option>
-                          <option value="Waiting">Waiting</option>
-                          <option value="Completed">Completed</option>
-                        </FilterSelect>
-                      </FilterGroup>
-
-                      <FilterGroup>
-                        <FilterLabel>ประเภท:</FilterLabel>
-                        <FilterSelect
-                          value={typeFilter}
-                          onChange={(e) => setTypeFilter(e.target.value)}
-                        >
-                          <option value="all">ทั้งหมด</option>
-                          {uniqueTypes.map((type) => (
-                            <option key={type} value={type}>
-                              {type}
-                            </option>
-                          ))}
-                        </FilterSelect>
-                      </FilterGroup>
-                    </SearchAndFilterContainer>
-
-                    <ScrollContainer>
-                      <StyledTable>
-                        <TableHeader>
-                          <tr>
-                            <TableHeaderCell>Ticket ID</TableHeaderCell>
-                            <TableHeaderCell>อีเมล</TableHeaderCell>
-                            <TableHeaderCell>ชื่อ</TableHeaderCell>
-                            <TableHeaderCell>เบอร์ติดต่อ</TableHeaderCell>
-                            <TableHeaderCell>แผนก</TableHeaderCell>
-                            <TableHeaderCell>วันที่แจ้ง</TableHeaderCell>
-                            <TableHeaderCell>สถานะ</TableHeaderCell>
-                            <TableHeaderCell>Appointment</TableHeaderCell>
-                            <TableHeaderCell style={{ width: '260px' }}>REQUESTE</TableHeaderCell>
-                            <TableHeaderCell style={{ width: '260px' }}>REPORT</TableHeaderCell>
-                            <TableHeaderCell>Type</TableHeaderCell>
-                            <TableHeaderCell>Action</TableHeaderCell>
-                          </tr>
-                        </TableHeader>
-                        <tbody>
-                          {paginatedData.map((row, i) => {
-                            const rowColor = getRowColor(
-                              row["วันที่แจ้ง"],
-                              row["สถานะ"]
-                            );
-                            const isEditing = editingTicketId === row["Ticket ID"];
-                            // appointment_datetime logic
-                            let apptSoon = false, apptNow = false;
-                            if (row["appointment_datetime"]) {
-                              const now = new Date();
-                              const appt = new Date(row["appointment_datetime"]);
-                              const diff = appt - now;
-                              if (diff > 0 && diff < 60 * 60 * 1000) apptSoon = true; // ภายใน 1 ชม.
-                              if (Math.abs(diff) < 5 * 60 * 1000) apptNow = true; // ถึงแล้ว (±5นาที)
-                            }
-                            const RowComponent = apptNow ? BlinkingRow : TableRow;
-                            return (
-                              <RowComponent
-                                key={i}
-                                $bgColor={apptSoon && !apptNow ? '#fef9c3' : rowColor}
-                                $isSelected={selectedTicket === row["Ticket ID"]}
-                              >
-                                <TableCell>{row["Ticket ID"] || "None"}</TableCell>
-                                <TableCell>
-                                  {isEditing ? (
-                                    <EditInput type="text" value={editForm.email} onChange={e => handleEditFormChange("email", e.target.value)} disabled={editLoading} />
-                                  ) : (row["อีเมล"] || "None")}
-                                </TableCell>
-                                <TableCell>
-                                  {isEditing ? (
-                                    <EditInput type="text" value={editForm.name} onChange={e => handleEditFormChange("name", e.target.value)} disabled={editLoading} />
-                                  ) : (row["ชื่อ"] || "None")}
-                                </TableCell>
-                                <TableCell>
-                                  {isEditing ? (
-                                    <EditInput type="text" value={editForm.phone} onChange={e => handleEditFormChange("phone", e.target.value)} disabled={editLoading} />
-                                  ) : (row["เบอร์ติดต่อ"] || "None")}
-                                </TableCell>
-                                <TableCell>
-                                  {isEditing ? (
-                                    <EditInput type="text" value={editForm.department} onChange={e => handleEditFormChange("department", e.target.value)} disabled={editLoading} />
-                                  ) : (row["แผนก"] || "None")}
-                                </TableCell>
-                                <TableCell>
-                                  {isEditing ? (
-                                    <EditInput type="text" value={editForm.date} onChange={e => handleEditFormChange("date", e.target.value)} disabled={editLoading} />
-                                  ) : (row["วันที่แจ้ง"] || "None")}
-                                </TableCell>
-                                <StatusCell>
-                                  {isEditing ? (
-                                    <select
-                                      value={editForm.status}
-                                      onChange={e => {
-                                        if (e.target.value !== row["สถานะ"]) {
-                                          setStatusChangeModal({
-                                            open: true,
-                                            ticketId: row["Ticket ID"],
-                                            newStatus: e.target.value,
-                                            oldStatus: row["สถานะ"],
-                                            remarks: ""
-                                          });
-                                        } else {
-                                          handleEditFormChange("status", e.target.value);
-                                        }
-                                      }}
-                                      disabled={editLoading}
-                                      style={{
-                                        width: '100%',
-                                        padding: '6px 12px',
-                                        borderRadius: '20px',
-                                        border: '1px solid #e2e8f0',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 500,
-                                        backgroundColor: 'white',
-                                        cursor: 'pointer',
-                                        appearance: 'none',
-                                        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'%23475569\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
-                                        backgroundRepeat: 'no-repeat',
-                                        backgroundPosition: 'right 12px center',
-                                        backgroundSize: '16px',
-                                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                                      }}
-                                    >
-                                      {STATUS_OPTIONS.map(opt => (
-                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                      ))}
-                                    </select>
-                                  ) : (
-                                    // ... แสดงสถานะปกติ ...
-                                    <div className="status-badge" data-status={row["สถานะ"]}>{row["สถานะ"]}</div>
-                                  )}
-                                </StatusCell>
-                                <TableCell $isEditing={isEditing}>
-                                  {isEditing ? (
-                                    <>
-                                      <EditInput
-                                        type="text"
-                                        value={editForm.appointment}
-                                        onChange={e => handleEditFormChange("appointment", e.target.value)}
-                                        disabled={editLoading}
-                                        placeholder="ข้อความนัดหมาย (เช่น 1 ก.ค. 2025 15:00-16:00)"
-                                      />
-                                      <EditInput
-                                        type="datetime-local"
-                                        value={editForm.appointment_datetime || ''}
-                                        onChange={e => handleEditFormChange("appointment_datetime", e.target.value)}
-                                        disabled={editLoading}
-                                        style={{ marginTop: 6 }}
-                                      />
-                                    </>
-                                  ) : (
-                                    <>
-                                      <span>{row["Appointment"] || "None"}</span>
-                                      {row["appointment_datetime"] && (
-                                        <div style={{ fontSize: '0.85em', color: '#64748b' }}>
-                                          ({new Date(row["appointment_datetime"]).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })})
-                                        </div>
-                                      )}
-                                    </>
-                                  )}
-                                </TableCell>
-                                <RequestReportCell $isEditing={isEditing}>
-                                  {isEditing ? (
-                                    <EditTextarea value={editForm.request} onChange={e => handleEditFormChange("request", e.target.value)} disabled={editLoading} />
-                                  ) : <span>{row["Requeste"] || "None"}</span>}
-                                </RequestReportCell>
-                                <RequestReportCell $isEditing={isEditing}>
-                                  {isEditing ? (
-                                    <EditTextarea value={editForm.report} onChange={e => handleEditFormChange("report", e.target.value)} disabled={editLoading} />
-                                  ) : <span>{row["Report"] || "None"}</span>}
-                                </RequestReportCell>
-                                <TableCell>
-                                  {isEditing ? (
-                                    <EditInput type="text" value={editForm.type} onChange={e => handleEditFormChange("type", e.target.value)} disabled={editLoading} />
-                                  ) : (row["Type"] || "None")}
-                                </TableCell>
-                                <TableCell $isEditing={isEditing}>
-                                  {isEditing ? (
-                                    <ActionButtonGroup>
-                                      <SaveButton onClick={() => handleSaveEdit(row["Ticket ID"])} disabled={editLoading}>Save</SaveButton>
-                                      <CancelButton onClick={handleCancelEdit} disabled={editLoading}>Cancel</CancelButton>
-                                    </ActionButtonGroup>
-                                  ) : (
-                                    <ActionButtonGroup>
-                                      <EditButton onClick={() => handleEditTicket(row)}>Edit</EditButton>
-                                      <DeleteButton onClick={() => handleDeleteTicket(row["Ticket ID"])}>ลบ</DeleteButton>
-                                    </ActionButtonGroup>
-                                  )}
-                                </TableCell>
-                              </RowComponent>
-                            );
-                          })}
-                        </tbody>
-                      </StyledTable>
-                    </ScrollContainer>
-
-                    {/* Pagination UI */}
-                    {totalPages > 1 && (
-                      <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0', gap: '8px', alignItems: 'center' }}>
-                        <button 
-                          onClick={() => handlePageChange(currentPage - 1)} 
-                          disabled={currentPage === 1}
-                          style={{ 
-                            padding: '8px 16px', 
-                            background: currentPage === 1 ? '#e2e8f0' : '#64748b',
-                            color: currentPage === 1 ? '#94a3b8' : 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                            transition: 'all 0.2s ease'
-                          }}
-                        >
-                          ก่อนหน้า
-                        </button>
-                        {Array.from({ length: totalPages }, (_, idx) => (
-                          <button
-                            key={idx + 1}
-                            onClick={() => handlePageChange(idx + 1)}
-                            style={{
-                              padding: '8px 12px',
-                              background: currentPage === idx + 1 ? '#64748b' : 'white',
-                              color: currentPage === idx + 1 ? 'white' : '#64748b',
-                              border: '1px solid #e2e8f0',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              minWidth: '40px'
-                            }}
-                          >
-                            {idx + 1}
-                          </button>
-                        ))}
-                        <button 
-                          onClick={() => handlePageChange(currentPage + 1)} 
-                          disabled={currentPage === totalPages}
-                          style={{ 
-                            padding: '8px 16px', 
-                            background: currentPage === totalPages ? '#e2e8f0' : '#64748b',
-                            color: currentPage === totalPages ? '#94a3b8' : 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                            transition: 'all 0.2s ease'
-                          }}
-                        >
-                          ถัดไป
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Loading indicator */}
-                    {loading && (
-                      <div style={{ textAlign: 'center', margin: '16px', color: '#64748b', fontSize: '0.95rem' }}>
-                        กำลังโหลดข้อมูล...
-                      </div>
-                    )}
-                  </TableContainer>
-                </div>
-                <div ref={chatRef}>
-                  <ChatContainer>
-                    <ChatHeader>
-                      <div
-                        style={{ display: "flex", alignItems: "center", gap: "12px" }}
-                      >
-                        <ChatTitle>Admin Chat</ChatTitle>
-                      </div>
-                      <ChatStatus>Online</ChatStatus>
-                    </ChatHeader>
-
-                    <UserSelectContainer>
-                      <UserSelect value={selectedChatUser || ""} onChange={handleUserSelect}>
-                        <option value="">-- Select User to Chat --</option>
-                        <option value="announcement">
-                          📢 Announcement to All Members
-                        </option>
-                        {chatUsers.map((chatUser) => (
-                          <option key={chatUser.user_id} value={chatUser.user_id}>
-                            {chatUser.name}
-                          </option>
-                        ))}
-                      </UserSelect>
-                    </UserSelectContainer>
-                    
-                    {selectedChatUser === "announcement" ? (
-                      // Announcement UI
-                      <div>
-                        <div style={{ padding: "20px", textAlign: "center", color: "#64748b" }}>
-                          <h3>📢 Send Announcement to All Members</h3>
-                          <p>This message will be sent to all registered users.</p>
-                        </div>
-                        <InputContainer>
-                          <InputWrapper>
-                            <ChatTextArea
-                              value={announcementMessage}
-                              onChange={(e) => setAnnouncementMessage(e.target.value)}
-                              placeholder="Type your announcement here..."
-                            />
-                            <SendButton onClick={sendAnnouncement}>
-                              Send Announcement
-                            </SendButton>
-                          </InputWrapper>
-                        </InputContainer>
-                      </div>
-                    ) : selectedChatUser ? (
-                      // Chat UI
-                      <>
-                        <MessagesContainer>
-                          {loadingChat && (
-                            <div style={{ textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
-                              Loading messages...
-                            </div>
-                          )}
-                          {chatMessages.length === 0 && !loadingChat && (
-                            <div style={{ textAlign: 'center', color: '#64748b' }}>
-                              No messages yet. Start the conversation!
-                            </div>
-                          )}
-                          {chatMessages.map((msg) => (
-                            <MessageBubble key={msg.id} $isAdmin={msg.sender_type === 'admin'}>
-                              <MessageSender $isAdmin={msg.sender_type === 'admin'}>
-                                {msg.sender_type === 'admin'
-                                  ? 'Admin'
-                                  : chatUsers.find(u => u.user_id === msg.user_id)?.name || 'User'}
-                              </MessageSender>
-                              <div>{msg.message}</div>
-                              <MessageTimeStyled $isAdmin={msg.sender_type === 'admin'}>
-                                {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
-                              </MessageTimeStyled>
-                            </MessageBubble>
-                          ))}
-                        </MessagesContainer>
-                        <InputContainer>
-                          <InputWrapper>
-                            <ChatTextArea
-                              value={newMessage}
-                              onChange={(e) => setNewMessage(e.target.value)}
-                              placeholder="Type your message here..."
-                              onKeyPress={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                  e.preventDefault();
-                                  sendChatMessage();
-                                }
-                              }}
-                            />
-                            <ClearButton onClick={clearChatHistory}>Clear History</ClearButton>
-                            <SendButton onClick={sendChatMessage} disabled={!newMessage.trim()}>
-                              Send
-                            </SendButton>
-                          </InputWrapper>
-                        </InputContainer>
-                      </>
-                    ) : (
-                      // No user selected
-                      <div style={{ 
-                        padding: "40px", 
-                        textAlign: "center", 
-                        color: "#64748b",
-                        fontSize: "1.1rem"
-                      }}>
-                        <div style={{ marginBottom: "16px" }}>
-                          💬 Select a user from the dropdown above to start chatting
-                        </div>
-                        <div style={{ fontSize: "0.9rem", opacity: 0.7 }}>
-                          Or choose "Announcement" to send a message to all members
-                        </div>
-                      </div>
-                    )}
-                  </ChatContainer>
-                </div>
-                <NotificationDropdown
-                  $visible={showNotifications}
-                  style={{
-                    transform: `translate(${notificationPosition.x}px, ${notificationPosition.y}px)`,
-                    cursor: isDragging ? "grabbing" : "grab",
-                  }}
-                  onMouseDown={handleMouseDown}
-                >
-                  <CloseButton onClick={() => setShowNotifications(false)}>
-                    &times;
-                  </CloseButton>
-                  <NotificationHeader>
-                    <NotificationTitle>การแจ้งเตือนล่าสุด</NotificationTitle>
-                    <div>
-                      <MarkAllRead onClick={() => markAsRead()}>
-                        อ่านทั้งหมด
-                      </MarkAllRead>
-                      <MarkAllRead
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              "คุณแน่ใจหรือไม่ว่าต้องการลบการแจ้งเตือนทั้งหมด?"
-                            )
-                          ) {
-                            notifications.forEach((n) => deleteNotification(n.id));
-                          }
-                        }}
-                        style={{ marginLeft: "10px", color: "#ef4444" }}
-                      >
-                        ลบทั้งหมด
-                      </MarkAllRead>
-                    </div>
-                  </NotificationHeader>
-
-                  {notifications.length > 0 ? (
-                    notifications.map((notification) => (
-                      <NotificationItem
-                        key={notification.id}
-                        $unread={!notification.read}
-                      >
-                        <NotificationContent>
-                          {notification.message &&
-                            typeof notification.message === "string" &&
-                            notification.message.includes("New message from") ? (
-                            <>
-                              <span style={{ fontWeight: "bold", marginBottom: "4px", display: "block" }}>
-                                New Message 📩 from{" "}
-                                {notification.message
-                                  .split(" from ")[1]
-                                  ?.split(" for ticket")[0] || "Unknown"}
-                              </span>
-                              <span style={{ background: "#f0f4f8", padding: "8px", borderRadius: "4px", display: "block" }}>
-                                {notification.message.split(": ").slice(1).join(": ")}
-                              </span>
-                            </>
-                          ) : (
-                            notification.message || "No message content"
-                          )}
-                        </NotificationContent>
+                      <FilterButton onClick={fetchDataByDate} disabled={!startDate}>
+                        กรอง
+                      </FilterButton>
+                      <ResetButton onClick={resetDateFilter}>รีเซ็ต</ResetButton>
+                      {isDateFilterActive && (
                         <div
                           style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
                             marginTop: "8px",
+                            color: "#475569",
+                            fontSize: "0.875rem",
                           }}
                         >
-                          <NotificationTime>
-                            {new Date(notification.timestamp).toLocaleString()}
-                          </NotificationTime>
+                          กำลังแสดงข้อมูลวันที่:{" "}
+                          {new Date(startDate).toLocaleDateString("th-TH")}
+                        </div>
+                      )}
+                    </DateFilterContainer>
+
+                    <FilterGroup>
+                      <FilterLabel>สถานะ:</FilterLabel>
+                      <FilterSelect
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                      >
+                        <option value="all">ทั้งหมด</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Scheduled">Scheduled</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Waiting">Waiting</option>
+                        <option value="Completed">Completed</option>
+                      </FilterSelect>
+                    </FilterGroup>
+
+                    <FilterGroup>
+                      <FilterLabel>ประเภท:</FilterLabel>
+                      <FilterSelect
+                        value={typeFilter}
+                        onChange={(e) => setTypeFilter(e.target.value)}
+                      >
+                        <option value="all">ทั้งหมด</option>
+                        {uniqueTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </FilterSelect>
+                    </FilterGroup>
+                  </SearchAndFilterContainer>
+                  {statusChangeModal.open && (
+                    <div style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(0,0,0,0.5)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 1000
+                    }}>
+                      <div style={{
+                        backgroundColor: 'white',
+                        padding: '24px',
+                        borderRadius: '12px',
+                        width: '500px',
+                        maxWidth: '90%',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                      }}>
+                        <h3 style={{ marginTop: 0, color: '#1e293b' }}>
+                          ยืนยันการเปลี่ยนสถานะ Ticket #{statusChangeModal.ticketId}
+                        </h3>
+                        <div style={{ margin: '16px 0' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+                            <span style={{ width: '120px', color: '#64748b' }}>จากสถานะ:</span>
+                            <span style={{
+                              padding: '4px 12px',
+                              borderRadius: '12px',
+                              ...getStatusStyle(statusChangeModal.oldStatus)
+                            }}>
+                              {statusChangeModal.oldStatus}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+                            <span style={{ width: '120px', color: '#64748b' }}>เป็นสถานะ:</span>
+                            <span style={{
+                              padding: '4px 12px',
+                              borderRadius: '12px',
+                              ...getStatusStyle(statusChangeModal.newStatus)
+                            }}>
+                              {statusChangeModal.newStatus}
+                            </span>
+                          </div>
+                          <div style={{ margin: '16px 0' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#64748b' }}>
+                              หมายเหตุ (สำหรับลูกค้า):
+                            </label>
+                            <textarea
+                              value={statusChangeModal.remarks}
+                              onChange={(e) => setStatusChangeModal(prev => ({
+                                ...prev,
+                                remarks: e.target.value
+                              }))}
+                              style={{
+                                width: '100%',
+                                padding: '12px',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '8px',
+                                minHeight: '80px',
+                                marginBottom: '16px'
+                              }}
+                              placeholder="กรอกหมายเหตุที่จะแสดงให้ลูกค้าเห็น..."
+                            />
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#64748b' }}>
+                              หมายเหตุภายใน:
+                            </label>
+                            <textarea
+                              value={statusChangeModal.internalNotes}
+                              onChange={(e) => setStatusChangeModal(prev => ({
+                                ...prev,
+                                internalNotes: e.target.value
+                              }))}
+                              style={{
+                                width: '100%',
+                                padding: '12px',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '8px',
+                                minHeight: '80px'
+                              }}
+                              placeholder="กรอกหมายเหตุภายใน (ไม่แสดงให้ลูกค้าเห็น)..."
+                            />
+                          </div>
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'flex-end',
+                          gap: '12px',
+                          marginTop: '24px'
+                        }}>
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteNotification(notification.id);
-                            }}
+                            onClick={cancelStatusChange}
                             style={{
-                              background: "none",
-                              border: "none",
-                              color: "#ef4444",
-                              cursor: "pointer",
-                              fontSize: "0.75rem",
+                              padding: '10px 20px',
+                              backgroundColor: '#f1f5f9',
+                              color: '#64748b',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer'
                             }}
                           >
-                            ลบ
+                            ยกเลิก
+                          </button>
+                          <button
+                            onClick={confirmStatusChange}
+                            style={{
+                              padding: '10px 20px',
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ยืนยันการเปลี่ยนสถานะ
                           </button>
                         </div>
-                      </NotificationItem>
-                    ))
-                  ) : (
-                    <EmptyNotifications>ไม่มีการแจ้งเตือน</EmptyNotifications>
+                      </div>
+                    </div>
                   )}
-                </NotificationDropdown>
-                {editError && (
-                  <div style={{ color: '#ef4444', textAlign: 'center', margin: '8px' }}>{editError}</div>
+                  <ScrollContainer>
+                    <StyledTable>
+                      <TableHeader>
+                        <tr>
+                          <TableHeaderCell>Ticket ID</TableHeaderCell>
+                          <TableHeaderCell>อีเมล</TableHeaderCell>
+                          <TableHeaderCell>ชื่อ</TableHeaderCell>
+                          <TableHeaderCell>เบอร์ติดต่อ</TableHeaderCell>
+                          <TableHeaderCell>แผนก</TableHeaderCell>
+                          <TableHeaderCell>วันที่แจ้ง</TableHeaderCell>
+                          <TableHeaderCell>สถานะ</TableHeaderCell>
+                          <TableHeaderCell>Appointment</TableHeaderCell>
+                          <TableHeaderCell style={{ width: '260px' }}>REQUESTE</TableHeaderCell>
+                          <TableHeaderCell style={{ width: '260px' }}>REPORT</TableHeaderCell>
+                          <TableHeaderCell>Type</TableHeaderCell>
+                          <TableHeaderCell>Action</TableHeaderCell>
+                        </tr>
+                      </TableHeader>
+                      <tbody>
+                        {paginatedData.map((row, i) => {
+                          const rowColor = getRowColor(
+                            row["วันที่แจ้ง"],
+                            row["สถานะ"]
+                          );
+                          const isEditing = editingTicketId === row["Ticket ID"];
+                          // appointment_datetime logic
+                          let apptSoon = false, apptNow = false;
+                          if (row["appointment_datetime"]) {
+                            const now = new Date();
+                            const appt = new Date(row["appointment_datetime"]);
+                            const diff = appt - now;
+                            if (diff > 0 && diff < 60 * 60 * 1000) apptSoon = true; // ภายใน 1 ชม.
+                            if (Math.abs(diff) < 5 * 60 * 1000) apptNow = true; // ถึงแล้ว (±5นาที)
+                          }
+                          const RowComponent = apptNow ? BlinkingRow : TableRow;
+                          return (
+                            <RowComponent
+                              key={i}
+                              $bgColor={apptSoon && !apptNow ? '#fef9c3' : rowColor}
+                              $isSelected={selectedTicket === row["Ticket ID"]}
+                            >
+                              <TableCell>{row["Ticket ID"] || "None"}</TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <EditInput type="text" value={editForm.email} onChange={e => handleEditFormChange("email", e.target.value)} disabled={editLoading} />
+                                ) : (row["อีเมล"] || "None")}
+                              </TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <EditInput type="text" value={editForm.name} onChange={e => handleEditFormChange("name", e.target.value)} disabled={editLoading} />
+                                ) : (row["ชื่อ"] || "None")}
+                              </TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <EditInput type="text" value={editForm.phone} onChange={e => handleEditFormChange("phone", e.target.value)} disabled={editLoading} />
+                                ) : (row["เบอร์ติดต่อ"] || "None")}
+                              </TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <EditInput type="text" value={editForm.department} onChange={e => handleEditFormChange("department", e.target.value)} disabled={editLoading} />
+                                ) : (row["แผนก"] || "None")}
+                              </TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <EditInput type="text" value={editForm.date} onChange={e => handleEditFormChange("date", e.target.value)} disabled={editLoading} />
+                                ) : (row["วันที่แจ้ง"] || "None")}
+                              </TableCell>
+                              <StatusCell>
+                                {isEditing ? (
+                                  <select
+                                    value={editForm.status}
+                                    onChange={e => {
+                                      if (e.target.value !== row["สถานะ"]) {
+                                        setStatusChangeModal({
+                                          open: true,
+                                          ticketId: row["Ticket ID"],
+                                          newStatus: e.target.value,
+                                          oldStatus: row["สถานะ"],
+                                          remarks: ""
+                                        });
+                                      } else {
+                                        handleEditFormChange("status", e.target.value);
+                                      }
+                                    }}
+                                    disabled={editLoading}
+                                    style={{
+                                      width: '100%',
+                                      padding: '6px 12px',
+                                      borderRadius: '20px',
+                                      border: '1px solid #e2e8f0',
+                                      fontSize: '0.85rem',
+                                      fontWeight: 500,
+                                      backgroundColor: 'white',
+                                      cursor: 'pointer',
+                                      appearance: 'none',
+                                      backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'%23475569\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
+                                      backgroundRepeat: 'no-repeat',
+                                      backgroundPosition: 'right 12px center',
+                                      backgroundSize: '16px',
+                                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                    }}
+                                  >
+                                    {STATUS_OPTIONS.map(opt => (
+                                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  // ... แสดงสถานะปกติ ...
+                                  <div className="status-badge" data-status={row["สถานะ"]}>{row["สถานะ"]}</div>
+                                )}
+                              </StatusCell>
+                              <TableCell $isEditing={isEditing}>
+                                {isEditing ? (
+                                  <>
+                                    <EditInput
+                                      type="text"
+                                      value={editForm.appointment}
+                                      onChange={e => handleEditFormChange("appointment", e.target.value)}
+                                      disabled={editLoading}
+                                      placeholder="ข้อความนัดหมาย (เช่น 1 ก.ค. 2025 15:00-16:00)"
+                                    />
+                                    <EditInput
+                                      type="datetime-local"
+                                      value={editForm.appointment_datetime || ''}
+                                      onChange={e => handleEditFormChange("appointment_datetime", e.target.value)}
+                                      disabled={editLoading}
+                                      style={{ marginTop: 6 }}
+                                    />
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>{row["Appointment"] || "None"}</span>
+                                    {row["appointment_datetime"] && (
+                                      <div style={{ fontSize: '0.85em', color: '#64748b' }}>
+                                        ({new Date(row["appointment_datetime"]).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })})
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </TableCell>
+                              <RequestReportCell $isEditing={isEditing}>
+                                {isEditing ? (
+                                  <EditTextarea value={editForm.request} onChange={e => handleEditFormChange("request", e.target.value)} disabled={editLoading} />
+                                ) : <span>{row["Requeste"] || "None"}</span>}
+                              </RequestReportCell>
+                              <RequestReportCell $isEditing={isEditing}>
+                                {isEditing ? (
+                                  <EditTextarea value={editForm.report} onChange={e => handleEditFormChange("report", e.target.value)} disabled={editLoading} />
+                                ) : <span>{row["Report"] || "None"}</span>}
+                              </RequestReportCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <EditInput type="text" value={editForm.type} onChange={e => handleEditFormChange("type", e.target.value)} disabled={editLoading} />
+                                ) : (row["Type"] || "None")}
+                              </TableCell>
+                              <TableCell $isEditing={isEditing}>
+                                {isEditing ? (
+                                  <ActionButtonGroup>
+                                    <SaveButton onClick={() => handleSaveEdit(row["Ticket ID"])} disabled={editLoading}>Save</SaveButton>
+                                    <CancelButton onClick={handleCancelEdit} disabled={editLoading}>Cancel</CancelButton>
+                                  </ActionButtonGroup>
+                                ) : (
+                                  <ActionButtonGroup>
+                                    <EditButton onClick={() => handleEditTicket(row)}>Edit</EditButton>
+                                    <DeleteButton onClick={() => handleDeleteTicket(row["Ticket ID"])}>ลบ</DeleteButton>
+                                  </ActionButtonGroup>
+                                )}
+                              </TableCell>
+                            </RowComponent>
+                          );
+                        })}
+                      </tbody>
+                    </StyledTable>
+                  </ScrollContainer>
+
+                  {/* Pagination UI */}
+                  {totalPages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0', gap: '8px', alignItems: 'center' }}>
+                      <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        style={{
+                          padding: '8px 16px',
+                          background: currentPage === 1 ? '#e2e8f0' : '#64748b',
+                          color: currentPage === 1 ? '#94a3b8' : 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        ก่อนหน้า
+                      </button>
+                      {Array.from({ length: totalPages }, (_, idx) => (
+                        <button
+                          key={idx + 1}
+                          onClick={() => handlePageChange(idx + 1)}
+                          style={{
+                            padding: '8px 12px',
+                            background: currentPage === idx + 1 ? '#64748b' : 'white',
+                            color: currentPage === idx + 1 ? 'white' : '#64748b',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            minWidth: '40px'
+                          }}
+                        >
+                          {idx + 1}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        style={{
+                          padding: '8px 16px',
+                          background: currentPage === totalPages ? '#e2e8f0' : '#64748b',
+                          color: currentPage === totalPages ? '#94a3b8' : 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        ถัดไป
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Loading indicator */}
+                  {loading && (
+                    <div style={{ textAlign: 'center', margin: '16px', color: '#64748b', fontSize: '0.95rem' }}>
+                      กำลังโหลดข้อมูล...
+                    </div>
+                  )}
+                </TableContainer>
+              </div>
+              <div ref={chatRef}>
+                <ChatContainer>
+                  <ChatHeader>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: "12px" }}
+                    >
+                      <ChatTitle>Admin Chat</ChatTitle>
+                    </div>
+                    <ChatStatus>Online</ChatStatus>
+                  </ChatHeader>
+
+                  <UserSelectContainer>
+                    <UserSelect value={selectedChatUser || ""} onChange={handleUserSelect}>
+                      <option value="">-- Select User to Chat --</option>
+                      <option value="announcement">
+                        📢 Announcement to All Members
+                      </option>
+                      {chatUsers.map((chatUser) => (
+                        <option key={chatUser.user_id} value={chatUser.user_id}>
+                          {chatUser.name}
+                        </option>
+                      ))}
+                    </UserSelect>
+                  </UserSelectContainer>
+
+                  {selectedChatUser === "announcement" ? (
+                    // Announcement UI
+                    <div>
+                      <div style={{ padding: "20px", textAlign: "center", color: "#64748b" }}>
+                        <h3>📢 Send Announcement to All Members</h3>
+                        <p>This message will be sent to all registered users.</p>
+                      </div>
+                      <InputContainer>
+                        <InputWrapper>
+                          <ChatTextArea
+                            value={announcementMessage}
+                            onChange={(e) => setAnnouncementMessage(e.target.value)}
+                            placeholder="Type your announcement here..."
+                          />
+                          <SendButton onClick={sendAnnouncement}>
+                            Send Announcement
+                          </SendButton>
+                        </InputWrapper>
+                      </InputContainer>
+                    </div>
+                  ) : selectedChatUser ? (
+                    // Chat UI
+                    <>
+                      <MessagesContainer>
+                        {loadingChat && (
+                          <div style={{ textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+                            Loading messages...
+                          </div>
+                        )}
+                        {chatMessages.length === 0 && !loadingChat && (
+                          <div style={{ textAlign: 'center', color: '#64748b' }}>
+                            No messages yet. Start the conversation!
+                          </div>
+                        )}
+                        {chatMessages.map((msg) => (
+                          <MessageBubble key={msg.id} $isAdmin={msg.sender_type === 'admin'}>
+                            <MessageSender $isAdmin={msg.sender_type === 'admin'}>
+                              {msg.sender_type === 'admin'
+                                ? 'Admin'
+                                : chatUsers.find(u => u.user_id === msg.user_id)?.name || 'User'}
+                            </MessageSender>
+                            <div>{msg.message}</div>
+                            <MessageTimeStyled $isAdmin={msg.sender_type === 'admin'}>
+                              {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
+                            </MessageTimeStyled>
+                          </MessageBubble>
+                        ))}
+                      </MessagesContainer>
+                      <InputContainer>
+                        <InputWrapper>
+                          <ChatTextArea
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            placeholder="Type your message here..."
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                sendChatMessage();
+                              }
+                            }}
+                          />
+                          <ClearButton onClick={clearChatHistory}>Clear History</ClearButton>
+                          <SendButton onClick={sendChatMessage} disabled={!newMessage.trim()}>
+                            Send
+                          </SendButton>
+                        </InputWrapper>
+                      </InputContainer>
+                    </>
+                  ) : (
+                    // No user selected
+                    <div style={{
+                      padding: "40px",
+                      textAlign: "center",
+                      color: "#64748b",
+                      fontSize: "1.1rem"
+                    }}>
+                      <div style={{ marginBottom: "16px" }}>
+                        💬 Select a user from the dropdown above to start chatting
+                      </div>
+                      <div style={{ fontSize: "0.9rem", opacity: 0.7 }}>
+                        Or choose "Announcement" to send a message to all members
+                      </div>
+                    </div>
+                  )}
+                </ChatContainer>
+              </div>
+              <NotificationDropdown
+                $visible={showNotifications}
+                style={{
+                  transform: `translate(${notificationPosition.x}px, ${notificationPosition.y}px)`,
+                  cursor: isDragging ? "grabbing" : "grab",
+                }}
+                onMouseDown={handleMouseDown}
+              >
+                <CloseButton onClick={() => setShowNotifications(false)}>
+                  &times;
+                </CloseButton>
+                <NotificationHeader>
+                  <NotificationTitle>การแจ้งเตือนล่าสุด</NotificationTitle>
+                  <div>
+                    <MarkAllRead onClick={() => markAsRead()}>
+                      อ่านทั้งหมด
+                    </MarkAllRead>
+                    <MarkAllRead
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            "คุณแน่ใจหรือไม่ว่าต้องการลบการแจ้งเตือนทั้งหมด?"
+                          )
+                        ) {
+                          notifications.forEach((n) => deleteNotification(n.id));
+                        }
+                      }}
+                      style={{ marginLeft: "10px", color: "#ef4444" }}
+                    >
+                      ลบทั้งหมด
+                    </MarkAllRead>
+                  </div>
+                </NotificationHeader>
+
+                {notifications.length > 0 ? (
+                  notifications.map((notification) => (
+                    <NotificationItem
+                      key={notification.id}
+                      $unread={!notification.read}
+                    >
+                      <NotificationContent>
+                        {notification.message &&
+                          typeof notification.message === "string" &&
+                          notification.message.includes("New message from") ? (
+                          <>
+                            <span style={{ fontWeight: "bold", marginBottom: "4px", display: "block" }}>
+                              New Message 📩 from{" "}
+                              {notification.message
+                                .split(" from ")[1]
+                                ?.split(" for ticket")[0] || "Unknown"}
+                            </span>
+                            <span style={{ background: "#f0f4f8", padding: "8px", borderRadius: "4px", display: "block" }}>
+                              {notification.message.split(": ").slice(1).join(": ")}
+                            </span>
+                          </>
+                        ) : (
+                          notification.message || "No message content"
+                        )}
+                      </NotificationContent>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginTop: "8px",
+                        }}
+                      >
+                        <NotificationTime>
+                          {new Date(notification.timestamp).toLocaleString()}
+                        </NotificationTime>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteNotification(notification.id);
+                          }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#ef4444",
+                            cursor: "pointer",
+                            fontSize: "0.75rem",
+                          }}
+                        >
+                          ลบ
+                        </button>
+                      </div>
+                    </NotificationItem>
+                  ))
+                ) : (
+                  <EmptyNotifications>ไม่มีการแจ้งเตือน</EmptyNotifications>
                 )}
-                {editSuccess && (
-                  <div style={{ color: '#10b981', textAlign: 'center', margin: '8px' }}>{editSuccess}</div>
-                )}
-        
-              </Container>
-            </MainContent>
-          </>
-        ) : <Navigate to="/login" />} />
-        <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
-        <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
-      </Routes>
+              </NotificationDropdown>
+              {editError && (
+                <div style={{ color: '#ef4444', textAlign: 'center', margin: '8px' }}>{editError}</div>
+              )}
+              {editSuccess && (
+                <div style={{ color: '#10b981', textAlign: 'center', margin: '8px' }}>{editSuccess}</div>
+              )}
+
+            </Container>
+          </MainContent>
+        </>
+      ) : <Navigate to="/login" />} />
+      <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
+      <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
+    </Routes>
 
   );
 }
