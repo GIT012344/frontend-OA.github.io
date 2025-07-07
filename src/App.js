@@ -1765,6 +1765,16 @@ function App() {
   const [availableGroups, setAvailableGroups] = useState([]);
   const [availableSubgroups, setAvailableSubgroups] = useState([]);
 
+  // --- เพิ่ม State สำหรับ Modal ยืนยันการเปลี่ยนสถานะ ---
+  const [statusChangeModal, setStatusChangeModal] = useState({
+    open: false,
+    ticketId: null,
+    newStatus: "",
+    oldStatus: "",
+    remarks: "",
+    internalNotes: ""
+  });
+
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
     if (backendStatus === 'offline' || backendStatus === 'error') {
@@ -2194,50 +2204,79 @@ function App() {
 
   // อัปเดตสถานะและบันทึกการเปลี่ยนแปลง
   const handleStatusChange = (ticketId, newStatus) => {
-    // ค้นหาข้อมูล ticket เดิมเพื่อหา old_status
     const target = data.find((d) => d["Ticket ID"] === ticketId);
     const oldStatus = target?.status || target?.สถานะ || "";
-
-    // ถ้าไม่เปลี่ยนสถานะ ไม่ต้องดำเนินการใด ๆ
     if (newStatus === oldStatus) return;
+    setStatusChangeModal({
+      open: true,
+      ticketId,
+      newStatus,
+      oldStatus,
+      remarks: "",
+      internalNotes: ""
+    });
+  };
 
-    axios
-      .post(
+  // --- เพิ่ม confirmStatusChange ---
+  const confirmStatusChange = async () => {
+    const { ticketId, newStatus, oldStatus, remarks, internalNotes } = statusChangeModal;
+    try {
+      const response = await axios.post(
         "https://backend-oa-pqy2.onrender.com/update-status",
         {
           ticket_id: ticketId,
           status: newStatus,
           changed_by: authUser?.name || authUser?.pin || "admin",
+          remarks,
+          internal_notes: internalNotes
         },
         {
           headers: {
             "Content-Type": "application/json",
           },
         }
-      )
-      .then(() => {
-        console.log("✅ Status updated");
-        // อัปเดต state ภายในแอป
+      );
+      if (response.data.success || response.data.message) {
         setData((prevData) =>
           prevData.map((item) =>
             item["Ticket ID"] === ticketId
-              ? { ...item, status: newStatus, สถานะ: newStatus }
+              ? { ...item, status: newStatus, สถานะ: newStatus, remarks }
               : item
           )
         );
-
-        // เรียก API เพื่อบันทึกการเปลี่ยนสถานะ
-        logStatusChange({
+        // Log status change with remarks
+        await logStatusChange({
           ticket_id: ticketId,
           old_status: oldStatus,
           new_status: newStatus,
-          changed_by: user?.name || "unknown",
+          changed_by: authUser?.name || "unknown",
           change_timestamp: new Date().toISOString(),
-        }).catch((err) =>
-          console.error("❌ Failed to log status change:", err)
-        );
-      })
-      .catch((err) => console.error("❌ Failed to update status:", err));
+          remarks,
+          internal_notes: internalNotes
+        });
+        setStatusChangeModal({
+          open: false,
+          ticketId: null,
+          newStatus: "",
+          oldStatus: "",
+          remarks: "",
+          internalNotes: ""
+        });
+      }
+    } catch (err) {
+      console.error("Failed to update status:", err);
+      alert("Failed to update status: " + (err.response?.data?.error || err.message));
+    }
+  };
+  const cancelStatusChange = () => {
+    setStatusChangeModal({
+      open: false,
+      ticketId: null,
+      newStatus: "",
+      oldStatus: "",
+      remarks: "",
+      internalNotes: ""
+    });
   };
 
   // Remove old chat functions and replace with new chat system
@@ -3589,7 +3628,7 @@ const handleSubgroupChange = (e) => {
                                         backgroundColor: 'white',
                                         cursor: 'pointer',
                                         appearance: 'none',
-                                        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23475569\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
+                                        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'%23475569\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
                                         backgroundRepeat: 'no-repeat',
                                         backgroundPosition: 'right 12px center',
                                         backgroundSize: '16px',
@@ -3603,18 +3642,32 @@ const handleSubgroupChange = (e) => {
                                       ))}
                                     </select>
                                   ) : (
-                                    (() => {
-                                      const status = row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None";
-                                      const statusOption = STATUS_OPTIONS.find(opt => opt.value === status);
-                                      return (
-                                        <div
-                                          className="status-badge"
-                                          data-status={status}
-                                        >
-                                          {statusOption?.icon || '📌'} {status}
+                                    // --- ปรับตรงนี้ให้แสดง remarks เมื่อปิด/ยกเลิก ---
+                                    row["สถานะ"] === "Closed" || row["สถานะ"] === "Cancelled" ? (
+                                      <div>
+                                        <div style={{ marginBottom: '4px' }}>
+                                          <span style={getStatusStyle(row["สถานะ"]) || {}}>
+                                            {row["สถานะ"]}
+                                          </span>
                                         </div>
-                                      );
-                                    })()
+                                        {row["remarks"] && (
+                                          <div style={{
+                                            fontSize: '0.8rem',
+                                            color: '#64748b',
+                                            padding: '8px',
+                                            background: '#f8fafc',
+                                            borderRadius: '6px',
+                                            marginTop: '4px'
+                                          }}>
+                                            <strong>หมายเหตุ:</strong> {row["remarks"]}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span style={getStatusStyle(row["สถานะ"]) || {}}>
+                                        {row["สถานะ"]}
+                                      </span>
+                                    )
                                   )}
                                 </StatusCell>
                                 <TableCell $isEditing={isEditing}>
