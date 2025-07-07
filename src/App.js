@@ -63,8 +63,9 @@ const Container = styled.div`
   }
 
   @media (max-width: 768px) {
-    padding: 8px 2px;
+    padding: 16px 4px;
     min-width: 0;
+    font-size: 1.1rem;
   }
 `;
 
@@ -90,8 +91,8 @@ const Title = styled.h1`
   }
 
   @media (max-width: 768px) {
-    font-size: 1.5rem;
-    margin-bottom: 24px;
+    font-size: 1.7rem;
+    margin-bottom: 18px;
   }
 `;
 
@@ -165,8 +166,10 @@ const ExportButton = styled.button`
   }
 
   @media (max-width: 768px) {
-    font-size: 0.92rem;
-    padding: 8px 12px;
+    font-size: 1.1rem;
+    padding: 14px 0;
+    min-height: 44px;
+    width: 100%;
   }
 `;
 
@@ -179,7 +182,7 @@ const Dashboard = styled.div`
   z-index: 1;
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 16px;
   }
 `;
 
@@ -212,8 +215,9 @@ const StatCard = styled.div`
   }
 
   @media (max-width: 768px) {
-    padding: 16px 8px;
+    padding: 18px 6px;
     min-width: 0;
+    font-size: 1.05rem;
   }
 `;
 
@@ -250,6 +254,7 @@ const TableContainer = styled.div`
   @media (max-width: 768px) {
     padding: 8px 2px;
     border-radius: 0;
+    font-size: 1.05rem;
   }
 `;
 
@@ -269,7 +274,7 @@ const StyledTable = styled.table`
   min-width: 700px;
   @media (max-width: 768px) {
     min-width: 600px;
-    font-size: 0.92rem;
+    font-size: 1.05rem;
   }
 `;
 
@@ -338,6 +343,11 @@ const TableCell = styled.td`
   white-space: normal;
   overflow-wrap: anywhere;
   background: ${props => props.$isEditing ? '#f1f5f9' : 'transparent'};
+  @media (max-width: 768px) {
+    font-size: 1.05rem;
+    padding: 14px 8px;
+    min-height: 44px;
+  }
 `;
 
 const StatusCell = styled(TableCell)`
@@ -401,6 +411,11 @@ const StatusCell = styled(TableCell)`
       border-color: #fecaca;
     }
   }
+  @media (max-width: 768px) {
+    font-size: 1.05rem;
+    min-width: 80px;
+    padding: 10px 6px;
+  }
 `;
 
 const StatusSelect = styled.select`
@@ -430,8 +445,10 @@ const StatusSelect = styled.select`
 
   @media (max-width: 768px) {
     width: 100%;
-    font-size: 1rem;
+    font-size: 1.1rem;
     margin-bottom: 4px;
+    min-height: 44px;
+    padding: 12px 8px;
   }
 `;
 
@@ -670,6 +687,7 @@ const ChatContainer = styled.div`
     height: 350px;
     padding: 0;
     border-radius: 0;
+    font-size: 1.05rem;
   }
 `;
 
@@ -812,8 +830,9 @@ const UserSelect = styled.select`
   }
 
   @media (max-width: 768px) {
-    font-size: 1rem;
-    padding: 10px 8px;
+    font-size: 1.1rem;
+    padding: 12px 8px;
+    min-height: 44px;
   }
 `;
 
@@ -845,8 +864,9 @@ const ChatTextArea = styled.textarea`
   }
 
   @media (max-width: 768px) {
-    font-size: 1rem;
-    padding: 10px 8px;
+    font-size: 1.1rem;
+    padding: 12px 8px;
+    min-height: 44px;
   }
 `;
 
@@ -886,9 +906,11 @@ const SendButton = styled.button`
   }
 
   @media (max-width: 768px) {
-    font-size: 1rem;
-    padding: 10px 8px;
-    height: 40px;
+    font-size: 1.1rem;
+    padding: 14px 0;
+    min-height: 44px;
+    width: 100%;
+    height: 44px;
   }
 `;
 
@@ -952,7 +974,9 @@ const SearchInput = styled.input`
   @media (max-width: 768px) {
     min-width: 0;
     width: 100%;
-    font-size: 1rem;
+    font-size: 1.1rem;
+    padding: 14px 10px;
+    min-height: 44px;
   }
 `;
 
@@ -980,8 +1004,10 @@ const FilterSelect = styled.select`
 
   @media (max-width: 768px) {
     width: 100%;
-    font-size: 1rem;
+    font-size: 1.1rem;
     margin-bottom: 4px;
+    min-height: 44px;
+    padding: 12px 8px;
   }
 `;
 
@@ -1072,7 +1098,7 @@ const NotificationDropdown = styled.div`
     right: auto !important;
     top: 60px;
     border-radius: 10px;
-    font-size: 0.95rem;
+    font-size: 1.05rem;
   }
 `;
 
@@ -1165,6 +1191,12 @@ const DateInput = styled.input`
     border-color: #64748b;
     box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.1);
     background: white;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 1.1rem;
+    min-height: 44px;
+    padding: 10px 8px;
   }
 `;
 
@@ -1259,9 +1291,11 @@ const ClearButton = styled.button`
   }
 
   @media (max-width: 768px) {
-    font-size: 1rem;
-    padding: 10px 8px;
-    height: 40px;
+    font-size: 1.1rem;
+    padding: 14px 0;
+    min-height: 44px;
+    width: 100%;
+    height: 44px;
   }
 `;
 
@@ -1306,6 +1340,7 @@ const Sidebar = styled.div`
     overflow-x: auto;
     background: white;
     transition: none;
+    display: none;
   }
 `;
 
@@ -1430,7 +1465,7 @@ const MainContent = styled.div`
   @media (max-width: 768px) {
     margin-left: 0;
     width: 100vw;
-    padding-top: 56px;
+    padding-top: 64px;
   }
 `;
 
@@ -1804,6 +1839,47 @@ const BlinkingRow = styled(TableRow)`
   @keyframes blink {
     0%, 100% { filter: brightness(1); }
     50% { filter: brightness(1.5); }
+  }
+`;
+
+const TopNav = styled.div`
+  display: none;
+  @media (max-width: 768px) {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: white;
+    z-index: 201;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    border-bottom: 1px solid #e2e8f0;
+  }
+`;
+const TopNavMenu = styled.div`
+  display: flex;
+  gap: 12px;
+  @media (max-width: 768px) {
+    gap: 0;
+  }
+`;
+const TopNavButton = styled.button`
+  background: none;
+  border: none;
+  color: #475569;
+  font-size: 1.1rem;
+  padding: 8px 12px;
+  min-width: 60px;
+  font-weight: 600;
+  cursor: pointer;
+  @media (max-width: 768px) {
+    font-size: 1.1rem;
+    padding: 8px 4px;
+    min-width: 44px;
   }
 `;
 
@@ -3158,6 +3234,15 @@ const handleSubgroupChange = (e) => {
         <Route path="/dashboard" element={token ? (
           // Main dashboard content
           <>
+            <TopNav>
+              <div style={{fontWeight:'bold'}}>Helpdesk</div>
+              <TopNavMenu>
+                <TopNavButton onClick={()=>{setActiveTab('dashboard');scrollToDashboard();}}>Dashboard</TopNavButton>
+                <TopNavButton onClick={()=>{setActiveTab('list');scrollToList();}}>List</TopNavButton>
+                <TopNavButton onClick={()=>{setActiveTab('chat');scrollToChat();}}>Chat</TopNavButton>
+                <TopNavButton onClick={()=>{setActiveTab('logs');navigate('/logs');}}>Logs</TopNavButton>
+              </TopNavMenu>
+            </TopNav>
             <Sidebar
   $collapsed={!sidebarOpen}
   $hovered={sidebarHover}
