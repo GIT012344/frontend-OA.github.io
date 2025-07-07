@@ -1720,6 +1720,16 @@ function App() {
   const [editError, setEditError] = useState("");
   const [editSuccess, setEditSuccess] = useState("");
 
+  // 1. เพิ่ม state สำหรับ modal ยืนยันการเปลี่ยนสถานะ
+  const [statusChangeModal, setStatusChangeModal] = useState({
+    open: false,
+    ticketId: null,
+    newStatus: "",
+    oldStatus: "",
+    remarks: "",
+    internalNotes: ""
+  });
+
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
     if (backendStatus === 'offline' || backendStatus === 'error') {
@@ -2148,66 +2158,81 @@ function App() {
 
   // อัปเดตสถานะและบันทึกการเปลี่ยนแปลง
   const handleStatusChange = (ticketId, newStatus) => {
-    // ค้นหาข้อมูล ticket เดิมเพื่อหา old_status
     const target = data.find((d) => d["Ticket ID"] === ticketId);
     const oldStatus = target?.status || target?.สถานะ || "";
-
-    // ถ้าไม่เปลี่ยนสถานะ ไม่ต้องดำเนินการใด ๆ
     if (newStatus === oldStatus) return;
+    setStatusChangeModal({
+      open: true,
+      ticketId,
+      newStatus,
+      oldStatus,
+      remarks: "",
+      internalNotes: ""
+    });
+  };
 
-    axios
-      .post(
+  // ฟังก์ชันยืนยันการเปลี่ยนสถานะ
+  const confirmStatusChange = async () => {
+    const { ticketId, newStatus, oldStatus, remarks, internalNotes } = statusChangeModal;
+    try {
+      const response = await axios.post(
         "https://backend-oa-pqy2.onrender.com/update-status",
         {
           ticket_id: ticketId,
           status: newStatus,
           changed_by: authUser?.name || authUser?.pin || "admin",
+          remarks,
+          internal_notes: internalNotes
         },
         {
           headers: {
             "Content-Type": "application/json",
           },
         }
-      )
-      .then(() => {
-        console.log("✅ Status updated");
-        // อัปเดต state ภายในแอป
+      );
+      if (response.data.success || response.data.message) {
         setData((prevData) =>
           prevData.map((item) =>
             item["Ticket ID"] === ticketId
-              ? { ...item, status: newStatus, สถานะ: newStatus }
+              ? { ...item, status: newStatus, สถานะ: newStatus, remarks }
               : item
           )
         );
-
-        // เรียก API เพื่อบันทึกการเปลี่ยนสถานะ
-        logStatusChange({
-          ticket_id: ticketId,
-          old_status: oldStatus,
-          new_status: newStatus,
-          changed_by: user?.name || "unknown",
-          change_timestamp: new Date().toISOString(),
-        }).catch((err) =>
-          console.error("❌ Failed to log status change:", err)
-        );
-      })
-      .catch((err) => console.error("❌ Failed to update status:", err));
-  };
-
-  // Remove old chat functions and replace with new chat system
-  const handleUserSelect = (e) => {
-    const selectedValue = e.target.value;
-    if (selectedValue === "announcement") {
-      setSelectedChatUser("announcement");
-      setAnnouncementMessage("");
-    } else {
-      setSelectedChatUser(selectedValue);
-      setNewMessage("");
-      // Load chat messages for selected user
-      if (selectedValue) {
-        loadChatMessages(selectedValue);
+        // Log status change (ถ้ามี logStatusChange)
+        if (typeof logStatusChange === 'function') {
+          await logStatusChange({
+            ticket_id: ticketId,
+            old_status: oldStatus,
+            new_status: newStatus,
+            changed_by: authUser?.name || "unknown",
+            change_timestamp: new Date().toISOString(),
+            remarks,
+            internal_notes: internalNotes
+          });
+        }
+        setStatusChangeModal({
+          open: false,
+          ticketId: null,
+          newStatus: "",
+          oldStatus: "",
+          remarks: "",
+          internalNotes: ""
+        });
       }
+    } catch (err) {
+      console.error("Failed to update status:", err);
+      alert("Failed to update status: " + (err.response?.data?.error || err.message));
     }
+  };
+  const cancelStatusChange = () => {
+    setStatusChangeModal({
+      open: false,
+      ticketId: null,
+      newStatus: "",
+      oldStatus: "",
+      remarks: "",
+      internalNotes: ""
+    });
   };
 
   const deleteNotification = async (id) => {
@@ -2827,51 +2852,51 @@ function App() {
           // Main dashboard content
           <>
             <Sidebar
-  $collapsed={!sidebarOpen}
-  $hovered={sidebarHover}
-  onMouseEnter={() => setSidebarHover(true)}
-  onMouseLeave={() => setSidebarHover(false)}
->
-  <Logo>{sidebarOpen || sidebarHover ? "Helpdesk-System" : "HS"}</Logo>
-  <ToggleButton
-    onClick={() => setSidebarOpen(!sidebarOpen)}
-    $collapsed={!sidebarOpen}
-  />
-  <NavItem
-    $icon="dashboard"
-    $active={activeTab === "dashboard"}
-    onClick={() => {
-      setActiveTab("dashboard");
-      scrollToDashboard();
-    }}
-    $collapsed={!sidebarOpen}
-    data-tooltip="Dashboard"
-  >
-    <span>Dashboard</span>
-  </NavItem>
-  <NavItem
-    $icon="list"
-    $active={activeTab === "list"}
-    onClick={() => {
-      setActiveTab("list");
-      scrollToList();
-    }}
-    $collapsed={!sidebarOpen}
-    data-tooltip="List"
-  >
-    <span>Ticket List</span>
-  </NavItem>
-  <NavItem
-    $icon="chat"
-    $active={activeTab === "chat"}
-    onClick={() => {
-      setActiveTab("chat");
-      scrollToChat();
-    }}
-    $collapsed={!sidebarOpen}
-    data-tooltip="Chat"
-  >
-    <span>Chat</span>
+              $collapsed={!sidebarOpen}
+              $hovered={sidebarHover}
+              onMouseEnter={() => setSidebarHover(true)}
+              onMouseLeave={() => setSidebarHover(false)}
+            >
+              <Logo>{sidebarOpen || sidebarHover ? "Helpdesk-System" : "HS"}</Logo>
+              <ToggleButton
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                $collapsed={!sidebarOpen}
+              />
+              <NavItem
+                $icon="dashboard"
+                $active={activeTab === "dashboard"}
+                onClick={() => {
+                  setActiveTab("dashboard");
+                  scrollToDashboard();
+                }}
+                $collapsed={!sidebarOpen}
+                data-tooltip="Dashboard"
+              >
+                <span>Dashboard</span>
+              </NavItem>
+              <NavItem
+                $icon="list"
+                $active={activeTab === "list"}
+                onClick={() => {
+                  setActiveTab("list");
+                  scrollToList();
+                }}
+                $collapsed={!sidebarOpen}
+                data-tooltip="List"
+              >
+                <span>Ticket List</span>
+              </NavItem>
+              <NavItem
+                $icon="chat"
+                $active={activeTab === "chat"}
+                onClick={() => {
+                  setActiveTab("chat");
+                  scrollToChat();
+                }}
+                $collapsed={!sidebarOpen}
+                data-tooltip="Chat"
+              >
+                <span>Chat</span>
   </NavItem>
   <NavItem
   $icon="history"
@@ -2884,8 +2909,8 @@ function App() {
   data-tooltip="Status Logs"
 >
   <span>Status Logs</span>
-</NavItem>
-</Sidebar>
+              </NavItem>
+            </Sidebar>
             <MainContent style={{ marginLeft: sidebarOpen ? "240px" : "80px" }}>
               <Container>
                 <div ref={dashboardRef}>
@@ -3103,12 +3128,12 @@ function App() {
                   </Dashboard>
                 </div>
                 <div ref={listRef}>
-                <StatCard
-  $accent="linear-gradient(90deg, #3b82f6, #2563eb)"
-  style={{ gridColumn: "span 2" }}
->
+                  <StatCard
+                    $accent="linear-gradient(90deg, #3b82f6, #2563eb)"
+                    style={{ gridColumn: "span 2" }}
+                  >
   <StatTitle>นัดหมายล่าสุด (Service)</StatTitle>
-  <div style={{ marginTop: "16px" }}>
+                    <div style={{ marginTop: "16px" }}>
     {(() => {
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -3190,13 +3215,13 @@ function App() {
         };
 
         return (
-          <div
-            key={ticket["Ticket ID"]}
-            style={{
-              marginBottom: "12px",
-              padding: "12px",
+                          <div
+                            key={ticket["Ticket ID"]}
+                            style={{
+                              marginBottom: "12px",
+                              padding: "12px",
               background: colors.bg,
-              borderRadius: "8px",
+                              borderRadius: "8px",
               borderLeft: `4px solid ${colors.border}`,
               animation: isOverdue ? "blink 1s linear infinite" : "none",
             }}
@@ -3206,7 +3231,7 @@ function App() {
                 <div>{ticket["ชื่อ"] || "ไม่ระบุชื่อ"} (Ticket ID: {ticket["Ticket ID"]})</div>
                 <div style={{ fontSize: '0.8rem', color: '#4b5563', fontWeight: 'normal' }}>
                   ผู้แจ้ง: {ticket["Requested"] || ticket["Requeste"] || "ไม่ระบุผู้แจ้ง"}
-                </div>
+                            </div>
               </div>
               {isOverdue && (
                 <span style={{ 
@@ -3218,8 +3243,8 @@ function App() {
                 }}>
                   เลยกำหนด
                 </span>
-              )}
-            </div>
+                              )}
+                            </div>
             <div style={{ fontSize: "0.875rem", color: "#475569", margin: '4px 0' }}>
               <div style={{ marginBottom: '4px' }}>
                 <span style={{ fontWeight: 500 }}>วันที่แจ้ง:</span>{' '}
@@ -3231,8 +3256,8 @@ function App() {
               </div>
             </div>
             <div style={{
-              fontSize: "0.75rem",
-              color: "#64748b",
+                                fontSize: "0.75rem",
+                                color: "#64748b",
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center'
@@ -3262,14 +3287,14 @@ function App() {
                 }}>
                   วันนี้
                 </span>
-              )}
-            </div>
-          </div>
+                              )}
+                            </div>
+                          </div>
         );
       });
     })()}
-  </div>
-</StatCard>
+                    </div>
+                  </StatCard>
                   <TableContainer>
                     <TableTitle>รายการ Ticket ทั้งหมด</TableTitle>
 
@@ -3412,7 +3437,7 @@ function App() {
                                       value={editForm.status} 
                                       onChange={e => handleEditFormChange("status", e.target.value)} 
                                       disabled={editLoading}
-                                      style={{
+                                    style={{
                                         width: '100%',
                                         padding: '6px 12px',
                                         borderRadius: '20px',
