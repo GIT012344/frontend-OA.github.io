@@ -2215,6 +2215,8 @@ function App() {
           },
         }
       );
+      // --- เพิ่ม debug log ---
+      // console.log("DEBUG update-status response", response.data);
       if (response.data.success) {
         setData((prevData) =>
           prevData.map((item) =>
@@ -2223,16 +2225,7 @@ function App() {
               : item
           )
         );
-        // Log status change with remarks
-        await logStatusChange({
-          ticket_id: ticketId,
-          old_status: oldStatus,
-          new_status: newStatus,
-          changed_by: authUser?.name || "unknown",
-          change_timestamp: new Date().toISOString(),
-          remarks,
-          internal_notes: internalNotes
-        });
+        // ปิด modal ทันที ไม่ต้องรอ logStatusChange
         setStatusChangeModal({
           open: false,
           ticketId: null,
@@ -2241,6 +2234,21 @@ function App() {
           remarks: "",
           internalNotes: ""
         });
+        setStatusChangeError(""); // ล้าง error
+        // logStatusChange ถ้า error ให้แค่ console.warn
+        try {
+          await logStatusChange({
+            ticket_id: ticketId,
+            old_status: oldStatus,
+            new_status: newStatus,
+            changed_by: authUser?.name || "unknown",
+            change_timestamp: new Date().toISOString(),
+            remarks,
+            internal_notes: internalNotes
+          });
+        } catch (logErr) {
+          console.warn("logStatusChange error", logErr);
+        }
       } else {
         setStatusChangeError(
           typeof response.data.error === 'string'
