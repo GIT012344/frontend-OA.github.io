@@ -1765,16 +1765,6 @@ function App() {
   const [availableGroups, setAvailableGroups] = useState([]);
   const [availableSubgroups, setAvailableSubgroups] = useState([]);
 
-  // --- เพิ่ม state สำหรับ modal ยืนยันการเปลี่ยนสถานะ ---
-  const [statusChangeModal, setStatusChangeModal] = useState({
-    open: false,
-    ticketId: null,
-    newStatus: "",
-    oldStatus: "",
-    remarks: "",
-    internalNotes: ""
-  });
-
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
     if (backendStatus === 'offline' || backendStatus === 'error') {
@@ -1820,7 +1810,7 @@ function App() {
   // Health check function to test backend connectivity
   const checkBackendHealth = async () => {
     try {
-      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/health", {
+      const response = await axios.get("http://127.0.0.1:5001/api/health", {
         timeout: 5000,
         headers: {
           'Content-Type': 'application/json',
@@ -1842,7 +1832,7 @@ function App() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
+      const response = await axios.get("http://127.0.0.1:5001/api/data", {
         timeout: 10000, // 10 second timeout
         headers: {
           'Content-Type': 'application/json',
@@ -1917,7 +1907,7 @@ function App() {
     // ฟังก์ชันดึงข้อมูล ticket
     const pollData = async () => {
       try {
-        const response = await fetch("https://backend-oa-pqy2.onrender.com/api/data");
+        const response = await fetch("http://127.0.0.1:5001/api/data");
         const data = await response.json();
         setData(Array.isArray(data) ? data : []);
         setLastSync(new Date());
@@ -2051,7 +2041,7 @@ function App() {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/notifications", {
+        const response = await axios.get("http://127.0.0.1:5001/api/notifications", {
           timeout: 5000, // 5 second timeout for notifications
           headers: {
             'Content-Type': 'application/json',
@@ -2094,7 +2084,7 @@ function App() {
     if (!startDate) return;
 
     axios
-      .get("https://backend-oa-pqy2.onrender.com/api/data-by-date", {
+      .get("http://127.0.0.1:5001/api/data-by-date", {
         params: { date: startDate },
       })
       .then((res) => {
@@ -2115,7 +2105,7 @@ function App() {
     setTypeFilter("all");
 
     axios
-      .get("https://backend-oa-pqy2.onrender.com/api/data")
+      .get("http://127.0.0.1:5001/api/data")
       .then((res) => setData(Array.isArray(res.data) ? res.data : []))
       .catch((err) => {
         console.error(err);
@@ -2127,7 +2117,7 @@ function App() {
     if (id) {
       // Mark single notification as read
       axios
-        .post("https://backend-oa-pqy2.onrender.com/mark-notification-read", { id })
+        .post("http://127.0.0.1:5001/mark-notification-read", { id })
         .then(() => {
           setNotifications((prev) =>
             prev.map((n) => (n.id === id ? { ...n, read: true } : n))
@@ -2137,7 +2127,7 @@ function App() {
     } else {
       // Mark all notifications as read
       axios
-        .post("https://backend-oa-pqy2.onrender.com/mark-all-notifications-read")
+        .post("http://127.0.0.1:5001/mark-all-notifications-read")
         .then(() => {
           setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
           setHasUnread(false);
@@ -2204,78 +2194,50 @@ function App() {
 
   // อัปเดตสถานะและบันทึกการเปลี่ยนแปลง
   const handleStatusChange = (ticketId, newStatus) => {
+    // ค้นหาข้อมูล ticket เดิมเพื่อหา old_status
     const target = data.find((d) => d["Ticket ID"] === ticketId);
     const oldStatus = target?.status || target?.สถานะ || "";
-    if (newStatus === oldStatus) return;
-    setStatusChangeModal({
-      open: true,
-      ticketId,
-      newStatus,
-      oldStatus,
-      remarks: "",
-      internalNotes: ""
-    });
-  };
 
-  const confirmStatusChange = async () => {
-    const { ticketId, newStatus, oldStatus, remarks, internalNotes } = statusChangeModal;
-    try {
-      const response = await axios.post(
-        "https://backend-oa-pqy2.onrender.com/update-status",
+    // ถ้าไม่เปลี่ยนสถานะ ไม่ต้องดำเนินการใด ๆ
+    if (newStatus === oldStatus) return;
+
+    axios
+      .post(
+        "http://127.0.0.1:5001/update-status",
         {
           ticket_id: ticketId,
           status: newStatus,
           changed_by: authUser?.name || authUser?.pin || "admin",
-          remarks,
-          internal_notes: internalNotes
         },
         {
           headers: {
             "Content-Type": "application/json",
           },
         }
-      );
-      if (response.data.success) {
+      )
+      .then(() => {
+        console.log("✅ Status updated");
+        // อัปเดต state ภายในแอป
         setData((prevData) =>
           prevData.map((item) =>
             item["Ticket ID"] === ticketId
-              ? { ...item, status: newStatus, สถานะ: newStatus, remarks }
+              ? { ...item, status: newStatus, สถานะ: newStatus }
               : item
           )
         );
-        await logStatusChange({
+
+        // เรียก API เพื่อบันทึกการเปลี่ยนสถานะ
+        logStatusChange({
           ticket_id: ticketId,
           old_status: oldStatus,
           new_status: newStatus,
-          changed_by: authUser?.name || "unknown",
+          changed_by: user?.name || "unknown",
           change_timestamp: new Date().toISOString(),
-          remarks,
-          internal_notes: internalNotes
-        });
-        setStatusChangeModal({
-          open: false,
-          ticketId: null,
-          newStatus: "",
-          oldStatus: "",
-          remarks: "",
-          internalNotes: ""
-        });
-      }
-    } catch (err) {
-      console.error("Failed to update status:", err);
-      alert("Failed to update status: " + (err.response?.data?.error || err.message));
-    }
-  };
-
-  const cancelStatusChange = () => {
-    setStatusChangeModal({
-      open: false,
-      ticketId: null,
-      newStatus: "",
-      oldStatus: "",
-      remarks: "",
-      internalNotes: ""
-    });
+        }).catch((err) =>
+          console.error("❌ Failed to log status change:", err)
+        );
+      })
+      .catch((err) => console.error("❌ Failed to update status:", err));
   };
 
   // Remove old chat functions and replace with new chat system
@@ -2296,7 +2258,7 @@ function App() {
 
   const deleteNotification = async (id) => {
     try {
-      await axios.post("https://backend-oa-pqy2.onrender.com/delete-notification", { id });
+      await axios.post("http://127.0.0.1:5001/delete-notification", { id });
       setNotifications(notifications.filter((n) => n.id !== id));
     } catch (err) {
       console.error("Error deleting notification:", err);
@@ -2307,7 +2269,7 @@ function App() {
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?")) {
       try {
         const response = await axios.post(
-          "https://backend-oa-pqy2.onrender.com/delete-ticket",
+          "http://127.0.0.1:5001/delete-ticket",
           { ticket_id: ticketId },
           {
             headers: {
@@ -2343,7 +2305,7 @@ function App() {
     
     setLoadingChat(true);
     try {
-      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
+      const response = await axios.get("http://127.0.0.1:5001/api/messages", {
         params: { user_id: userId }
       });
       setChatMessages(response.data || []);
@@ -2365,7 +2327,7 @@ function App() {
         sender_type: 'admin', // ต้องเป็น 'admin' (ตัวเล็ก)
         message: newMessage
       };
-      const response = await axios.post("https://backend-oa-pqy2.onrender.com/api/messages", payload);
+      const response = await axios.post("http://127.0.0.1:5001/api/messages", payload);
 
       // Add new message to local state (ถ้า backend ส่งกลับ message ใหม่)
       setChatMessages(prev => [
@@ -2397,7 +2359,7 @@ function App() {
 
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบประวัติการสนทนาทั้งหมด?")) {
       try {
-        await axios.post("https://backend-oa-pqy2.onrender.com/api/messages/delete", {
+        await axios.post("http://127.0.0.1:5001/api/messages/delete", {
           user_id: selectedChatUser
         });
         setChatMessages([]);
@@ -2419,7 +2381,7 @@ function App() {
 
     try {
       const response = await axios.post(
-        "https://backend-oa-pqy2.onrender.com/send-announcement",
+        "http://127.0.0.1:5001/send-announcement",
         { message: announcementMessage },
         { headers: { "Content-Type": "application/json" } }
       );
@@ -2451,7 +2413,7 @@ function App() {
   useEffect(() => {
     const fetchChatUsers = async () => {
       try {
-        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/chat-users");
+        const response = await axios.get("http://127.0.0.1:5001/api/chat-users");
         // response.data should be an array of { user_id, name }
         setChatUsers(Array.isArray(response.data) ? response.data : []);
       } catch (error) {
@@ -2468,7 +2430,7 @@ function App() {
 
     const pollMessages = async () => {
       try {
-        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
+        const response = await axios.get("http://127.0.0.1:5001/api/messages", {
           params: { user_id: selectedChatUser }
         });
         
@@ -2519,7 +2481,7 @@ function App() {
     setRetryCount(prev => prev + 1);
     
     try {
-      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
+      const response = await axios.get("http://127.0.0.1:5001/api/data", {
         timeout: 15000, // 15 second timeout for manual retry
         headers: {
           'Content-Type': 'application/json',
@@ -2932,27 +2894,41 @@ const handleSubgroupChange = (e) => {
     setEditError("");
     setEditSuccess("");
     
+    // Map request and report based on ticket type and selected group for backend compatibility
+    const typeUpper = (editForm.type || "").toUpperCase();
+    const requestField = typeUpper === "SERVICE" ? (editForm.group || editForm.request) : editForm.request;
+    const reportField = typeUpper === "HELPDESK" ? (editForm.group || editForm.report) : editForm.report;
+    
     try {
+      // Build the payload dynamically – include only meaningful, non-empty values
+      const isValid = (v) => v !== undefined && v !== null && v !== "" && v !== "None";
+
       const payload = {
         ticket_id: ticketId,
-        email: editForm.email,
-        name: editForm.name,
-        phone: editForm.phone,
-        department: editForm.department,
-        date: editForm.date,
-        appointment: editForm.appointment,
-        appointment_datetime: editForm.appointment_datetime,
-        request: editForm.request,
-        report: editForm.report,
-        type: editForm.type,
-        group: editForm.group,
-        subgroup: editForm.subgroup,
-        status: editForm.status,
-        updated_by: authUser?.name || authUser?.pin || "admin"
+        updated_by: authUser?.name || authUser?.pin || "admin",
       };
+
+      // Basic optional fields
+      if (isValid(editForm.email)) payload.email = editForm.email;
+      if (isValid(editForm.name)) payload.name = editForm.name;
+      if (isValid(editForm.phone)) payload.phone = editForm.phone;
+      if (isValid(editForm.department)) payload.department = editForm.department;
+      if (isValid(editForm.date)) payload.date = editForm.date;
+      if (isValid(editForm.appointment)) payload.appointment = editForm.appointment;
+      if (isValid(editForm.appointment_datetime)) payload.appointment_datetime = editForm.appointment_datetime;
+
+      // Request / Report mapping (SERVICE / HELPDESK logic above)
+      if (isValid(requestField)) payload.request = requestField;
+      if (isValid(reportField)) payload.report = reportField;
+
+      // Type, Group, Subgroup, Status
+      if (isValid(editForm.type)) payload.type = editForm.type;
+      if (isValid(editForm.group)) payload.group = editForm.group;
+      if (isValid(editForm.subgroup)) payload.subgroup = editForm.subgroup;
+      if (isValid(editForm.status)) payload.status = editForm.status;
   
       const response = await axios.post(
-        "https://backend-oa-pqy2.onrender.com/update-ticket",
+        "http://127.0.0.1:5001/update-ticket",
         payload,
         {
           headers: {
@@ -2975,8 +2951,8 @@ const handleSubgroupChange = (e) => {
                   "วันที่แจ้ง": editForm.date,
                   "Appointment": editForm.appointment,
                   "appointment_datetime": editForm.appointment_datetime,
-                  "Requeste": editForm.request,
-                  "Report": editForm.report,
+                  "Requeste": requestField,
+                  "Report": reportField,
                   "Type": editForm.type,
                   "สถานะ": editForm.status,
                   "group": editForm.group,
