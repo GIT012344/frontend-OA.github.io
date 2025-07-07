@@ -1720,13 +1720,14 @@ function App() {
   const [editError, setEditError] = useState("");
   const [editSuccess, setEditSuccess] = useState("");
 
-  // 1. เพิ่ม state สำหรับ modal remark
+  // --- State สำหรับ Modal ยืนยันการเปลี่ยนสถานะ ---
   const [statusChangeModal, setStatusChangeModal] = useState({
     open: false,
     ticketId: null,
     newStatus: "",
     oldStatus: "",
-    remarks: ""
+    remarks: "",
+    internalNotes: ""
   });
 
   // Load cached data from localStorage when backend is offline
@@ -2155,68 +2156,81 @@ function App() {
   // Get unique types for filter dropdown
   const uniqueTypes = [...new Set(displayData.map((item) => item["Type"] || "None"))];
 
-  // อัปเดตสถานะและบันทึกการเปลี่ยนแปลง
+  // --- ฟังก์ชัน handleStatusChange ---
   const handleStatusChange = (ticketId, newStatus) => {
-    // ค้นหาข้อมูล ticket เดิมเพื่อหา old_status
     const target = data.find((d) => d["Ticket ID"] === ticketId);
     const oldStatus = target?.status || target?.สถานะ || "";
-
-    // ถ้าไม่เปลี่ยนสถานะ ไม่ต้องดำเนินการใด ๆ
     if (newStatus === oldStatus) return;
+    setStatusChangeModal({
+      open: true,
+      ticketId,
+      newStatus,
+      oldStatus,
+      remarks: "",
+      internalNotes: ""
+    });
+  };
 
-    axios
-      .post(
+  const confirmStatusChange = async () => {
+    const { ticketId, newStatus, oldStatus, remarks, internalNotes } = statusChangeModal;
+    try {
+      const response = await axios.post(
         "https://backend-oa-pqy2.onrender.com/update-status",
         {
           ticket_id: ticketId,
           status: newStatus,
           changed_by: authUser?.name || authUser?.pin || "admin",
+          remarks,
+          internal_notes: internalNotes
         },
         {
           headers: {
             "Content-Type": "application/json",
           },
         }
-      )
-      .then(() => {
-        console.log("✅ Status updated");
-        // อัปเดต state ภายในแอป
+      );
+      if (response.data.success) {
         setData((prevData) =>
           prevData.map((item) =>
             item["Ticket ID"] === ticketId
-              ? { ...item, status: newStatus, สถานะ: newStatus }
+              ? { ...item, status: newStatus, สถานะ: newStatus, remarks }
               : item
           )
         );
-
-        // เรียก API เพื่อบันทึกการเปลี่ยนสถานะ
-        logStatusChange({
+        // Log status change with remarks
+        await logStatusChange({
           ticket_id: ticketId,
           old_status: oldStatus,
           new_status: newStatus,
-          changed_by: user?.name || "unknown",
+          changed_by: authUser?.name || "unknown",
           change_timestamp: new Date().toISOString(),
-        }).catch((err) =>
-          console.error("❌ Failed to log status change:", err)
-        );
-      })
-      .catch((err) => console.error("❌ Failed to update status:", err));
+          remarks,
+          internal_notes: internalNotes
+        });
+        setStatusChangeModal({
+          open: false,
+          ticketId: null,
+          newStatus: "",
+          oldStatus: "",
+          remarks: "",
+          internalNotes: ""
+        });
+      }
+    } catch (err) {
+      console.error("Failed to update status:", err);
+      alert("Failed to update status: " + (err.response?.data?.error || err.message));
+    }
   };
 
-  // Remove old chat functions and replace with new chat system
-  const handleUserSelect = (e) => {
-    const selectedValue = e.target.value;
-    if (selectedValue === "announcement") {
-      setSelectedChatUser("announcement");
-      setAnnouncementMessage("");
-    } else {
-      setSelectedChatUser(selectedValue);
-      setNewMessage("");
-      // Load chat messages for selected user
-      if (selectedValue) {
-        loadChatMessages(selectedValue);
-      }
-    }
+  const cancelStatusChange = () => {
+    setStatusChangeModal({
+      open: false,
+      ticketId: null,
+      newStatus: "",
+      oldStatus: "",
+      remarks: "",
+      internalNotes: ""
+    });
   };
 
   const deleteNotification = async (id) => {
