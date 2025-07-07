@@ -3453,7 +3453,7 @@ function App() {
                                       value={editForm.status} 
                                       onChange={e => handleEditFormChange("status", e.target.value)} 
                                       disabled={editLoading}
-                                    style={{
+                                      style={{
                                         width: '100%',
                                         padding: '6px 12px',
                                         borderRadius: '20px',
@@ -3463,7 +3463,7 @@ function App() {
                                         backgroundColor: 'white',
                                         cursor: 'pointer',
                                         appearance: 'none',
-                                        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23475569\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
+                                        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'%23475569\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
                                         backgroundRepeat: 'no-repeat',
                                         backgroundPosition: 'right 12px center',
                                         backgroundSize: '16px',
@@ -3478,19 +3478,27 @@ function App() {
                                       ))}
                                     </select>
                                   ) : (
-                                    <div 
-                                      className="status-badge" 
-                                      data-status={row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None"}
-                                    >
-                                      {(() => {
-                                        const status = row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None";
-                                        const statusOption = STATUS_OPTIONS.find(opt => opt.value === status);
-                                        return (
-                                          <>
-                                            {statusOption?.icon || '📌'} {status}
-                                          </>
-                                        );
-                                      })()}
+                                    <div>
+                                      <div 
+                                        className="status-badge" 
+                                        data-status={row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None"}
+                                      >
+                                        {(() => {
+                                          const status = row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None";
+                                          const statusOption = STATUS_OPTIONS.find(opt => opt.value === status);
+                                          return (
+                                            <>
+                                              {statusOption?.icon || '📌'} {status}
+                                            </>
+                                          );
+                                        })()}
+                                      </div>
+                                      {/* แสดง remarks เมื่อปิด/ยกเลิก */}
+                                      {(row["สถานะ"] === "Closed" || row["สถานะ"] === "Cancelled") && row.remarks && (
+                                        <div style={{ fontSize: '0.8em', color: '#64748b', marginTop: 4 }}>
+                                          หมายเหตุ: {row.remarks}
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </StatusCell>
@@ -3525,8 +3533,16 @@ function App() {
                                 </TableCell>
                                 <RequestReportCell $isEditing={isEditing}>
                                   {isEditing ? (
-                                    <EditTextarea value={editForm.request} onChange={e => handleEditFormChange("request", e.target.value)} disabled={editLoading} />
-                                  ) : <span>{row["Requeste"] || "None"}</span>}
+                                    row["Type"] === "Service" ? (
+                                      <EditTextarea value={editForm.request} onChange={e => handleEditFormChange("request", e.target.value)} disabled={editLoading} />
+                                    ) : (
+                                      <EditTextarea value={editForm.report} onChange={e => handleEditFormChange("report", e.target.value)} disabled={editLoading} />
+                                    )
+                                  ) : (
+                                    <span>
+                                      {row["Type"] === "Service" ? (row["Requested"] || row["Requeste"] || "None") : (row["Report"] || "None")}
+                                    </span>
+                                  )}
                                 </RequestReportCell>
                                 <RequestReportCell $isEditing={isEditing}>
                                   {isEditing ? (
@@ -3829,7 +3845,46 @@ function App() {
                 {editSuccess && (
                   <div style={{ color: '#10b981', textAlign: 'center', margin: '8px' }}>{editSuccess}</div>
                 )}
-        
+                {statusChangeModal.open && (
+                  <div style={{
+                    position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+                    background: 'rgba(0,0,0,0.25)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <div style={{
+                      background: '#fff', borderRadius: 16, padding: 32, minWidth: 340, boxShadow: '0 8px 32px rgba(0,0,0,0.15)'
+                    }}>
+                      <h2 style={{ marginBottom: 16 }}>ยืนยันการเปลี่ยนสถานะ</h2>
+                      <div style={{ marginBottom: 12 }}>
+                        <b>Ticket ID:</b> {statusChangeModal.ticketId}
+                      </div>
+                      <div style={{ marginBottom: 12 }}>
+                        <b>จาก:</b> {statusChangeModal.oldStatus} <b>→</b> <b>เป็น:</b> {statusChangeModal.newStatus}
+                      </div>
+                      <div style={{ marginBottom: 12 }}>
+                        <label>หมายเหตุ (remarks):</label>
+                        <textarea
+                          style={{ width: '100%', borderRadius: 8, border: '1px solid #e2e8f0', padding: 8, marginTop: 4 }}
+                          rows={2}
+                          value={statusChangeModal.remarks}
+                          onChange={e => setStatusChangeModal(modal => ({ ...modal, remarks: e.target.value }))}
+                        />
+                      </div>
+                      <div style={{ marginBottom: 16 }}>
+                        <label>หมายเหตุภายใน (internal notes):</label>
+                        <textarea
+                          style={{ width: '100%', borderRadius: 8, border: '1px solid #e2e8f0', padding: 8, marginTop: 4 }}
+                          rows={2}
+                          value={statusChangeModal.internalNotes}
+                          onChange={e => setStatusChangeModal(modal => ({ ...modal, internalNotes: e.target.value }))}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+                        <button onClick={cancelStatusChange} style={{ padding: '8px 16px', borderRadius: 8, background: '#e2e8f0', color: '#475569', border: 'none' }}>ยกเลิก</button>
+                        <button onClick={confirmStatusChange} style={{ padding: '8px 16px', borderRadius: 8, background: '#10b981', color: '#fff', border: 'none' }}>ยืนยัน</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </Container>
             </MainContent>
           </>
