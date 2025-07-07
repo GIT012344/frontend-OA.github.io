@@ -1720,6 +1720,15 @@ function App() {
   const [editError, setEditError] = useState("");
   const [editSuccess, setEditSuccess] = useState("");
 
+  // 1. เพิ่ม state สำหรับ modal remark
+  const [statusChangeModal, setStatusChangeModal] = useState({
+    open: false,
+    ticketId: null,
+    newStatus: "",
+    oldStatus: "",
+    remarks: ""
+  });
+
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
     if (backendStatus === 'offline' || backendStatus === 'error') {
@@ -2774,6 +2783,7 @@ function App() {
         report: editForm.report,
         type: editForm.type,
         status: editForm.status,
+        remarks: editForm.remarks,
       };
       const response = await axios.post("https://backend-oa-pqy2.onrender.com/update-ticket", payload, {
         headers: { "Content-Type": "application/json" },
@@ -2801,6 +2811,7 @@ function App() {
                 "Report": editForm.report,
                 "Type": editForm.type,
                 "สถานะ": editForm.status,
+                "remarks": editForm.remarks,
               }
             : item
         ));
@@ -3408,11 +3419,23 @@ function App() {
                                 </TableCell>
                                 <StatusCell>
                                   {isEditing ? (
-                                    <select 
-                                      value={editForm.status} 
-                                      onChange={e => handleEditFormChange("status", e.target.value)} 
+                                    <select
+                                      value={editForm.status}
+                                      onChange={e => {
+                                        if (e.target.value !== row["สถานะ"]) {
+                                          setStatusChangeModal({
+                                            open: true,
+                                            ticketId: row["Ticket ID"],
+                                            newStatus: e.target.value,
+                                            oldStatus: row["สถานะ"],
+                                            remarks: ""
+                                          });
+                                        } else {
+                                          handleEditFormChange("status", e.target.value);
+                                        }
+                                      }}
                                       disabled={editLoading}
-                                    style={{
+                                      style={{
                                         width: '100%',
                                         padding: '6px 12px',
                                         borderRadius: '20px',
@@ -3422,7 +3445,7 @@ function App() {
                                         backgroundColor: 'white',
                                         cursor: 'pointer',
                                         appearance: 'none',
-                                        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23475569\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
+                                        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'%23475569\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
                                         backgroundRepeat: 'no-repeat',
                                         backgroundPosition: 'right 12px center',
                                         backgroundSize: '16px',
@@ -3430,27 +3453,12 @@ function App() {
                                       }}
                                     >
                                       {STATUS_OPTIONS.map(opt => (
-                                        <option key={opt.value} value={opt.value}>
-                                          {opt.icon && <span style={{ marginRight: '6px' }}>{opt.icon}</span>}
-                                          {opt.label}
-                                        </option>
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
                                       ))}
                                     </select>
                                   ) : (
-                                    <div 
-                                      className="status-badge" 
-                                      data-status={row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None"}
-                                    >
-                                      {(() => {
-                                        const status = row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None";
-                                        const statusOption = STATUS_OPTIONS.find(opt => opt.value === status);
-                                        return (
-                                          <>
-                                            {statusOption?.icon || '📌'} {status}
-                                          </>
-                                        );
-                                      })()}
-                                    </div>
+                                    // ... แสดงสถานะปกติ ...
+                                    <div className="status-badge" data-status={row["สถานะ"]}>{row["สถานะ"]}</div>
                                   )}
                                 </StatusCell>
                                 <TableCell $isEditing={isEditing}>
