@@ -3447,11 +3447,26 @@ function App() {
                                 </TableCell>
                                 <StatusCell>
                                   {isEditing ? (
-                                    <select 
-                                      value={editForm.status} 
-                                      onChange={e => handleEditFormChange("status", e.target.value)} 
-                                      disabled={editLoading}
-                                      style={{
+                                    <>
+                                      <select 
+                                        value={editForm.status} 
+                                        onChange={e => {
+                                          // ถ้าเปลี่ยน status ให้เปิด modal
+                                          if (e.target.value !== row["สถานะ"]) {
+                                            setStatusChangeModal({
+                                              open: true,
+                                              ticketId: row["Ticket ID"],
+                                              newStatus: e.target.value,
+                                              oldStatus: row["สถานะ"],
+                                              remarks: "",
+                                              internalNotes: ""
+                                            });
+                                          } else {
+                                            handleEditFormChange("status", e.target.value);
+                                          }
+                                        }}
+                                        disabled={editLoading}
+                                        style={{
                                           width: '100%',
                                           padding: '6px 12px',
                                           borderRadius: '20px',
@@ -3461,22 +3476,23 @@ function App() {
                                           backgroundColor: 'white',
                                           cursor: 'pointer',
                                           appearance: 'none',
-                                          backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23475569\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
+                                          backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'%23475569\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
                                           backgroundRepeat: 'no-repeat',
                                           backgroundPosition: 'right 12px center',
                                           backgroundSize: '16px',
                                           boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                                         }}
-                                    >
-                                      {STATUS_OPTIONS.map(opt => (
-                                        <option key={opt.value} value={opt.value}>
-                                          {opt.icon && <span style={{ marginRight: '6px' }}>{opt.icon}</span>}
-                                          {opt.label}
-                                        </option>
-                                      ))}
-                                    </select>
+                                      >
+                                        {STATUS_OPTIONS.map(opt => (
+                                          <option key={opt.value} value={opt.value}>
+                                            {opt.icon && <span style={{ marginRight: '6px' }}>{opt.icon}</span>}
+                                            {opt.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </>
                                   ) : (
-                                    // --- เพิ่มการแสดง remarks เมื่อปิดหรือยกเลิก ---
+                                    // ... แสดงสถานะปกติ ...
                                     row["สถานะ"] === "Closed" || row["สถานะ"] === "Cancelled" ? (
                                       <div>
                                         <div style={{ marginBottom: '4px' }}>
@@ -3541,7 +3557,6 @@ function App() {
                                         value={editForm.type} 
                                         onChange={e => {
                                           handleEditFormChange("type", e.target.value);
-                                          // Reset request/report เมื่อเปลี่ยน type
                                           handleEditFormChange("request", "");
                                           handleEditFormChange("report", "");
                                           handleEditFormChange("requestDetails", "");
@@ -3974,7 +3989,7 @@ function App() {
                         </div>
                         <div style={{ margin: '16px 0' }}>
                           <label style={{ display: 'block', marginBottom: '8px', color: '#64748b' }}>
-                            หมายเหตุ (สำหรับลูกค้า):
+                            หมายเหตุ (สำหรับลูกค้า): <span style={{color:'#ef4444'}}>*</span>
                           </label>
                           <textarea
                             value={statusChangeModal.remarks}
@@ -3991,7 +4006,11 @@ function App() {
                               marginBottom: '16px'
                             }}
                             placeholder="กรอกหมายเหตุที่จะแสดงให้ลูกค้าเห็น..."
-                      />
+                            required
+                          />
+                          {statusChangeModal.remarks.trim() === "" && (
+                            <div style={{color:'#ef4444', fontSize:'0.85rem'}}>กรุณากรอกหมายเหตุ</div>
+                          )}
                           <label style={{ display: 'block', marginBottom: '8px', color: '#64748b' }}>
                             หมายเหตุภายใน:
                           </label>
@@ -4009,7 +4028,7 @@ function App() {
                               minHeight: '80px'
                             }}
                             placeholder="กรอกหมายเหตุภายใน (ไม่แสดงให้ลูกค้าเห็น)..."
-                      />
+                          />
                         </div>
                       </div>
                       <div style={{ 
@@ -4032,15 +4051,18 @@ function App() {
                           ยกเลิก
                         </button>
                         <button
-                          onClick={confirmStatusChange}
+                          onClick={() => {
+                            if(statusChangeModal.remarks.trim() !== "") confirmStatusChange();
+                          }}
                           style={{
                             padding: '10px 20px',
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
+                            backgroundColor: statusChangeModal.remarks.trim() === "" ? '#e2e8f0' : '#3b82f6',
+                            color: statusChangeModal.remarks.trim() === "" ? '#64748b' : 'white',
                             border: 'none',
                             borderRadius: '8px',
-                            cursor: 'pointer'
+                            cursor: statusChangeModal.remarks.trim() === "" ? 'not-allowed' : 'pointer'
                           }}
+                          disabled={statusChangeModal.remarks.trim() === ""}
                         >
                           ยืนยันการเปลี่ยนสถานะ
                         </button>
