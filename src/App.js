@@ -1720,16 +1720,6 @@ function App() {
   const [editError, setEditError] = useState("");
   const [editSuccess, setEditSuccess] = useState("");
 
-  // --- State สำหรับ Modal ยืนยันการเปลี่ยนสถานะ ---
-  const [statusChangeModal, setStatusChangeModal] = useState({
-    open: false,
-    ticketId: null,
-    newStatus: "",
-    oldStatus: "",
-    remarks: "",
-    internalNotes: ""
-  });
-
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
     if (backendStatus === 'offline' || backendStatus === 'error') {
@@ -2158,39 +2148,30 @@ function App() {
 
   // อัปเดตสถานะและบันทึกการเปลี่ยนแปลง
   const handleStatusChange = (ticketId, newStatus) => {
+    // ค้นหาข้อมูล ticket เดิมเพื่อหา old_status
     const target = data.find((d) => d["Ticket ID"] === ticketId);
     const oldStatus = target?.status || target?.สถานะ || "";
-    if (newStatus === oldStatus) return;
-    setStatusChangeModal({
-      open: true,
-      ticketId,
-      newStatus,
-      oldStatus,
-      remarks: "",
-      internalNotes: ""
-    });
-  };
 
-  // --- ฟังก์ชันยืนยันการเปลี่ยนสถานะ ---
-  const confirmStatusChange = async () => {
-    const { ticketId, newStatus, oldStatus, remarks, internalNotes } = statusChangeModal;
-    try {
-      const response = await axios.post(
+    // ถ้าไม่เปลี่ยนสถานะ ไม่ต้องดำเนินการใด ๆ
+    if (newStatus === oldStatus) return;
+
+    axios
+      .post(
         "https://backend-oa-pqy2.onrender.com/update-status",
         {
           ticket_id: ticketId,
           status: newStatus,
           changed_by: authUser?.name || authUser?.pin || "admin",
-          remarks,
-          internal_notes: internalNotes
         },
         {
           headers: {
             "Content-Type": "application/json",
           },
         }
-      );
-      if (response.data.success) {
+      )
+      .then(() => {
+        console.log("✅ Status updated");
+        // อัปเดต state ภายในแอป
         setData((prevData) =>
           prevData.map((item) =>
             item["Ticket ID"] === ticketId
@@ -2198,39 +2179,19 @@ function App() {
               : item
           )
         );
-        // Log status change พร้อม remarks/internalNotes
-        await logStatusChange({
+
+        // เรียก API เพื่อบันทึกการเปลี่ยนสถานะ
+        logStatusChange({
           ticket_id: ticketId,
           old_status: oldStatus,
           new_status: newStatus,
-          changed_by: authUser?.name || "unknown",
+          changed_by: user?.name || "unknown",
           change_timestamp: new Date().toISOString(),
-          remarks,
-          internal_notes: internalNotes
-        });
-        setStatusChangeModal({
-          open: false,
-          ticketId: null,
-          newStatus: "",
-          oldStatus: "",
-          remarks: "",
-          internalNotes: ""
-        });
-      }
-    } catch (err) {
-      console.error("Failed to update status:", err);
-      alert("Failed to update status: " + (err.response?.data?.error || err.message));
-    }
-  };
-  const cancelStatusChange = () => {
-    setStatusChangeModal({
-      open: false,
-      ticketId: null,
-      newStatus: "",
-      oldStatus: "",
-      remarks: "",
-      internalNotes: ""
-    });
+        }).catch((err) =>
+          console.error("❌ Failed to log status change:", err)
+        );
+      })
+      .catch((err) => console.error("❌ Failed to update status:", err));
   };
 
   // Remove old chat functions and replace with new chat system
@@ -3447,77 +3408,49 @@ function App() {
                                 </TableCell>
                                 <StatusCell>
                                   {isEditing ? (
-                                    <>
-                                      <select 
-                                        value={editForm.status} 
-                                        onChange={e => {
-                                          // ถ้าเปลี่ยน status ให้เปิด modal
-                                          if (e.target.value !== row["สถานะ"]) {
-                                            setStatusChangeModal({
-                                              open: true,
-                                              ticketId: row["Ticket ID"],
-                                              newStatus: e.target.value,
-                                              oldStatus: row["สถานะ"],
-                                              remarks: "",
-                                              internalNotes: ""
-                                            });
-                                          } else {
-                                            handleEditFormChange("status", e.target.value);
-                                          }
-                                        }}
-                                        disabled={editLoading}
-                                        style={{
-                                          width: '100%',
-                                          padding: '6px 12px',
-                                          borderRadius: '20px',
-                                          border: '1px solid #e2e8f0',
-                                          fontSize: '0.85rem',
-                                          fontWeight: 500,
-                                          backgroundColor: 'white',
-                                          cursor: 'pointer',
-                                          appearance: 'none',
-                                          backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'%23475569\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
-                                          backgroundRepeat: 'no-repeat',
-                                          backgroundPosition: 'right 12px center',
-                                          backgroundSize: '16px',
-                                          boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                                        }}
-                                      >
-                                        {STATUS_OPTIONS.map(opt => (
-                                          <option key={opt.value} value={opt.value}>
-                                            {opt.icon && <span style={{ marginRight: '6px' }}>{opt.icon}</span>}
-                                            {opt.label}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </>
+                                    <select 
+                                      value={editForm.status} 
+                                      onChange={e => handleEditFormChange("status", e.target.value)} 
+                                      disabled={editLoading}
+                                    style={{
+                                        width: '100%',
+                                        padding: '6px 12px',
+                                        borderRadius: '20px',
+                                        border: '1px solid #e2e8f0',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 500,
+                                        backgroundColor: 'white',
+                                        cursor: 'pointer',
+                                        appearance: 'none',
+                                        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23475569\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
+                                        backgroundRepeat: 'no-repeat',
+                                        backgroundPosition: 'right 12px center',
+                                        backgroundSize: '16px',
+                                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                      }}
+                                    >
+                                      {STATUS_OPTIONS.map(opt => (
+                                        <option key={opt.value} value={opt.value}>
+                                          {opt.icon && <span style={{ marginRight: '6px' }}>{opt.icon}</span>}
+                                          {opt.label}
+                                        </option>
+                                      ))}
+                                    </select>
                                   ) : (
-                                    // ... แสดงสถานะปกติ ...
-                                    row["สถานะ"] === "Closed" || row["สถานะ"] === "Cancelled" ? (
-                                      <div>
-                                        <div style={{ marginBottom: '4px' }}>
-                                          <span style={getStatusStyle(row["สถานะ"]) }>
-                                            {row["สถานะ"]}
-                                          </span>
-                                        </div>
-                                        {row["remarks"] && (
-                                          <div style={{
-                                            fontSize: '0.8rem',
-                                            color: '#64748b',
-                                            padding: '8px',
-                                            background: '#f8fafc',
-                                            borderRadius: '6px',
-                                            marginTop: '4px'
-                                          }}>
-                                            <strong>หมายเหตุ:</strong> {row["remarks"]}
-                                          </div>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <span style={getStatusStyle(row["สถานะ"]) }>
-                                        {row["สถานะ"]}
-                                      </span>
-                                    )
+                                    <div 
+                                      className="status-badge" 
+                                      data-status={row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None"}
+                                    >
+                                      {(() => {
+                                        const status = row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None";
+                                        const statusOption = STATUS_OPTIONS.find(opt => opt.value === status);
+                                        return (
+                                          <>
+                                            {statusOption?.icon || '📌'} {status}
+                                          </>
+                                        );
+                                      })()}
+                                    </div>
                                   )}
                                 </StatusCell>
                                 <TableCell $isEditing={isEditing}>
@@ -3549,108 +3482,21 @@ function App() {
                                     </>
                                   )}
                                 </TableCell>
-                                {isEditing && (
-                                  <>
-                                    {/* ส่วนของ Type Selection */}
-                                    <TableCell>
-                                      <select 
-                                        value={editForm.type} 
-                                        onChange={e => {
-                                          handleEditFormChange("type", e.target.value);
-                                          handleEditFormChange("request", "");
-                                          handleEditFormChange("report", "");
-                                          handleEditFormChange("requestDetails", "");
-                                          handleEditFormChange("reportDetails", "");
-                                        }}
-                                        disabled={editLoading}
-                                        style={{
-                                          width: '100%',
-                                          padding: '6px 12px',
-                                          borderRadius: '8px',
-                                          border: '1px solid #e2e8f0',
-                                          fontSize: '0.85rem',
-                                          backgroundColor: 'white'
-                                        }}
-                                      >
-                                        <option value="Service">Service</option>
-                                        <option value="Helpdesk">Helpdesk</option>
-                                        <option value="Information">Information</option>
-                                      </select>
-                                    </TableCell>
-                                    {/* ส่วนของ Requested/Report */}
-                                    {editForm.type === "Service" ? (
-                                      <RequestReportCell $isEditing={isEditing}>
-                                        <div style={{ marginBottom: '8px' }}>
-                                          <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.8rem', color: '#64748b' }}>
-                                            Requested:
-                                          </label>
-                                          <select
-                                            value={editForm.request}
-                                            onChange={e => handleEditFormChange("request", e.target.value)}
-                                            style={{
-                                              width: '100%',
-                                              padding: '6px 12px',
-                                              borderRadius: '8px',
-                                              border: '1px solid #e2e8f0',
-                                              fontSize: '0.85rem',
-                                              marginBottom: '8px'
-                                            }}
-                                          >
-                                            <option value="">-- Select Request --</option>
-                                            <option value="Installation">Installation</option>
-                                            <option value="Maintenance">Maintenance</option>
-                                            <option value="Repair">Repair</option>
-                                            <option value="Inspection">Inspection</option>
-                                            <option value="Other">Other (Please Specify)</option>
-                                          </select>
-                                        </div>
-                                        {editForm.request === "Other" && (
-                                          <EditTextarea 
-                                            value={editForm.requestDetails || ''}
-                                            onChange={e => handleEditFormChange("requestDetails", e.target.value)}
-                                            placeholder="Please specify your request..."
-                                            disabled={editLoading}
-                                          />
-                                        )}
-                                      </RequestReportCell>
-                                    ) : (
-                                      <RequestReportCell $isEditing={isEditing}>
-                                        <div style={{ marginBottom: '8px' }}>
-                                          <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.8rem', color: '#64748b' }}>
-                                            Report:
-                                          </label>
-                                          <select
-                                            value={editForm.report}
-                                            onChange={e => handleEditFormChange("report", e.target.value)}
-                                            style={{
-                                              width: '100%',
-                                              padding: '6px 12px',
-                                              borderRadius: '8px',
-                                              border: '1px solid #e2e8f0',
-                                              fontSize: '0.85rem',
-                                              marginBottom: '8px'
-                                            }}
-                                          >
-                                            <option value="">-- Select Report --</option>
-                                            <option value="Hardware Issue">Hardware Issue</option>
-                                            <option value="Software Issue">Software Issue</option>
-                                            <option value="Network Issue">Network Issue</option>
-                                            <option value="Account Issue">Account Issue</option>
-                                            <option value="Other">Other (Please Specify)</option>
-                                          </select>
-                                        </div>
-                                        {editForm.report === "Other" && (
-                                          <EditTextarea 
-                                            value={editForm.reportDetails || ''}
-                                            onChange={e => handleEditFormChange("reportDetails", e.target.value)}
-                                            placeholder="Please describe your issue..."
-                                            disabled={editLoading}
-                                          />
-                                        )}
-                                      </RequestReportCell>
-                                    )}
-                                  </>
-                                )}
+                                <RequestReportCell $isEditing={isEditing}>
+                                  {isEditing ? (
+                                    <EditTextarea value={editForm.request} onChange={e => handleEditFormChange("request", e.target.value)} disabled={editLoading} />
+                                  ) : <span>{row["Requeste"] || "None"}</span>}
+                                </RequestReportCell>
+                                <RequestReportCell $isEditing={isEditing}>
+                                  {isEditing ? (
+                                    <EditTextarea value={editForm.report} onChange={e => handleEditFormChange("report", e.target.value)} disabled={editLoading} />
+                                  ) : <span>{row["Report"] || "None"}</span>}
+                                </RequestReportCell>
+                                <TableCell>
+                                  {isEditing ? (
+                                    <EditInput type="text" value={editForm.type} onChange={e => handleEditFormChange("type", e.target.value)} disabled={editLoading} />
+                                  ) : (row["Type"] || "None")}
+                                </TableCell>
                                 <TableCell $isEditing={isEditing}>
                                   {isEditing ? (
                                     <ActionButtonGroup>
@@ -3942,134 +3788,7 @@ function App() {
                 {editSuccess && (
                   <div style={{ color: '#10b981', textAlign: 'center', margin: '8px' }}>{editSuccess}</div>
                 )}
-                {statusChangeModal.open && (
-                  <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000
-                  }}>
-                    <div style={{
-                      backgroundColor: 'white',
-                      padding: '24px',
-                      borderRadius: '12px',
-                      width: '500px',
-                      maxWidth: '90%',
-                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                    }}>
-                      <h3 style={{ marginTop: 0, color: '#1e293b' }}>
-                        ยืนยันการเปลี่ยนสถานะ Ticket #{statusChangeModal.ticketId}
-                      </h3>
-                      <div style={{ margin: '16px 0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-                          <span style={{ width: '120px', color: '#64748b' }}>จากสถานะ:</span>
-                          <span style={{ 
-                            padding: '4px 12px', 
-                            borderRadius: '12px',
-                            ...getStatusStyle(statusChangeModal.oldStatus)
-                          }}>
-                            {statusChangeModal.oldStatus}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-                          <span style={{ width: '120px', color: '#64748b' }}>เป็นสถานะ:</span>
-                          <span style={{ 
-                            padding: '4px 12px', 
-                            borderRadius: '12px',
-                            ...getStatusStyle(statusChangeModal.newStatus)
-                          }}>
-                            {statusChangeModal.newStatus}
-                          </span>
-                        </div>
-                        <div style={{ margin: '16px 0' }}>
-                          <label style={{ display: 'block', marginBottom: '8px', color: '#64748b' }}>
-                            หมายเหตุ (สำหรับลูกค้า): <span style={{color:'#ef4444'}}>*</span>
-                          </label>
-                          <textarea
-                            value={statusChangeModal.remarks}
-                            onChange={(e) => setStatusChangeModal(prev => ({
-                              ...prev,
-                              remarks: e.target.value
-                            }))}
-                            style={{
-                              width: '100%',
-                              padding: '12px',
-                              border: '1px solid #e2e8f0',
-                              borderRadius: '8px',
-                              minHeight: '80px',
-                              marginBottom: '16px'
-                            }}
-                            placeholder="กรอกหมายเหตุที่จะแสดงให้ลูกค้าเห็น..."
-                            required
-                          />
-                          {statusChangeModal.remarks.trim() === "" && (
-                            <div style={{color:'#ef4444', fontSize:'0.85rem'}}>กรุณากรอกหมายเหตุ</div>
-                          )}
-                          <label style={{ display: 'block', marginBottom: '8px', color: '#64748b' }}>
-                            หมายเหตุภายใน:
-                          </label>
-                          <textarea
-                            value={statusChangeModal.internalNotes}
-                            onChange={(e) => setStatusChangeModal(prev => ({
-                              ...prev,
-                              internalNotes: e.target.value
-                            }))}
-                            style={{
-                              width: '100%',
-                              padding: '12px',
-                              border: '1px solid #e2e8f0',
-                              borderRadius: '8px',
-                              minHeight: '80px'
-                            }}
-                            placeholder="กรอกหมายเหตุภายใน (ไม่แสดงให้ลูกค้าเห็น)..."
-                          />
-                        </div>
-                      </div>
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'flex-end',
-                        gap: '12px',
-                        marginTop: '24px'
-                      }}>
-                        <button
-                          onClick={cancelStatusChange}
-                          style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#f1f5f9',
-                            color: '#64748b',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          ยกเลิก
-                        </button>
-                        <button
-                          onClick={() => {
-                            if(statusChangeModal.remarks.trim() !== "") confirmStatusChange();
-                          }}
-                          style={{
-                            padding: '10px 20px',
-                            backgroundColor: statusChangeModal.remarks.trim() === "" ? '#e2e8f0' : '#3b82f6',
-                            color: statusChangeModal.remarks.trim() === "" ? '#64748b' : 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: statusChangeModal.remarks.trim() === "" ? 'not-allowed' : 'pointer'
-                          }}
-                          disabled={statusChangeModal.remarks.trim() === ""}
-                        >
-                          ยืนยันการเปลี่ยนสถานะ
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
+        
               </Container>
             </MainContent>
           </>
