@@ -1765,6 +1765,16 @@ function App() {
   const [availableGroups, setAvailableGroups] = useState([]);
   const [availableSubgroups, setAvailableSubgroups] = useState([]);
 
+  // --- เพิ่ม state สำหรับ modal ยืนยันการเปลี่ยนสถานะ ---
+  const [statusChangeModal, setStatusChangeModal] = useState({
+    open: false,
+    ticketId: null,
+    newStatus: "",
+    oldStatus: "",
+    remarks: "",
+    internalNotes: ""
+  });
+
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
     if (backendStatus === 'offline' || backendStatus === 'error') {
@@ -2194,50 +2204,78 @@ function App() {
 
   // อัปเดตสถานะและบันทึกการเปลี่ยนแปลง
   const handleStatusChange = (ticketId, newStatus) => {
-    // ค้นหาข้อมูล ticket เดิมเพื่อหา old_status
     const target = data.find((d) => d["Ticket ID"] === ticketId);
     const oldStatus = target?.status || target?.สถานะ || "";
-
-    // ถ้าไม่เปลี่ยนสถานะ ไม่ต้องดำเนินการใด ๆ
     if (newStatus === oldStatus) return;
+    setStatusChangeModal({
+      open: true,
+      ticketId,
+      newStatus,
+      oldStatus,
+      remarks: "",
+      internalNotes: ""
+    });
+  };
 
-    axios
-      .post(
-        "http://127.0.0.1:5001/update-status",
+  const confirmStatusChange = async () => {
+    const { ticketId, newStatus, oldStatus, remarks, internalNotes } = statusChangeModal;
+    try {
+      const response = await axios.post(
+        "https://backend-oa-pqy2.onrender.com/update-status",
         {
           ticket_id: ticketId,
           status: newStatus,
           changed_by: authUser?.name || authUser?.pin || "admin",
+          remarks,
+          internal_notes: internalNotes
         },
         {
           headers: {
             "Content-Type": "application/json",
           },
         }
-      )
-      .then(() => {
-        console.log("✅ Status updated");
-        // อัปเดต state ภายในแอป
+      );
+      if (response.data.success) {
         setData((prevData) =>
           prevData.map((item) =>
             item["Ticket ID"] === ticketId
-              ? { ...item, status: newStatus, สถานะ: newStatus }
+              ? { ...item, status: newStatus, สถานะ: newStatus, remarks }
               : item
           )
         );
-
-        // เรียก API เพื่อบันทึกการเปลี่ยนสถานะ
-        logStatusChange({
+        await logStatusChange({
           ticket_id: ticketId,
           old_status: oldStatus,
           new_status: newStatus,
-          changed_by: user?.name || "unknown",
+          changed_by: authUser?.name || "unknown",
           change_timestamp: new Date().toISOString(),
-        }).catch((err) =>
-          console.error("❌ Failed to log status change:", err)
-        );
-      })
-      .catch((err) => console.error("❌ Failed to update status:", err));
+          remarks,
+          internal_notes: internalNotes
+        });
+        setStatusChangeModal({
+          open: false,
+          ticketId: null,
+          newStatus: "",
+          oldStatus: "",
+          remarks: "",
+          internalNotes: ""
+        });
+      }
+    } catch (err) {
+      console.error("Failed to update status:", err);
+      alert("Failed to update status: " + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const cancelStatusChange = () => {
+    setStatusChangeModal({
+      open: false,
+      ticketId: null,
+      newStatus: "",
+      oldStatus: "",
+      remarks: "",
+      internalNotes: ""
+    });
   };
 
   // Remove old chat functions and replace with new chat system
