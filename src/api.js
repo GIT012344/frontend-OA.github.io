@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://backend-oa-pqy2.onrender.com';
+const API_BASE_URL = 'http://127.0.0.1:5001';
 
 // Create axios instance with default configuration
 const apiClient = axios.create({
@@ -34,7 +34,32 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
+export const TYPE_GROUP_SUBGROUP = {
+  SERVICE: {
+    Hardware: [
+      "ลงทะเบียน USB", "ติดตั้งอุปกรณ์", "ทดสอบอุปกรณ์", "ตรวจสอบอุปกรณ์"
+    ],
+    Meeting: [
+      "ติดตั้งอุปกรณ์ประชุม", "ขอ Link ประชุม / Zoom", "เชื่อมต่อ TV", "ขอยืมอุปกรณ์"
+    ],
+    Service: [
+      "ขอยืมอุปกรณ์", "เชื่อมต่ออุปกรณ์", "ย้ายจุดติดตั้ง"
+    ],
+    Software: [
+      "ติดตั้งโปรแกรม", "ตั้งค่าโปรแกรม", "ตรวจสอบโปรแกรม", "เปิดสิทธิ์การใช้งาน"
+    ],
+    "บริการอื่นๆ": []
+  },
+  HELPDESK: {
+    "คอมพิวเตอร์": ["PC", "Notebook", "MAC"],
+    "ปริ้นเตอร์": ["เครื่องพิมพ์", "Barcode Printer", "Scanner"],
+    "อุปกรณ์ต่อพ่วง": ["เมาส์", "คีย์บอร์ด", "UPS", "จอคอมพิวเตอร์", "Projector"],
+    "โปรแกรม": ["Windows", "User Login", "E-Mail / Outlook", "ERP/CRM/LMS", "MyHR", "ระบบผิดพลาด", "อื่นๆ"],
+    "เน็ตเวิร์ค": ["การเชื่อมต่อ", "ไม่มีสัญญาณ", "WIFI"],
+    "ข้อมูล": ["ข้อมูลหาย", "File Sharing/Map Drive"],
+    "ปัญหาอื่นๆ": []
+  }
+};
 // Health check function
 export const checkBackendHealth = async () => {
   try {
