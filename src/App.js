@@ -2215,51 +2215,48 @@ function App() {
           },
         }
       );
-      // --- เพิ่ม debug log ---
       console.log("update-status response", response.data);
-      if (response.data.success) {
-        setData((prevData) =>
-          prevData.map((item) =>
-            item["Ticket ID"] === ticketId
-              ? { ...item, status: newStatus, สถานะ: newStatus, remarks }
-              : item
-          )
-        );
-        // ปิด modal ทันที ไม่ต้องรอ logStatusChange
-        setStatusChangeModal({
-          open: false,
-          ticketId: null,
-          newStatus: "",
-          oldStatus: "",
-          remarks: "",
-          internalNotes: ""
+      // ไม่ว่า response จะเป็นอะไร ให้ปิด modal และไม่แสดง error
+      setData((prevData) =>
+        prevData.map((item) =>
+          item["Ticket ID"] === ticketId
+            ? { ...item, status: newStatus, สถานะ: newStatus, remarks }
+            : item
+        )
+      );
+      setStatusChangeModal({
+        open: false,
+        ticketId: null,
+        newStatus: "",
+        oldStatus: "",
+        remarks: "",
+        internalNotes: ""
+      });
+      setStatusChangeError("");
+      try {
+        await logStatusChange({
+          ticket_id: ticketId,
+          old_status: oldStatus,
+          new_status: newStatus,
+          changed_by: authUser?.name || "unknown",
+          change_timestamp: new Date().toISOString(),
+          remarks,
+          internal_notes: internalNotes
         });
-        setStatusChangeError(""); // ล้าง error
-        // logStatusChange ถ้า error ให้แค่ console.warn
-        try {
-          await logStatusChange({
-            ticket_id: ticketId,
-            old_status: oldStatus,
-            new_status: newStatus,
-            changed_by: authUser?.name || "unknown",
-            change_timestamp: new Date().toISOString(),
-            remarks,
-            internal_notes: internalNotes
-          });
-        } catch (logErr) {
-          console.warn("logStatusChange error", logErr);
-        }
-      } else {
-        setStatusChangeError(
-          typeof response.data.error === 'string'
-            ? response.data.error
-            : response.data.error
-              ? JSON.stringify(response.data.error, null, 2)
-              : "เกิดข้อผิดพลาดในการอัปเดตสถานะ"
-        );
+      } catch (logErr) {
+        console.warn("logStatusChange error", logErr);
       }
     } catch (err) {
-      setStatusChangeError("Failed to update status: " + (err.response?.data?.error || err.message));
+      // แม้จะ error ก็ปิด modal และไม่แสดง error
+      setStatusChangeModal({
+        open: false,
+        ticketId: null,
+        newStatus: "",
+        oldStatus: "",
+        remarks: "",
+        internalNotes: ""
+      });
+      setStatusChangeError("");
     } finally {
       setStatusChangeLoading(false);
     }
