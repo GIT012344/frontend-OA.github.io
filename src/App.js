@@ -2242,7 +2242,13 @@ function App() {
           internalNotes: ""
         });
       } else {
-        setStatusChangeError(response.data.error || "เกิดข้อผิดพลาดในการอัปเดตสถานะ");
+        setStatusChangeError(
+          typeof response.data.error === 'string'
+            ? response.data.error
+            : response.data.error
+              ? JSON.stringify(response.data.error, null, 2)
+              : "เกิดข้อผิดพลาดในการอัปเดตสถานะ"
+        );
       }
     } catch (err) {
       setStatusChangeError("Failed to update status: " + (err.response?.data?.error || err.message));
