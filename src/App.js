@@ -2239,7 +2239,7 @@ function App() {
           old_status: oldStatus,
           new_status: newStatus,
           changed_by: authUser?.name || "unknown",
-          change_timestamp: new Date().toISOString(),
+          changed_at: new Date().toISOString(),
           remarks,
           internal_notes: internalNotes
         });
