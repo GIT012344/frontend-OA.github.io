@@ -2843,6 +2843,22 @@ function App() {
     }
   };
 
+  // เพิ่มฟังก์ชัน handleUserSelect สำหรับ Chat User Dropdown
+  const handleUserSelect = (e) => {
+    const selectedValue = e.target.value;
+    if (selectedValue === "announcement") {
+      setSelectedChatUser("announcement");
+      setAnnouncementMessage("");
+    } else {
+      setSelectedChatUser(selectedValue);
+      setNewMessage("");
+      // Load chat messages for selected user
+      if (selectedValue) {
+        loadChatMessages(selectedValue);
+      }
+    }
+  };
+
   return (
 
       <Routes>
