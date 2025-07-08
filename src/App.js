@@ -1679,7 +1679,7 @@ const BlinkingRow = styled(TableRow)`
   }
 `;
 
-// เพิ่ม State สำหรับป๊อปอัพหมายเหตุ
+// เพิ่ม State สำหรับป๊อปอัพหมายเหตุ (ย้ายเข้ามาใน App)
 const [statusChangeModal, setStatusChangeModal] = useState({
   isOpen: false,
   ticketId: null,
