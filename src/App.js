@@ -39,6 +39,7 @@ const TYPE_GROUP_SUBGROUP = {
   }
 };
 
+
 // Styled components with elegant, modern, and sophisticated design
 const Container = styled.div`
   max-width: 1400px;
@@ -1610,18 +1611,6 @@ const SaveButton = styled.button`
   &:hover { background: #059669; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
-const CancelButton = styled.button`
-  background: #64748b;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  &:hover { background: #334155; }
-  &:disabled { opacity: 0.6; cursor: not-allowed; }
-`;
 
 // เพิ่ม ActionButtonGroup, EditButton, DeleteButton
 const ActionButtonGroup = styled.div`
@@ -1677,14 +1666,6 @@ const BlinkingRow = styled(TableRow)`
     50% { filter: brightness(1.5); }
   }
 `;
-
-// --- เพิ่ม State สำหรับ Modal หมายเหตุ ---
-const [showStatusChangeModal, setShowStatusChangeModal] = useState(false);
-const [statusChangeNote, setStatusChangeNote] = useState("");
-const [tempNewStatus, setTempNewStatus] = useState("");
-const [tempTicketId, setTempTicketId] = useState("");
-
-// --- เพิ่ม styled components สำหรับ Modal ---
 const StatusChangeModal = styled.div`
   position: fixed;
   top: 0;
@@ -1697,6 +1678,7 @@ const StatusChangeModal = styled.div`
   justify-content: center;
   z-index: 1000;
 `;
+
 const ModalContent = styled.div`
   background: white;
   padding: 24px;
@@ -1705,12 +1687,14 @@ const ModalContent = styled.div`
   max-width: 90%;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 `;
+
 const ModalTitle = styled.h3`
   margin-top: 0;
   color: #1e293b;
   font-size: 1.25rem;
   margin-bottom: 16px;
 `;
+
 const NoteTextarea = styled.textarea`
   width: 100%;
   min-height: 100px;
@@ -1720,17 +1704,20 @@ const NoteTextarea = styled.textarea`
   margin-bottom: 16px;
   font-family: inherit;
   resize: vertical;
+  
   &:focus {
     outline: none;
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 `;
+
 const ModalButtonGroup = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 12px;
 `;
+
 const ConfirmButton = styled.button`
   padding: 10px 16px;
   background: #10b981;
@@ -1739,11 +1726,13 @@ const ConfirmButton = styled.button`
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
+  
   &:hover {
     background: #059669;
   }
 `;
-const CancelButtonModal = styled.button`
+
+const CancelButton = styled.button`
   padding: 10px 16px;
   background: #ef4444;
   color: white;
@@ -1751,6 +1740,7 @@ const CancelButtonModal = styled.button`
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
+  
   &:hover {
     background: #dc2626;
   }
@@ -1798,7 +1788,11 @@ function App() {
   const [newMessage, setNewMessage] = useState("");
   const [loadingChat, setLoadingChat] = useState(false);
   const [chatUsers, setChatUsers] = useState([]);
-  
+  const [showStatusChangeModal, setShowStatusChangeModal] = useState(false);
+  const [statusChangeNote, setStatusChangeNote] = useState("");
+  const [tempNewStatus, setTempNewStatus] = useState("");
+  const [tempTicketId, setTempTicketId] = useState("");
+
   // Announcement System State (preserved)
   const [announcementMessage, setAnnouncementMessage] = useState("");
   
@@ -1868,6 +1862,48 @@ function App() {
       }
     }
   }, [backendStatus, data]);
+
+  const handleStatusChangeWithNote = (ticketId, newStatus) => {
+    setTempTicketId(ticketId);
+    setTempNewStatus(newStatus);
+    setStatusChangeNote("");
+    setShowStatusChangeModal(true);
+  };
+  
+  const confirmStatusChange = async () => {
+    try {
+      // เรียก API เพื่ออัปเดตสถานะพร้อมหมายเหตุ
+      const response = await axios.post(
+        "https://backend-oa-pqy2.onrender.com/update-status",
+        {
+          ticket_id: tempTicketId,
+          status: tempNewStatus,
+          changed_by: authUser?.name || authUser?.pin || "admin",
+          note: statusChangeNote
+        }
+      );
+  
+      if (response.data.success) {
+        // อัปเดต state ภายในแอป
+        setData(prevData =>
+          prevData.map(item =>
+            item["Ticket ID"] === tempTicketId
+              ? { ...item, status: tempNewStatus, สถานะ: tempNewStatus }
+              : item
+          )
+        );
+        
+        // ปิดป๊อปอัพ
+        setShowStatusChangeModal(false);
+      }
+    } catch (error) {
+      console.error("Error updating status with note:", error);
+    }
+  };
+  
+  const cancelStatusChange = () => {
+    setShowStatusChangeModal(false);
+  };
 
   // Use offline data when backend is unavailable
   const displayData = isOfflineMode ? offlineData : data;
@@ -3115,50 +3151,6 @@ const handleSubgroupChange = (e) => {
     }
   };
 
-  // --- ฟังก์ชันเปิด Modal เมื่อเปลี่ยนสถานะ ---
-  const handleStatusChangeWithNote = (ticketId, newStatus) => {
-    setTempTicketId(ticketId);
-    setTempNewStatus(newStatus);
-    setStatusChangeNote("");
-    setShowStatusChangeModal(true);
-  };
-
-  // --- ฟังก์ชันยืนยันการเปลี่ยนสถานะ ---
-  const confirmStatusChange = async () => {
-    try {
-      const response = await axios.post(
-        "https://backend-oa-pqy2.onrender.com/update-status",
-        {
-          ticket_id: tempTicketId,
-          status: tempNewStatus,
-          changed_by: authUser?.name || authUser?.pin || "admin",
-          note: statusChangeNote
-        }
-      );
-      if (response.data.success) {
-        setData(prevData =>
-          prevData.map(item =>
-            item["Ticket ID"] === tempTicketId
-              ? { ...item, status: tempNewStatus, สถานะ: tempNewStatus }
-              : item
-          )
-        );
-        setShowStatusChangeModal(false);
-      }
-    } catch (error) {
-      console.error("Error updating status with note:", error);
-      alert("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ: " + (error.response?.data?.error || error.message));
-    }
-  };
-
-  // --- ฟังก์ชันยกเลิกการเปลี่ยนสถานะ ---
-  const cancelStatusChange = () => {
-    setShowStatusChangeModal(false);
-    setTempTicketId("");
-    setTempNewStatus("");
-    setStatusChangeNote("");
-  };
-
   return (
 
       <Routes>
@@ -3756,39 +3748,10 @@ const apptDateTime = row["appointment_datetime"]
                                 </TableCell>
                                 <StatusCell>
                                   {isEditing ? (
-                                    <select
-                                      value={editForm.status}
-                                      onChange={e => handleEditFormChange("status", e.target.value)}
-                                      disabled={editLoading}
-                                      style={{
-                                        width: '100%',
-                                        padding: '6px 12px',
-                                        borderRadius: '20px',
-                                        border: '1px solid #e2e8f0',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 500,
-                                        backgroundColor: 'white',
-                                        cursor: 'pointer',
-                                        appearance: 'none',
-                                        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23475569\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
-                                        backgroundRepeat: 'no-repeat',
-                                        backgroundPosition: 'right 12px center',
-                                        backgroundSize: '16px',
-                                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                                      }}
-                                    >
-                                      {STATUS_OPTIONS.map(opt => (
-                                        <option key={opt.value} value={opt.value}>
-                                          {`${opt.icon ? opt.icon + ' ' : ''}${opt.label}`}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  ) : (
                                     <StatusSelect
-                                      value={row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None"}
+                                      value={editForm.status}
                                       onChange={e => {
-                                        const currentStatus = row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"];
-                                        if (currentStatus !== e.target.value) {
+                                        if (editForm.status !== e.target.value) {
                                           handleStatusChangeWithNote(row["Ticket ID"], e.target.value);
                                         }
                                       }}
@@ -3800,6 +3763,19 @@ const apptDateTime = row["appointment_datetime"]
                                         </option>
                                       ))}
                                     </StatusSelect>
+                                  ) : (
+                                    (() => {
+                                      const status = row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None";
+                                      const statusOption = STATUS_OPTIONS.find(opt => opt.value === status);
+                                      return (
+                                        <div
+                                          className="status-badge"
+                                          data-status={status}
+                                        >
+                                          {statusOption?.icon || '📌'} {status}
+                                        </div>
+                                      );
+                                    })()
                                   )}
                                 </StatusCell>
                                 <TableCell $isEditing={isEditing}>
@@ -3987,6 +3963,25 @@ const apptDateTime = row["appointment_datetime"]
                       </div>
                     )}
                   </TableContainer>
+
+                  {/* Modal สำหรับเปลี่ยนสถานะ */}
+                  {showStatusChangeModal && (
+                    <StatusChangeModal>
+                      <ModalContent>
+                        <ModalTitle>เปลี่ยนสถานะเป็น: {tempNewStatus}</ModalTitle>
+                        <p style={{ marginBottom: '12px' }}>กรุณากรอกหมายเหตุ (ถ้ามี):</p>
+                        <NoteTextarea
+                          value={statusChangeNote}
+                          onChange={(e) => setStatusChangeNote(e.target.value)}
+                          placeholder="ระบุรายละเอียดเพิ่มเติมเกี่ยวกับการเปลี่ยนสถานะนี้..."
+                        />
+                        <ModalButtonGroup>
+                          <CancelButton onClick={cancelStatusChange}>ยกเลิก</CancelButton>
+                          <ConfirmButton onClick={confirmStatusChange}>ยืนยันการเปลี่ยนสถานะ</ConfirmButton>
+                        </ModalButtonGroup>
+                      </ModalContent>
+                    </StatusChangeModal>
+                  )}
                 </div>
                 <div ref={chatRef}>
                   <ChatContainer>
@@ -4198,23 +4193,6 @@ const apptDateTime = row["appointment_datetime"]
                   <div style={{ color: '#10b981', textAlign: 'center', margin: '8px' }}>{editSuccess}</div>
                 )}
         
-              {showStatusChangeModal && (
-                <StatusChangeModal>
-                  <ModalContent>
-                    <ModalTitle>เปลี่ยนสถานะเป็น: {tempNewStatus}</ModalTitle>
-                    <p style={{ marginBottom: '12px' }}>กรุณากรอกหมายเหตุ (ถ้ามี):</p>
-                    <NoteTextarea
-                      value={statusChangeNote}
-                      onChange={(e) => setStatusChangeNote(e.target.value)}
-                      placeholder="ระบุรายละเอียดเพิ่มเติมเกี่ยวกับการเปลี่ยนสถานะนี้..."
-                    />
-                    <ModalButtonGroup>
-                      <CancelButtonModal onClick={cancelStatusChange}>ยกเลิก</CancelButtonModal>
-                      <ConfirmButton onClick={confirmStatusChange}>ยืนยันการเปลี่ยนสถานะ</ConfirmButton>
-                    </ModalButtonGroup>
-                  </ModalContent>
-                </StatusChangeModal>
-              )}
               </Container>
             </MainContent>
           </>
