@@ -10,7 +10,7 @@ import { useAuth } from './AuthContext';
 import './styles.css';
 import DashboardSection from "./DashboardSection";
 import StatusLogsPage from './StatusLogsPage';
-import StatusChangeModal from './StatusChangeModal';
+// import StatusChangeModal from './StatusChangeModal';
 
 // Define the type-group-subgroup mapping
 const TYPE_GROUP_SUBGROUP = {
