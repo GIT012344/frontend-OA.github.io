@@ -28,7 +28,7 @@ const TYPE_GROUP_SUBGROUP = {
     ],
     "บริการอื่นๆ": []
   },
-  HELPDESK: {
+  Helpdesk: {
     "คอมพิวเตอร์": ["PC", "Notebook", "MAC"],
     "ปริ้นเตอร์": ["เครื่องพิมพ์", "Barcode Printer", "Scanner"],
     "อุปกรณ์ต่อพ่วง": ["เมาส์", "คีย์บอร์ด", "UPS", "จอคอมพิวเตอร์", "Projector"],
@@ -3026,9 +3026,9 @@ const handleEditTicket = (ticket) => {
   let subgroup = ticket["subgroup"] || "";
   
   // Map group based on type
-  if (type === "SERVICE") {
+  if (type === "Service") {
     group = ticket["Requeste"] || "";
-  } else if (type === "HELPDESK") {
+  } else if (type === "Helpdesk") {
     group = ticket["Report"] || "";
   }
   
@@ -3140,8 +3140,8 @@ const handleSubgroupChange = (e) => {
     
     // Map request and report based on ticket type and selected group for backend compatibility
     const typeUpper = (editForm.type || "").toUpperCase();
-    const requestField = typeUpper === "SERVICE" ? (editForm.group || editForm.request) : editForm.request;
-    const reportField = typeUpper === "HELPDESK" ? (editForm.group || editForm.report) : editForm.report;
+    const requestField = typeUpper === "Service" ? (editForm.group || editForm.request) : editForm.request;
+    const reportField = typeUpper === "Helpdesk" ? (editForm.group || editForm.report) : editForm.report;
     
     try {
       // Build the payload dynamically – include only meaningful, non-empty values
@@ -3958,7 +3958,7 @@ const handleSubgroupChange = (e) => {
                                   ) : (
                                     (() => {
                                         const typeUpper = (row["Type"] || "").toString().toUpperCase();
-                                        const groupVal = typeUpper === "SERVICE" ? row["Requested"] : typeUpper === "HELPDESK" ? row["Report"] : "";
+                                        const groupVal = typeUpper === "Service" ? row["Requested"] : typeUpper === "Helpdesk" ? row["Report"] : "";
                                         if (!groupVal || groupVal === "None" || groupVal === "null" || groupVal === "NULL") {
                                           return "";
                                         }
