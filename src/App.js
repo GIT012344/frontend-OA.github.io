@@ -1678,6 +1678,61 @@ const BlinkingRow = styled(TableRow)`
   }
 `;
 
+// --- Styled Modal สำหรับ Remarks ---
+const RemarkModal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+const ModalContent = styled.div`
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  width: 500px;
+  max-width: 90%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+`;
+const ModalTitle = styled.h3`
+  margin-top: 0;
+  color: #1e293b;
+`;
+const ModalTextarea = styled.textarea`
+  width: 100%;
+  min-height: 100px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-family: inherit;
+`;
+const ModalActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+`;
+const ModalButton = styled.button`
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  ${({ $primary }) => $primary ? `
+    background: #3b82f6;
+    color: white;
+    border: none;
+  ` : `
+    background: white;
+    color: #475569;
+    border: 1px solid #e2e8f6;
+  `}
+`;
+
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -1764,6 +1819,15 @@ function App() {
   // New state for cascade dropdown
   const [availableGroups, setAvailableGroups] = useState([]);
   const [availableSubgroups, setAvailableSubgroups] = useState([]);
+
+  // --- Remark Modal State ---
+  const [showRemarkModal, setShowRemarkModal] = useState(false);
+  const [remarkData, setRemarkData] = useState({
+    ticketId: null,
+    newStatus: '',
+    remarks: '',
+    internalNotes: ''
+  });
 
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
@@ -3037,6 +3101,52 @@ const handleSubgroupChange = (e) => {
     }
   };
 
+  // ฟังก์ชันเปิด modal เมื่อจะเปลี่ยนสถานะ (เฉพาะกรณีไม่ใช่โหมดแก้ไข inline)
+  const handleStatusChangeWithRemarks = (ticketId, newStatus) => {
+    const target = data.find((d) => d["Ticket ID"] === ticketId);
+    const oldStatus = target?.status || target?.สถานะ || "";
+    if (newStatus === oldStatus) return;
+    setRemarkData({
+      ticketId,
+      newStatus,
+      remarks: '',
+      internalNotes: ''
+    });
+    setShowRemarkModal(true);
+  };
+  // ฟังก์ชันยืนยันการเปลี่ยนสถานะ (พร้อมส่ง remarks)
+  const confirmStatusChange = async () => {
+    try {
+      const response = await axios.post(
+        "https://backend-oa-pqy2.onrender.com/update-status",
+        {
+          ticket_id: remarkData.ticketId,
+          status: remarkData.newStatus,
+          changed_by: authUser?.name || authUser?.pin || "admin",
+          remarks: remarkData.remarks,
+          internal_notes: remarkData.internalNotes
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (response.data.success) {
+        setData((prevData) =>
+          prevData.map((item) =>
+            item["Ticket ID"] === remarkData.ticketId
+              ? { ...item, status: remarkData.newStatus, สถานะ: remarkData.newStatus }
+              : item
+          )
+        );
+        setShowRemarkModal(false);
+      }
+    } catch (error) {
+      console.error("Error updating status with remarks:", error);
+    }
+  };
+
   return (
 
       <Routes>
@@ -3662,18 +3772,16 @@ const apptDateTime = row["appointment_datetime"]
                                       ))}
                                     </select>
                                   ) : (
-                                    (() => {
-                                      const status = row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None";
-                                      const statusOption = STATUS_OPTIONS.find(opt => opt.value === status);
-                                      return (
-                                        <div
-                                          className="status-badge"
-                                          data-status={status}
-                                        >
-                                          {statusOption?.icon || '📌'} {status}
-                                        </div>
-                                      );
-                                    })()
+                                    <StatusSelect
+                                      value={row["สถานะ"]}
+                                      onChange={e => handleStatusChangeWithRemarks(row["Ticket ID"], e.target.value)}
+                                    >
+                                      {STATUS_OPTIONS.map(opt => (
+                                        <option key={opt.value} value={opt.value}>
+                                          {opt.label}
+                                        </option>
+                                      ))}
+                                    </StatusSelect>
                                   )}
                                 </StatusCell>
                                 <TableCell $isEditing={isEditing}>
@@ -4071,7 +4179,42 @@ const apptDateTime = row["appointment_datetime"]
                 {editSuccess && (
                   <div style={{ color: '#10b981', textAlign: 'center', margin: '8px' }}>{editSuccess}</div>
                 )}
-        
++               {/* --- Modal สำหรับ Remarks --- */}
++               {showRemarkModal && (
++                 <RemarkModal>
++                   <ModalContent>
++                     <ModalTitle>เพิ่มหมายเหตุสำหรับการเปลี่ยนสถานะ</ModalTitle>
++                     <div style={{ marginBottom: '16px' }}>
++                       <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
++                         หมายเหตุสำหรับผู้ใช้ (จะแสดงใน LINE)
++                       </label>
++                       <ModalTextarea
++                         placeholder="อธิบายสาเหตุการเปลี่ยนสถานะ..."
++                         value={remarkData.remarks}
++                         onChange={e => setRemarkData({ ...remarkData, remarks: e.target.value })}
++                       />
++                     </div>
++                     <div style={{ marginBottom: '16px' }}>
++                       <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
++                         หมายเหตุภายใน (สำหรับทีมงาน)
++                       </label>
++                       <ModalTextarea
++                         placeholder="บันทึกเพิ่มเติมสำหรับทีมงาน..."
++                         value={remarkData.internalNotes}
++                         onChange={e => setRemarkData({ ...remarkData, internalNotes: e.target.value })}
++                       />
++                     </div>
++                     <ModalActions>
++                       <ModalButton onClick={() => setShowRemarkModal(false)}>
++                         ยกเลิก
++                       </ModalButton>
++                       <ModalButton $primary onClick={confirmStatusChange}>
++                         ยืนยันการเปลี่ยนสถานะ
++                       </ModalButton>
++                     </ModalActions>
++                   </ModalContent>
++                 </RemarkModal>
++               )}
               </Container>
             </MainContent>
           </>
