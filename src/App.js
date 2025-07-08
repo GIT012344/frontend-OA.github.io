@@ -10,6 +10,7 @@ import { useAuth } from './AuthContext';
 import './styles.css';
 import DashboardSection from "./DashboardSection";
 import StatusLogsPage from './StatusLogsPage';
+import { useMediaQuery } from 'react-responsive';
 
 // Define the type-group-subgroup mapping
 const TYPE_GROUP_SUBGROUP = {
@@ -62,6 +63,10 @@ const Container = styled.div`
     opacity: 0.03;
     z-index: 0;
   }
+  @media (max-width: 768px) {
+    padding: 80px 4vw 24px 4vw;
+    min-width: 0;
+  }
 `;
 
 const Title = styled.h1`
@@ -83,6 +88,10 @@ const Title = styled.h1`
     margin: 16px auto 0;
     border-radius: 2px;
     opacity: 0.6;
+  }
+  @media (max-width: 768px) {
+    font-size: 2rem;
+    margin-bottom: 32px;
   }
 `;
 
@@ -149,6 +158,13 @@ const ExportButton = styled.button`
     background-size: contain;
     background-repeat: no-repeat;
   }
+  @media (max-width: 768px) {
+    font-size: 1.1rem;
+    min-height: 44px;
+    padding: 12px 0;
+    flex: 1;
+    width: 100%;
+  }
 `;
 
 const Dashboard = styled.div`
@@ -158,6 +174,11 @@ const Dashboard = styled.div`
   margin-bottom: 40px;
   position: relative;
   z-index: 1;
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
 `;
 
 const StatCard = styled.div`
@@ -217,6 +238,11 @@ const TableContainer = styled.div`
     right: 0;
     height: 1px;
     background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+  }
+  @media (max-width: 768px) {
+    padding: 12px 2vw;
+    border-radius: 10px;
+    margin-bottom: 16px;
   }
 `;
 
@@ -300,6 +326,12 @@ const TableCell = styled.td`
   white-space: normal;
   overflow-wrap: anywhere;
   background: ${props => props.$isEditing ? '#f1f5f9' : 'transparent'};
+  @media (max-width: 768px) {
+    font-size: 1.1rem;
+    padding: 16px 8px;
+    min-width: 90px;
+    max-width: 120px;
+  }
 `;
 
 const StatusCell = styled(TableCell)`
@@ -843,6 +875,10 @@ const ScrollContainer = styled.div`
   &::-webkit-scrollbar-thumb:hover {
     background: rgba(100, 116, 139, 0.5);
   }
+  @media (max-width: 768px) {
+    border-radius: 6px;
+    margin: 0 -2vw;
+  }
 `;
 
 const SearchAndFilterContainer = styled.div`
@@ -1184,6 +1220,9 @@ const Sidebar = styled.div`
     transform: translateX(0);
     width: 240px;
   }
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 const Logo = styled.div`
@@ -1304,6 +1343,10 @@ const ToggleButton = styled.button`
 const MainContent = styled.div`
   margin-left: 240px;
   width: calc(100% - 240px);
+  @media (max-width: 768px) {
+    margin-left: 0;
+    width: 100%;
+  }
 `;
 
 const EmailRankingCard = styled(StatCard)`
@@ -1578,6 +1621,12 @@ const EditInput = styled.input`
     border-color: #2563eb;
     background: #fff;
   }
+  @media (max-width: 768px) {
+    font-size: 1.1rem;
+    min-height: 44px;
+    padding: 12px 10px;
+    width: 100%;
+  }
 `;
 const EditTextarea = styled.textarea`
   padding: 8px 12px;
@@ -1765,6 +1814,44 @@ const SubLabel = styled.span`
   color: #64748b;
   display: block;
   margin-top: 2px;
+`;
+
+const TopNav = styled.nav`
+  display: none;
+  @media (max-width: 768px) {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: linear-gradient(90deg, #64748b, #475569);
+    z-index: 2000;
+    align-items: center;
+    justify-content: space-around;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+`;
+const TopNavButton = styled.button`
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: 600;
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+  &:active, &:focus { background: #334155; }
+  @media (max-width: 768px) {
+    font-size: 1.1rem;
+    min-height: 44px;
+    padding: 0;
+  }
 `;
 
 function App() {
@@ -3202,8 +3289,19 @@ const handleSubgroupChange = (e) => {
     }
   };
 
-  return (
+  const isMobile = window.innerWidth <= 768;
 
+  return (
+    <>
+      {/* TopNav เฉพาะมือถือ */}
+      {isMobile && (
+        <TopNav>
+          <TopNavButton onClick={() => { setActiveTab('dashboard'); scrollToDashboard(); }}>🏠<span style={{fontSize:'0.85em'}}>Dashboard</span></TopNavButton>
+          <TopNavButton onClick={() => { setActiveTab('list'); scrollToList(); }}>📋<span style={{fontSize:'0.85em'}}>List</span></TopNavButton>
+          <TopNavButton onClick={() => { setActiveTab('chat'); scrollToChat(); }}>💬<span style={{fontSize:'0.85em'}}>Chat</span></TopNavButton>
+          <TopNavButton onClick={() => { setActiveTab('logs'); navigate('/logs'); }}>🕑<span style={{fontSize:'0.85em'}}>Logs</span></TopNavButton>
+        </TopNav>
+      )}
       <Routes>
         <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
         <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <Login />} />
@@ -4270,7 +4368,7 @@ const apptDateTime = row["appointment_datetime"]
         <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
         <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
       </Routes>
-
+    </>
   );
 }
 
