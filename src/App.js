@@ -1894,6 +1894,19 @@ function App() {
 };
 
 const confirmStatusChange = async () => {
+  // --- Optimistic UI ---
+  // 1. เก็บสถานะเดิมไว้ก่อน
+  let oldStatus = null;
+  setData(prevData => {
+    return prevData.map(item => {
+      if (item["Ticket ID"] === tempTicketId) {
+        oldStatus = item.status || item["สถานะ"];
+        return { ...item, status: tempNewStatus, สถานะ: tempNewStatus };
+      }
+      return item;
+    });
+  });
+
   try {
     const response = await axios.post(
       "https://backend-oa-pqy2.onrender.com/update-status-with-note",
@@ -1907,22 +1920,32 @@ const confirmStatusChange = async () => {
     );
 
     if (response.data.success) {
-      // อัปเดต state ภายในแอป
-      setData(prevData =>
-        prevData.map(item =>
-          item["Ticket ID"] === tempTicketId
-            ? { ...item, status: tempNewStatus, สถานะ: tempNewStatus }
-            : item
-        )
-      );
-      
-      // ปิด modal และยกเลิกการแก้ไข
+      // สำเร็จ: ไม่ต้องทำอะไรเพิ่ม
       setShowStatusChangeModal(false);
       setEditingTicketId(null);
       setEditSuccess("อัปเดตสถานะและบันทึกหมายเหตุเรียบร้อยแล้ว");
       setTimeout(() => setEditSuccess(""), 3000);
+    } else {
+      // ถ้า backend ตอบกลับไม่สำเร็จ ให้ revert กลับ
+      setData(prevData =>
+        prevData.map(item =>
+          item["Ticket ID"] === tempTicketId
+            ? { ...item, status: oldStatus, สถานะ: oldStatus }
+            : item
+        )
+      );
+      setEditError("เกิดข้อผิดพลาดในการอัปเดตสถานะ");
+      setTimeout(() => setEditError(""), 3000);
     }
   } catch (error) {
+    // ถ้า error: revert กลับ
+    setData(prevData =>
+      prevData.map(item =>
+        item["Ticket ID"] === tempTicketId
+          ? { ...item, status: oldStatus, สถานะ: oldStatus }
+          : item
+      )
+    );
     console.error("Error updating status with note:", error);
     setEditError("เกิดข้อผิดพลาดในการอัปเดตสถานะ");
     setTimeout(() => setEditError(""), 3000);
