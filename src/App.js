@@ -4196,23 +4196,22 @@ function App() {
               {editSuccess && (
                 <div style={{ color: '#10b981', textAlign: 'center', margin: '8px' }}>{editSuccess}</div>
               )}
-              +             {showStatusChangeModal && (
-                +               <StatusChangeModal>
-                  +                 <ModalContent>
-                    +                   <ModalTitle>เปลี่ยนสถานะเป็น: {tempNewStatus}</ModalTitle>
-                    +                   <p style={{ marginBottom: '12px' }}>กรุณากรอกหมายเหตุ (ถ้ามี):</p>
-                    +                   <NoteTextarea
-+                     value={statusChangeNote}
-                    +                     onChange={(e) => setStatusChangeNote(e.target.value)}
-                    +                     placeholder="ระบุรายละเอียดเพิ่มเติมเกี่ยวกับการเปลี่ยนสถานะนี้..."
-+                   />
-                    +                   <ModalButtonGroup>
-                      +                     <CancelButtonModal onClick={cancelStatusChange}>ยกเลิก</CancelButtonModal>
-                      +                     <ConfirmButton onClick={confirmStatusChange}>ยืนยันการเปลี่ยนสถานะ</ConfirmButton>
-                      +                   </ModalButtonGroup>
-                    +                 </ModalContent>
-                  +               </StatusChangeModal>
-                +             )}
+              {showStatusChangeModal && (
+                <StatusChangeModal>
+                  <ModalContent>
+                    <ModalTitle>เปลี่ยนสถานะเป็น: {tempNewStatus}</ModalTitle>
+                    <p style={{ marginBottom: '12px' }}>กรุณากรอกหมายเหตุ (ถ้ามี):</p>
+                    <NoteTextarea
+                      value={statusChangeNote}
+                      onChange={(e) => setStatusChangeNote(e.target.value)}
+                      placeholder="ระบุรายละเอียดเพิ่มเติมเกี่ยวกับการเปลี่ยนสถานะนี้..." />
+                    <ModalButtonGroup>
+                      <CancelButtonModal onClick={cancelStatusChange}>ยกเลิก</CancelButtonModal>
+                      <ConfirmButton onClick={confirmStatusChange}>ยืนยันการเปลี่ยนสถานะ</ConfirmButton>
+                    </ModalButtonGroup>
+                  </ModalContent>
+                </StatusChangeModal>
+              )}
             </Container>
           </MainContent>
         </>
