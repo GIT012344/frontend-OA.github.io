@@ -1922,6 +1922,8 @@ const confirmStatusChange = async () => {
       setEditingTicketId(null);
       setEditSuccess("อัปเดตสถานะและบันทึกหมายเหตุเรียบร้อยแล้ว");
       setTimeout(() => setEditSuccess(""), 3000);
+      // ดึงข้อมูลใหม่ทันทีหลังเปลี่ยนสถานะ
+      fetchData();
     } else {
       // ถ้า backend ตอบ error (แต่ไม่ throw)
       setData(prevData); // rollback
