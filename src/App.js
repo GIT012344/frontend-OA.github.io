@@ -10,7 +10,6 @@ import { useAuth } from './AuthContext';
 import './styles.css';
 import DashboardSection from "./DashboardSection";
 import StatusLogsPage from './StatusLogsPage';
-// import StatusChangeModal from './StatusChangeModal';
 
 // Define the type-group-subgroup mapping
 const TYPE_GROUP_SUBGROUP = {
@@ -1679,16 +1678,6 @@ const BlinkingRow = styled(TableRow)`
   }
 `;
 
-// เพิ่ม State สำหรับป๊อปอัพหมายเหตุ (ย้ายเข้ามาใน App)
-const [statusChangeModal, setStatusChangeModal] = useState({
-  isOpen: false,
-  ticketId: null,
-  oldStatus: '',
-  newStatus: '',
-  remarks: '',
-  isSaving: false
-});
-
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -1775,6 +1764,13 @@ function App() {
   // New state for cascade dropdown
   const [availableGroups, setAvailableGroups] = useState([]);
   const [availableSubgroups, setAvailableSubgroups] = useState([]);
+
+  // --- State สำหรับ Remark Popup ---
+  const [showRemarkModal, setShowRemarkModal] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState("");
+  const [remarkUser, setRemarkUser] = useState("");
+  const [remarkAdmin, setRemarkAdmin] = useState("");
+  const [pendingTicketId, setPendingTicketId] = useState(null);
 
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
@@ -2204,26 +2200,31 @@ function App() {
   const uniqueTypes = [...new Set(displayData.map(item => (item["Type"] || "").toUpperCase()).filter(t => t))];
 
   // อัปเดตสถานะและบันทึกการเปลี่ยนแปลง
-  const handleStatusChange = async (ticketId, newStatus, remarks = '') => {
+  const handleStatusChange = (ticketId, newStatus) => {
+    // ค้นหาข้อมูล ticket เดิมเพื่อหา old_status
     const target = data.find((d) => d["Ticket ID"] === ticketId);
     const oldStatus = target?.status || target?.สถานะ || "";
+
+    // ถ้าไม่เปลี่ยนสถานะ ไม่ต้องดำเนินการใด ๆ
     if (newStatus === oldStatus) return;
-    try {
-      const response = await axios.post(
+
+    axios
+      .post(
         "https://backend-oa-pqy2.onrender.com/update-status",
         {
           ticket_id: ticketId,
           status: newStatus,
           changed_by: authUser?.name || authUser?.pin || "admin",
-          remarks: remarks // ส่งหมายเหตุไปด้วย
         },
         {
           headers: {
             "Content-Type": "application/json",
           },
         }
-      );
-      if (response.data.success) {
+      )
+      .then(() => {
+        console.log("✅ Status updated");
+        // อัปเดต state ภายในแอป
         setData((prevData) =>
           prevData.map((item) =>
             item["Ticket ID"] === ticketId
@@ -2231,40 +2232,19 @@ function App() {
               : item
           )
         );
-        // บันทึกการเปลี่ยนสถานะพร้อมหมายเหตุ
-        await logStatusChange({
+
+        // เรียก API เพื่อบันทึกการเปลี่ยนสถานะ
+        logStatusChange({
           ticket_id: ticketId,
           old_status: oldStatus,
           new_status: newStatus,
           changed_by: user?.name || "unknown",
           change_timestamp: new Date().toISOString(),
-          remarks: remarks
-        });
-        // แสดงการแจ้งเตือนสำเร็จ
-        setNotifications(prev => [
-          {
-            id: Date.now(),
-            message: `เปลี่ยนสถานะ Ticket #${ticketId} เป็น ${newStatus} สำเร็จ`,
-            timestamp: new Date().toISOString(),
-            read: false
-          },
-          ...prev
-        ]);
-        setHasUnread(true);
-      }
-    } catch (err) {
-      console.error("❌ Failed to update status:", err);
-      setNotifications(prev => [
-        {
-          id: Date.now(),
-          message: `ไม่สามารถเปลี่ยนสถานะ Ticket #${ticketId}: ${err.message}`,
-          timestamp: new Date().toISOString(),
-          read: false
-        },
-        ...prev
-      ]);
-      setHasUnread(true);
-    }
+        }).catch((err) =>
+          console.error("❌ Failed to log status change:", err)
+        );
+      })
+      .catch((err) => console.error("❌ Failed to update status:", err));
   };
 
   // Remove old chat functions and replace with new chat system
@@ -2971,7 +2951,7 @@ const handleSubgroupChange = (e) => {
   };
 
   // ฟังก์ชันบันทึกการแก้ไข
-  const handleSaveEdit = async (ticketId) => {
+  const handleSaveEdit = async (ticketId, overrideStatus = null, remarkUserVal = "", remarkAdminVal = "") => {
     setEditLoading(true);
     setEditError("");
     setEditSuccess("");
@@ -3007,6 +2987,9 @@ const handleSubgroupChange = (e) => {
       if (isValid(editForm.group)) payload.group = editForm.group;
       if (isValid(editForm.subgroup)) payload.subgroup = editForm.subgroup;
       if (isValid(editForm.status)) payload.status = editForm.status;
+      if (overrideStatus) payload.status = overrideStatus;
+      if (remarkUserVal) payload.remark_user = remarkUserVal;
+      if (remarkAdminVal) payload.remark_admin = remarkAdminVal;
   
       const response = await axios.post(
         "https://backend-oa-pqy2.onrender.com/update-ticket",
@@ -3064,112 +3047,56 @@ const handleSubgroupChange = (e) => {
     }
   };
 
-  // === StatusChangeModal Component (ย้ายมาไว้ในนี้) ===
-  const StatusChangeModal = ({ 
-    isOpen, 
-    onClose, 
-    oldStatus, 
-    newStatus, 
-    remarks, 
-    onRemarksChange, 
-    onConfirm,
-    isSaving 
-  }) => {
-    if (!isOpen) return null;
-    return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000
-      }}>
-        <div style={{
-          background: 'white',
-          padding: '24px',
-          borderRadius: '12px',
-          width: '500px',
-          maxWidth: '90%',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
-        }}>
-          <h3 style={{ marginTop: 0, color: '#1e293b' }}>
-            เปลี่ยนสถานะจาก <span style={{ color: '#64748b' }}>{oldStatus}</span> เป็น{' '}
-            <span style={{ 
-              color: STATUS_OPTIONS.find(s => s.value === newStatus)?.textColor || '#1e293b',
-              fontWeight: 600
-            }}>
-              {newStatus}
-            </span>
-          </h3>
-          <div style={{ margin: '16px 0' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
-              หมายเหตุ (ไม่บังคับ)
-            </label>
-            <textarea
-              value={remarks}
-              onChange={(e) => onRemarksChange(e.target.value)}
-              style={{
-                width: '100%',
-                minHeight: '100px',
-                padding: '12px',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                fontSize: '0.95rem',
-                resize: 'vertical'
-              }}
-              placeholder="ระบุรายละเอียดเพิ่มเติมเกี่ยวกับการเปลี่ยนสถานะนี้..."
-            />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
-            <button
-              onClick={onClose}
-              disabled={isSaving}
-              style={{
-                padding: '10px 16px',
-                background: '#f1f5f9',
-                color: '#64748b',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 600
-              }}
-            >
-              ยกเลิก
-            </button>
-            <button
-              onClick={onConfirm}
-              disabled={isSaving}
-              style={{
-                padding: '10px 16px',
-                background: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              {isSaving ? (
-                <>
-                  <span>กำลังบันทึก...</span>
-                  <div style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                </>
-              ) : (
-                'ยืนยันการเปลี่ยนสถานะ'
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+  // --- ฟังก์ชันเมื่อเลือกสถานะใหม่ในโหมด Edit ---
+  const handleEditStatusChange = (e) => {
+    const newStatus = e.target.value;
+    if (newStatus !== editForm.status) {
+      setPendingStatus(newStatus);
+      setPendingTicketId(editingTicketId);
+      setShowRemarkModal(true);
+    } else {
+      handleEditFormChange("status", newStatus);
+    }
+  };
+
+  // --- ฟังก์ชัน Confirm/Cancel Remark Modal ---
+  const handleConfirmRemark = async () => {
+    if (!pendingStatus) return;
+    setEditLoading(true);
+    setEditError("");
+    setEditSuccess("");
+    try {
+      // Log status change พร้อม Remark
+      await logStatusChange({
+        ticket_id: pendingTicketId,
+        old_status: editForm.status,
+        new_status: pendingStatus,
+        changed_by: authUser?.name || authUser?.pin || "admin",
+        change_timestamp: new Date().toISOString(),
+        remark_user: remarkUser,
+        remark_admin: remarkAdmin
+      });
+      // อัพเดทสถานะในฟอร์ม
+      setEditForm(prev => ({ ...prev, status: pendingStatus }));
+      // เรียก handleSaveEdit เพื่อบันทึก
+      await handleSaveEdit(pendingTicketId, pendingStatus, remarkUser, remarkAdmin);
+      setShowRemarkModal(false);
+      setRemarkUser("");
+      setRemarkAdmin("");
+      setPendingStatus("");
+      setPendingTicketId(null);
+    } catch (err) {
+      setEditError("เกิดข้อผิดพลาดในการบันทึก Remark หรือเปลี่ยนสถานะ");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+  const handleCancelRemark = () => {
+    setShowRemarkModal(false);
+    setRemarkUser("");
+    setRemarkAdmin("");
+    setPendingStatus("");
+    setPendingTicketId(null);
   };
 
   return (
@@ -3771,19 +3698,7 @@ const apptDateTime = row["appointment_datetime"]
                                   {isEditing ? (
                                     <select
                                       value={editForm.status}
-                                      onChange={e => {
-                                        const newStatus = e.target.value;
-                                        if (newStatus !== editForm.status) {
-                                          setStatusChangeModal({
-                                            isOpen: true,
-                                            ticketId: row["Ticket ID"],
-                                            oldStatus: editForm.status,
-                                            newStatus: newStatus,
-                                            remarks: '',
-                                            isSaving: false
-                                          });
-                                        }
-                                      }}
+                                      onChange={handleEditStatusChange}
                                       disabled={editLoading}
                                       style={{
                                         width: '100%',
@@ -4219,27 +4134,6 @@ const apptDateTime = row["appointment_datetime"]
                   <div style={{ color: '#10b981', textAlign: 'center', margin: '8px' }}>{editSuccess}</div>
                 )}
         
-                {/* Modal สำหรับใส่หมายเหตุเมื่อเปลี่ยนสถานะ */}
-                <StatusChangeModal
-                  isOpen={statusChangeModal.isOpen}
-                  onClose={() => setStatusChangeModal(prev => ({ ...prev, isOpen: false }))}
-                  oldStatus={statusChangeModal.oldStatus}
-                  newStatus={statusChangeModal.newStatus}
-                  remarks={statusChangeModal.remarks}
-                  onRemarksChange={(remarks) => setStatusChangeModal(prev => ({ ...prev, remarks }))}
-                  onConfirm={async () => {
-                    setStatusChangeModal(prev => ({ ...prev, isSaving: true }));
-                    await handleStatusChange(
-                      statusChangeModal.ticketId, 
-                      statusChangeModal.newStatus,
-                      statusChangeModal.remarks
-                    );
-                    // อัปเดตค่าในฟอร์มแก้ไข
-                    setEditForm(prev => ({ ...prev, status: statusChangeModal.newStatus }));
-                    setStatusChangeModal(prev => ({ ...prev, isOpen: false, isSaving: false }));
-                  }}
-                  isSaving={statusChangeModal.isSaving}
-                />
               </Container>
             </MainContent>
           </>
