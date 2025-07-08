@@ -4179,42 +4179,42 @@ const apptDateTime = row["appointment_datetime"]
                 {editSuccess && (
                   <div style={{ color: '#10b981', textAlign: 'center', margin: '8px' }}>{editSuccess}</div>
                 )}
-+               {/* --- Modal สำหรับ Remarks --- */}
-+               {showRemarkModal && (
-+                 <RemarkModal>
-+                   <ModalContent>
-+                     <ModalTitle>เพิ่มหมายเหตุสำหรับการเปลี่ยนสถานะ</ModalTitle>
-+                     <div style={{ marginBottom: '16px' }}>
-+                       <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
-+                         หมายเหตุสำหรับผู้ใช้ (จะแสดงใน LINE)
-+                       </label>
-+                       <ModalTextarea
-+                         placeholder="อธิบายสาเหตุการเปลี่ยนสถานะ..."
-+                         value={remarkData.remarks}
-+                         onChange={e => setRemarkData({ ...remarkData, remarks: e.target.value })}
-+                       />
-+                     </div>
-+                     <div style={{ marginBottom: '16px' }}>
-+                       <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
-+                         หมายเหตุภายใน (สำหรับทีมงาน)
-+                       </label>
-+                       <ModalTextarea
-+                         placeholder="บันทึกเพิ่มเติมสำหรับทีมงาน..."
-+                         value={remarkData.internalNotes}
-+                         onChange={e => setRemarkData({ ...remarkData, internalNotes: e.target.value })}
-+                       />
-+                     </div>
-+                     <ModalActions>
-+                       <ModalButton onClick={() => setShowRemarkModal(false)}>
-+                         ยกเลิก
-+                       </ModalButton>
-+                       <ModalButton $primary onClick={confirmStatusChange}>
-+                         ยืนยันการเปลี่ยนสถานะ
-+                       </ModalButton>
-+                     </ModalActions>
-+                   </ModalContent>
-+                 </RemarkModal>
-+               )}
+                {/* --- Modal สำหรับ Remarks --- */}
+                {showRemarkModal && (
+                  <RemarkModal>
+                    <ModalContent>
+                      <ModalTitle>เพิ่มหมายเหตุสำหรับการเปลี่ยนสถานะ</ModalTitle>
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                          หมายเหตุสำหรับผู้ใช้ (จะแสดงใน LINE)
+                        </label>
+                        <ModalTextarea
+                          placeholder="อธิบายสาเหตุการเปลี่ยนสถานะ..."
+                          value={remarkData.remarks}
+                          onChange={e => setRemarkData({ ...remarkData, remarks: e.target.value })}
+                        ></ModalTextarea>
+                      </div>
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                          หมายเหตุภายใน (สำหรับทีมงาน)
+                        </label>
+                        <ModalTextarea
+                          placeholder="บันทึกเพิ่มเติมสำหรับทีมงาน..."
+                          value={remarkData.internalNotes}
+                          onChange={e => setRemarkData({ ...remarkData, internalNotes: e.target.value })}
+                        ></ModalTextarea>
+                      </div>
+                      <ModalActions>
+                        <ModalButton onClick={() => setShowRemarkModal(false)}>
+                          ยกเลิก
+                        </ModalButton>
+                        <ModalButton $primary onClick={confirmStatusChange}>
+                          ยืนยันการเปลี่ยนสถานะ
+                        </ModalButton>
+                      </ModalActions>
+                    </ModalContent>
+                  </RemarkModal>
+                )}
               </Container>
             </MainContent>
           </>
