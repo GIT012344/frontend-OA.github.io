@@ -4111,27 +4111,27 @@ const apptDateTime = row["appointment_datetime"]
                   <div style={{ color: '#10b981', textAlign: 'center', margin: '8px' }}>{editSuccess}</div>
                 )}
         
-+                {/* Modal สำหรับใส่หมายเหตุเมื่อเปลี่ยนสถานะ */}
-+                <StatusChangeModal
-+                  isOpen={statusChangeModal.isOpen}
-+                  onClose={() => setStatusChangeModal(prev => ({ ...prev, isOpen: false }))}
-+                  oldStatus={statusChangeModal.oldStatus}
-+                  newStatus={statusChangeModal.newStatus}
-+                  remarks={statusChangeModal.remarks}
-+                  onRemarksChange={(remarks) => setStatusChangeModal(prev => ({ ...prev, remarks }))}
-+                  onConfirm={async () => {
-+                    setStatusChangeModal(prev => ({ ...prev, isSaving: true }));
-+                    await handleStatusChange(
-+                      statusChangeModal.ticketId, 
-+                      statusChangeModal.newStatus,
-+                      statusChangeModal.remarks
-+                    );
-+                    // อัปเดตค่าในฟอร์มแก้ไข
-+                    setEditForm(prev => ({ ...prev, status: statusChangeModal.newStatus }));
-+                    setStatusChangeModal(prev => ({ ...prev, isOpen: false, isSaving: false }));
-+                  }}
-+                  isSaving={statusChangeModal.isSaving}
-+                />
+                {/* Modal สำหรับใส่หมายเหตุเมื่อเปลี่ยนสถานะ */}
+                <StatusChangeModal
+                  isOpen={statusChangeModal.isOpen}
+                  onClose={() => setStatusChangeModal(prev => ({ ...prev, isOpen: false }))}
+                  oldStatus={statusChangeModal.oldStatus}
+                  newStatus={statusChangeModal.newStatus}
+                  remarks={statusChangeModal.remarks}
+                  onRemarksChange={(remarks) => setStatusChangeModal(prev => ({ ...prev, remarks }))}
+                  onConfirm={async () => {
+                    setStatusChangeModal(prev => ({ ...prev, isSaving: true }));
+                    await handleStatusChange(
+                      statusChangeModal.ticketId, 
+                      statusChangeModal.newStatus,
+                      statusChangeModal.remarks
+                    );
+                    // อัปเดตค่าในฟอร์มแก้ไข
+                    setEditForm(prev => ({ ...prev, status: statusChangeModal.newStatus }));
+                    setStatusChangeModal(prev => ({ ...prev, isOpen: false, isSaving: false }));
+                  }}
+                  isSaving={statusChangeModal.isSaving}
+                />
               </Container>
             </MainContent>
           </>
