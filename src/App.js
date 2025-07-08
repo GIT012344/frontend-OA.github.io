@@ -61,12 +61,6 @@ const Container = styled.div`
     opacity: 0.03;
     z-index: 0;
   }
-
-  @media (max-width: 768px) {
-    padding: 16px 4px;
-    min-width: 0;
-    font-size: 1.1rem;
-  }
 `;
 
 const Title = styled.h1`
@@ -89,11 +83,6 @@ const Title = styled.h1`
     border-radius: 2px;
     opacity: 0.6;
   }
-
-  @media (max-width: 768px) {
-    font-size: 1.7rem;
-    margin-bottom: 18px;
-  }
 `;
 
 const HeaderSection = styled.div`
@@ -111,11 +100,6 @@ const ExportSection = styled.div`
   display: flex;
   gap: 12px;
   align-items: center;
-  @media (max-width: 768px) {
-    flex-wrap: wrap;
-    gap: 6px;
-    justify-content: flex-end;
-  }
 `;
 
 const ExportButton = styled.button`
@@ -164,13 +148,6 @@ const ExportButton = styled.button`
     background-size: contain;
     background-repeat: no-repeat;
   }
-
-  @media (max-width: 768px) {
-    font-size: 1.1rem;
-    padding: 14px 0;
-    min-height: 44px;
-    width: 100%;
-  }
 `;
 
 const Dashboard = styled.div`
@@ -180,10 +157,6 @@ const Dashboard = styled.div`
   margin-bottom: 40px;
   position: relative;
   z-index: 1;
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
 `;
 
 const StatCard = styled.div`
@@ -212,12 +185,6 @@ const StatCard = styled.div`
     transform: translateY(-4px);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
     background: rgba(255, 255, 255, 0.85);
-  }
-
-  @media (max-width: 768px) {
-    padding: 18px 6px;
-    min-width: 0;
-    font-size: 1.05rem;
   }
 `;
 
@@ -250,12 +217,6 @@ const TableContainer = styled.div`
     height: 1px;
     background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
   }
-
-  @media (max-width: 768px) {
-    padding: 8px 2px;
-    border-radius: 0;
-    font-size: 1.05rem;
-  }
 `;
 
 const TableTitle = styled.h2`
@@ -271,11 +232,6 @@ const StyledTable = styled.table`
   border-collapse: collapse;
   border-radius: 12px;
   overflow: hidden;
-  min-width: 700px;
-  @media (max-width: 768px) {
-    min-width: 600px;
-    font-size: 1.05rem;
-  }
 `;
 
 const TableHeader = styled.thead`
@@ -343,11 +299,6 @@ const TableCell = styled.td`
   white-space: normal;
   overflow-wrap: anywhere;
   background: ${props => props.$isEditing ? '#f1f5f9' : 'transparent'};
-  @media (max-width: 768px) {
-    font-size: 1.05rem;
-    padding: 14px 8px;
-    min-height: 44px;
-  }
 `;
 
 const StatusCell = styled(TableCell)`
@@ -411,11 +362,6 @@ const StatusCell = styled(TableCell)`
       border-color: #fecaca;
     }
   }
-  @media (max-width: 768px) {
-    font-size: 1.05rem;
-    min-width: 80px;
-    padding: 10px 6px;
-  }
 `;
 
 const StatusSelect = styled.select`
@@ -441,14 +387,6 @@ const StatusSelect = styled.select`
     border-color: #64748b;
     box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.1);
     background: white;
-  }
-
-  @media (max-width: 768px) {
-    width: 100%;
-    font-size: 1.1rem;
-    margin-bottom: 4px;
-    min-height: 44px;
-    padding: 12px 8px;
   }
 `;
 
@@ -597,11 +535,6 @@ const RetryButton = styled.button`
     background-size: contain;
     background-repeat: no-repeat;
   }
-
-  @media (max-width: 768px) {
-    font-size: 0.92rem;
-    padding: 8px 12px;
-  }
 `;
 
 const ErrorDetails = styled.div`
@@ -681,13 +614,6 @@ const ChatContainer = styled.div`
     background: linear-gradient(90deg, #64748b, #94a3b8);
     border-radius: 16px 16px 0 0;
     opacity: 0.6;
-  }
-
-  @media (max-width: 768px) {
-    height: 350px;
-    padding: 0;
-    border-radius: 0;
-    font-size: 1.05rem;
   }
 `;
 
@@ -828,12 +754,6 @@ const UserSelect = styled.select`
     background-color: #3b82f6;
     color: white;
   }
-
-  @media (max-width: 768px) {
-    font-size: 1.1rem;
-    padding: 12px 8px;
-    min-height: 44px;
-  }
 `;
 
 const ChatTextArea = styled.textarea`
@@ -861,12 +781,6 @@ const ChatTextArea = styled.textarea`
   &::placeholder {
     color: #94a3b8;
     opacity: 0.6;
-  }
-
-  @media (max-width: 768px) {
-    font-size: 1.1rem;
-    padding: 12px 8px;
-    min-height: 44px;
   }
 `;
 
@@ -904,14 +818,6 @@ const SendButton = styled.button`
     background-size: contain;
     background-repeat: no-repeat;
   }
-
-  @media (max-width: 768px) {
-    font-size: 1.1rem;
-    padding: 14px 0;
-    min-height: 44px;
-    width: 100%;
-    height: 44px;
-  }
 `;
 
 const ScrollContainer = styled.div`
@@ -935,11 +841,6 @@ const ScrollContainer = styled.div`
 
   &::-webkit-scrollbar-thumb:hover {
     background: rgba(100, 116, 139, 0.5);
-  }
-
-  @media (max-width: 768px) {
-    border-radius: 0;
-    padding: 0;
   }
 `;
 
@@ -970,14 +871,6 @@ const SearchInput = styled.input`
   &::placeholder {
     color: #94a3b8;
   }
-
-  @media (max-width: 768px) {
-    min-width: 0;
-    width: 100%;
-    font-size: 1.1rem;
-    padding: 14px 10px;
-    min-height: 44px;
-  }
 `;
 
 const FilterSelect = styled.select`
@@ -1000,14 +893,6 @@ const FilterSelect = styled.select`
     border-color: #64748b;
     box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.1);
     background: white;
-  }
-
-  @media (max-width: 768px) {
-    width: 100%;
-    font-size: 1.1rem;
-    margin-bottom: 4px;
-    min-height: 44px;
-    padding: 12px 8px;
   }
 `;
 
@@ -1090,16 +975,6 @@ const NotificationDropdown = styled.div`
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: move;
   user-select: none;
-
-  @media (max-width: 768px) {
-    width: 98vw;
-    max-width: 98vw;
-    left: 1vw !important;
-    right: auto !important;
-    top: 60px;
-    border-radius: 10px;
-    font-size: 1.05rem;
-  }
 `;
 
 const NotificationHeader = styled.div`
@@ -1192,12 +1067,6 @@ const DateInput = styled.input`
     box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.1);
     background: white;
   }
-
-  @media (max-width: 768px) {
-    font-size: 1.1rem;
-    min-height: 44px;
-    padding: 10px 8px;
-  }
 `;
 
 const FilterButton = styled.button`
@@ -1289,14 +1158,6 @@ const ClearButton = styled.button`
     background-size: contain;
     background-repeat: no-repeat;
   }
-
-  @media (max-width: 768px) {
-    font-size: 1.1rem;
-    padding: 14px 0;
-    min-height: 44px;
-    width: 100%;
-    height: 44px;
-  }
 `;
 
 const Sidebar = styled.div`
@@ -1321,26 +1182,6 @@ const Sidebar = styled.div`
   &:hover {
     transform: translateX(0);
     width: 240px;
-  }
-
-  @media (max-width: 768px) {
-    position: fixed;
-    left: 0;
-    top: 0;
-    bottom: auto;
-    width: 100vw;
-    height: 56px;
-    flex-direction: row;
-    align-items: center;
-    padding: 0 8px;
-    z-index: 200;
-    border-right: none;
-    border-bottom: 1px solid #e2e8f0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    overflow-x: auto;
-    background: white;
-    transition: none;
-    display: none;
   }
 `;
 
@@ -1462,11 +1303,6 @@ const ToggleButton = styled.button`
 const MainContent = styled.div`
   margin-left: 240px;
   width: calc(100% - 240px);
-  @media (max-width: 768px) {
-    margin-left: 0;
-    width: 100vw;
-    padding-top: 64px;
-  }
 `;
 
 const EmailRankingCard = styled(StatCard)`
@@ -1842,47 +1678,6 @@ const BlinkingRow = styled(TableRow)`
   }
 `;
 
-const TopNav = styled.div`
-  display: none;
-  @media (max-width: 768px) {
-    display: flex;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 56px;
-    background: white;
-    z-index: 201;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    border-bottom: 1px solid #e2e8f0;
-  }
-`;
-const TopNavMenu = styled.div`
-  display: flex;
-  gap: 12px;
-  @media (max-width: 768px) {
-    gap: 0;
-  }
-`;
-const TopNavButton = styled.button`
-  background: none;
-  border: none;
-  color: #475569;
-  font-size: 1.1rem;
-  padding: 8px 12px;
-  min-width: 60px;
-  font-weight: 600;
-  cursor: pointer;
-  @media (max-width: 768px) {
-    font-size: 1.1rem;
-    padding: 8px 4px;
-    min-width: 44px;
-  }
-`;
-
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -1969,16 +1764,6 @@ function App() {
   // New state for cascade dropdown
   const [availableGroups, setAvailableGroups] = useState([]);
   const [availableSubgroups, setAvailableSubgroups] = useState([]);
-
-  // --- เพิ่ม State สำหรับ Modal ยืนยันการเปลี่ยนสถานะ ---
-  const [statusChangeModal, setStatusChangeModal] = useState({
-    open: false,
-    ticketId: null,
-    newStatus: "",
-    oldStatus: "",
-    remarks: "",
-    internalNotes: ""
-  });
 
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
@@ -2409,79 +2194,50 @@ function App() {
 
   // อัปเดตสถานะและบันทึกการเปลี่ยนแปลง
   const handleStatusChange = (ticketId, newStatus) => {
+    // ค้นหาข้อมูล ticket เดิมเพื่อหา old_status
     const target = data.find((d) => d["Ticket ID"] === ticketId);
     const oldStatus = target?.status || target?.สถานะ || "";
-    if (newStatus === oldStatus) return;
-    setStatusChangeModal({
-      open: true,
-      ticketId,
-      newStatus,
-      oldStatus,
-      remarks: "",
-      internalNotes: ""
-    });
-  };
 
-  // --- เพิ่ม confirmStatusChange ---
-  const confirmStatusChange = async () => {
-    const { ticketId, newStatus, oldStatus, remarks, internalNotes } = statusChangeModal;
-    try {
-      const response = await axios.post(
+    // ถ้าไม่เปลี่ยนสถานะ ไม่ต้องดำเนินการใด ๆ
+    if (newStatus === oldStatus) return;
+
+    axios
+      .post(
         "https://backend-oa-pqy2.onrender.com/update-status",
         {
           ticket_id: ticketId,
           status: newStatus,
           changed_by: authUser?.name || authUser?.pin || "admin",
-          remarks,
-          internal_notes: internalNotes
         },
         {
           headers: {
             "Content-Type": "application/json",
           },
         }
-      );
-      if (response.data.success || response.data.message) {
+      )
+      .then(() => {
+        console.log("✅ Status updated");
+        // อัปเดต state ภายในแอป
         setData((prevData) =>
           prevData.map((item) =>
             item["Ticket ID"] === ticketId
-              ? { ...item, status: newStatus, สถานะ: newStatus, remarks }
+              ? { ...item, status: newStatus, สถานะ: newStatus }
               : item
           )
         );
-        // Log status change with remarks
-        await logStatusChange({
+
+        // เรียก API เพื่อบันทึกการเปลี่ยนสถานะ
+        logStatusChange({
           ticket_id: ticketId,
           old_status: oldStatus,
           new_status: newStatus,
-          changed_by: authUser?.name || "unknown",
+          changed_by: user?.name || "unknown",
           change_timestamp: new Date().toISOString(),
-          remarks,
-          internal_notes: internalNotes
-        });
-        setStatusChangeModal({
-          open: false,
-          ticketId: null,
-          newStatus: "",
-          oldStatus: "",
-          remarks: "",
-          internalNotes: ""
-        });
-      }
-    } catch (err) {
-      console.error("Failed to update status:", err);
-      alert("Failed to update status: " + (err.response?.data?.error || err.message));
-    }
-  };
-  const cancelStatusChange = () => {
-    setStatusChangeModal({
-      open: false,
-      ticketId: null,
-      newStatus: "",
-      oldStatus: "",
-      remarks: "",
-      internalNotes: ""
-    });
+        }).catch((err) =>
+          console.error("❌ Failed to log status change:", err)
+        );
+      })
+      .catch((err) => console.error("❌ Failed to update status:", err));
   };
 
   // Remove old chat functions and replace with new chat system
@@ -2929,15 +2685,27 @@ function App() {
   const isSameDay = (d1, d2) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
 
   function parseAppointmentText(str) {
-    // str: '2025-07-05 15:00-16:00' -> extract '2025-07-05' as date
-    if (typeof str === 'string') {
-      const datePart = str.split(' ')[0];
-      return new Date(datePart + 'T00:00:00'); // force to start of day
+    if (!str) return null;
+    
+    try {
+      // สำหรับรูปแบบ "2025-07-05 15:00-16:00"
+      const [datePart, timeRange] = str.split(' ');
+      if (!datePart || !timeRange) return null;
+      
+      const [startTime] = timeRange.split('-');
+      const [hours, minutes] = startTime.split(':');
+      
+      const date = new Date(datePart);
+      date.setHours(parseInt(hours), parseInt(minutes));
+      
+      return isNaN(date.getTime()) ? null : date;
+    } catch (error) {
+      console.error("Error parsing appointment:", error);
+      return null;
     }
-    return null;
   }
 
-  const getUpcomingAppointments = () => {
+  const getUpcomingAppointmentsService = () => {
     const now = new Date();
     return data.filter((t) => {
       const apptRaw = t.Appointment || t["appointment text"] || t["appointment_datetime"];
@@ -2956,26 +2724,67 @@ function App() {
     });
   };
 
-  const getOverdueAppointments = () => {
-    const now = new Date();
-    return data.filter((t) => {
-      const name = t["ชื่อ"] || t["ticket name"] || t["name"];
-      const apptRaw = t.Appointment || t["appointment text"] || t["appointment_datetime"];
-      const requester = t.Requested || t["requested text"] || t["Requester"] || "-";
-      if (!apptRaw) return false;
-      // Only include tickets with type exactly 'Service' (case-sensitive)
-      if (t["Type"] !== "Service") return false;
-      const appt = new Date(apptRaw);
-      if (isNaN(appt.getTime())) return false;
-      return appt < now; // past appointments
-    }).sort((a,b) => {
-      const dateA = new Date(a.Appointment || a["appointment text"] || a["appointment_datetime"] || 0);
-      const dateB = new Date(b.Appointment || b["appointment text"] || b["appointment_datetime"] || 0);
-      return dateB - dateA; // Sort by most recent first
-    });
-  };
+const getUpcomingAppointments = () => {
+  const now = new Date();
+  return data.filter((t) => {
+    // ตรวจสอบทั้ง Service และ Helpdesk
+    if (t["Type"] !== "Service" && t["Type"] !== "Helpdesk") return false;
+    
+    // ตรวจสอบสถานะ
+    if (t["สถานะ"] !== "New" && t["สถานะ"] !== "Pending") return false;
+    
+    // ตรวจสอบการนัดหมาย (รองรับหลายรูปแบบ)
+    const apptRaw = t["Appointment"] || t["appointment text"] || t["appointment_datetime"];
+    if (!apptRaw) return false;
 
-  const getOverdueTickets = () => {
+    try {
+      // แปลงวันที่จากรูปแบบต่างๆ
+      let apptDate;
+      if (apptRaw.includes('-')) { // รูปแบบ "2025-07-03 15:00-16:00"
+        const [dateStr, timeRange] = apptRaw.split(' ');
+        const [startTime] = timeRange.split('-');
+        const [hours, minutes] = startTime.split(':');
+        apptDate = new Date(dateStr);
+        apptDate.setHours(parseInt(hours), parseInt(minutes));
+      } else { // รูปแบบอื่นๆ
+        apptDate = new Date(apptRaw);
+      }
+
+      if (isNaN(apptDate.getTime())) return false;
+
+      // ตรวจสอบว่าอยู่ในวันนี้หรือเลยกำหนด
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const isToday = apptDate.toDateString() === today.toDateString();
+      const isOverdue = apptDate < now;
+
+      return isToday || isOverdue;
+    } catch (error) {
+      console.error("Error parsing date:", error);
+      return false;
+    }
+  }).sort((a, b) => {
+    // เรียงลำดับตามเวลานัดหมาย
+    const getDateTime = (ticket) => {
+      const apptRaw = ticket["Appointment"] || ticket["appointment text"] || ticket["appointment_datetime"];
+      try {
+        if (apptRaw.includes('-')) {
+          const [dateStr, timeRange] = apptRaw.split(' ');
+          const [startTime] = timeRange.split('-');
+          const [hours, minutes] = startTime.split(':');
+          const date = new Date(dateStr);
+          date.setHours(parseInt(hours), parseInt(minutes));
+          return date;
+        }
+        return new Date(apptRaw);
+      } catch {
+        return new Date(0);
+      }
+    };
+    return getDateTime(a) - getDateTime(b);
+  });
+};
+
+  const getOverdueAppointments = () => {
     const overdueTickets = [];
     const now = new Date();
     data.forEach(ticket => {
@@ -3021,13 +2830,15 @@ const handleEditTicket = (ticket) => {
   setEditingTicketId(ticket["Ticket ID"]);
   
   // Determine type and map group/subgroup correctly
-  const type = ticket["Type"] || "";
+  const rawType = ticket["Type"] || "";
+  const typeUpper = rawType.toUpperCase();
+  const type = typeUpper === "SERVICE" ? "Service" : typeUpper === "HELPDESK" ? "Helpdesk" : rawType;
   let group = "";
   let subgroup = ticket["subgroup"] || "";
   
-  // Map group based on type
+  // Map group based on normalized type
   if (type === "Service") {
-    group = ticket["Requeste"] || "";
+    group = ticket["Requeste"] || ticket["Requested"] || "";
   } else if (type === "Helpdesk") {
     group = ticket["Report"] || "";
   }
@@ -3040,7 +2851,7 @@ const handleEditTicket = (ticket) => {
     date: ticket["วันที่แจ้ง"] || "",
     appointment: ticket["Appointment"] || "",
     appointment_datetime: ticket["appointment_datetime"] ? ticket["appointment_datetime"].slice(0,16) : "",
-    request: ticket["Requeste"] || "",
+    request: ticket["Requeste"] || ticket["Requested"] || "",
     report: ticket["Report"] || "",
     type: type,
     group: group,
@@ -3139,9 +2950,8 @@ const handleSubgroupChange = (e) => {
     setEditSuccess("");
     
     // Map request and report based on ticket type and selected group for backend compatibility
-    const typeUpper = (editForm.type || "").toUpperCase();
-    const requestField = typeUpper === "Service" ? (editForm.group || editForm.request) : editForm.request;
-    const reportField = typeUpper === "Helpdesk" ? (editForm.group || editForm.report) : editForm.report;
+    const requestField = editForm.type === "Service" ? (editForm.group || editForm.request) : editForm.request;
+    const reportField = editForm.type === "Helpdesk" ? (editForm.group || editForm.report) : editForm.report;
     
     try {
       // Build the payload dynamically – include only meaningful, non-empty values
@@ -3196,6 +3006,7 @@ const handleSubgroupChange = (e) => {
                   "Appointment": editForm.appointment,
                   "appointment_datetime": editForm.appointment_datetime,
                   "Requeste": requestField,
+                  "Requested": requestField,
                   "Report": reportField,
                   "Type": editForm.type,
                   "สถานะ": editForm.status,
@@ -3234,15 +3045,6 @@ const handleSubgroupChange = (e) => {
         <Route path="/dashboard" element={token ? (
           // Main dashboard content
           <>
-            <TopNav>
-              <div style={{fontWeight:'bold'}}>Helpdesk</div>
-              <TopNavMenu>
-                <TopNavButton onClick={()=>{setActiveTab('dashboard');scrollToDashboard();}}>Dashboard</TopNavButton>
-                <TopNavButton onClick={()=>{setActiveTab('list');scrollToList();}}>List</TopNavButton>
-                <TopNavButton onClick={()=>{setActiveTab('chat');scrollToChat();}}>Chat</TopNavButton>
-                <TopNavButton onClick={()=>{setActiveTab('logs');navigate('/logs');}}>Logs</TopNavButton>
-              </TopNavMenu>
-            </TopNav>
             <Sidebar
   $collapsed={!sidebarOpen}
   $hovered={sidebarHover}
@@ -3785,6 +3587,10 @@ const handleSubgroupChange = (e) => {
                             );
                             const isEditing = editingTicketId === row["Ticket ID"];
                             // appointment_datetime logic
+                            const apptText = row["Appointment"] || "";
+const apptDateTime = row["appointment_datetime"] 
+  ? new Date(row["appointment_datetime"])
+  : parseAppointmentText(apptText);
                             let apptSoon = false, apptNow = false;
                             if (row["appointment_datetime"]) {
                               const now = new Date();
@@ -3842,7 +3648,7 @@ const handleSubgroupChange = (e) => {
                                         backgroundColor: 'white',
                                         cursor: 'pointer',
                                         appearance: 'none',
-                                        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'%23475569\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
+                                        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23475569\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
                                         backgroundRepeat: 'no-repeat',
                                         backgroundPosition: 'right 12px center',
                                         backgroundSize: '16px',
@@ -3856,32 +3662,18 @@ const handleSubgroupChange = (e) => {
                                       ))}
                                     </select>
                                   ) : (
-                                    // --- ปรับตรงนี้ให้แสดง remarks เมื่อปิด/ยกเลิก ---
-                                    row["สถานะ"] === "Closed" || row["สถานะ"] === "Cancelled" ? (
-                                      <div>
-                                        <div style={{ marginBottom: '4px' }}>
-                                          <span style={getStatusStyle(row["สถานะ"]) || {}}>
-                                            {row["สถานะ"]}
-                                          </span>
+                                    (() => {
+                                      const status = row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None";
+                                      const statusOption = STATUS_OPTIONS.find(opt => opt.value === status);
+                                      return (
+                                        <div
+                                          className="status-badge"
+                                          data-status={status}
+                                        >
+                                          {statusOption?.icon || '📌'} {status}
                                         </div>
-                                        {row["remarks"] && (
-                                          <div style={{
-                                            fontSize: '0.8rem',
-                                            color: '#64748b',
-                                            padding: '8px',
-                                            background: '#f8fafc',
-                                            borderRadius: '6px',
-                                            marginTop: '4px'
-                                          }}>
-                                            <strong>หมายเหตุ:</strong> {row["remarks"]}
-                                          </div>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <span style={getStatusStyle(row["สถานะ"]) || {}}>
-                                        {row["สถานะ"]}
-                                      </span>
-                                    )
+                                      );
+                                    })()
                                   )}
                                 </StatusCell>
                                 <TableCell $isEditing={isEditing}>
@@ -3958,7 +3750,7 @@ const handleSubgroupChange = (e) => {
                                   ) : (
                                     (() => {
                                         const typeUpper = (row["Type"] || "").toString().toUpperCase();
-                                        const groupVal = typeUpper === "Service" ? row["Requested"] : typeUpper === "Helpdesk" ? row["Report"] : "";
+                                        const groupVal = typeUpper === "SERVICE" ? row["Requested"] : typeUpper === "HELPDESK" ? row["Report"] : "";
                                         if (!groupVal || groupVal === "None" || groupVal === "null" || groupVal === "NULL") {
                                           return "";
                                         }

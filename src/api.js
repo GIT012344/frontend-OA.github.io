@@ -35,7 +35,7 @@ apiClient.interceptors.response.use(
   }
 );
 export const TYPE_GROUP_SUBGROUP = {
-  SERVICE: {
+  Service: {
     Hardware: [
       "ลงทะเบียน USB", "ติดตั้งอุปกรณ์", "ทดสอบอุปกรณ์", "ตรวจสอบอุปกรณ์"
     ],
@@ -50,7 +50,7 @@ export const TYPE_GROUP_SUBGROUP = {
     ],
     "บริการอื่นๆ": []
   },
-  HELPDESK: {
+  Helpdesk: {
     "คอมพิวเตอร์": ["PC", "Notebook", "MAC"],
     "ปริ้นเตอร์": ["เครื่องพิมพ์", "Barcode Printer", "Scanner"],
     "อุปกรณ์ต่อพ่วง": ["เมาส์", "คีย์บอร์ด", "UPS", "จอคอมพิวเตอร์", "Projector"],

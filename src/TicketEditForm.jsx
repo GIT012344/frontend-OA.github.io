@@ -3,7 +3,7 @@ import axios from "axios";
 
 // ----------------------- Mapping -----------------------
 export const TYPE_GROUP_SUBGROUP = {
-  SERVICE: {
+  Service: {
     Hardware: [
       "ลงทะเบียน USB", "ติดตั้งอุปกรณ์", "ทดสอบอุปกรณ์", "ตรวจสอบอุปกรณ์"
     ],
@@ -18,7 +18,7 @@ export const TYPE_GROUP_SUBGROUP = {
     ],
     "บริการอื่นๆ": []
   },
-  HELPDESK: {
+  Helpdesk: {
     "คอมพิวเตอร์": ["PC", "Notebook", "MAC"],
     "ปริ้นเตอร์": ["เครื่องพิมพ์", "Barcode Printer", "Scanner"],
     "อุปกรณ์ต่อพ่วง": ["เมาส์", "คีย์บอร์ด", "UPS", "จอคอมพิวเตอร์", "Projector"],
@@ -49,8 +49,10 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
   useEffect(() => {
     if (!initialTicket) return;
 
-    const type = initialTicket.type || "";
-    const group = type === "SERVICE" ? initialTicket.request : type === "HELPDESK" ? initialTicket.report : "";
+        const rawType = initialTicket.type || "";
+    const typeUpper = rawType.toUpperCase();
+    const type = typeUpper === "SERVICE" ? "Service" : typeUpper === "HELPDESK" ? "Helpdesk" : rawType;
+    const group = type === "Service" ? initialTicket.request : type === "Helpdesk" ? initialTicket.report : "";
     const subgroup = initialTicket.subgroup || "";
 
     setForm({ type, group, subgroup });
@@ -91,7 +93,7 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
       const payload = {
         type: form.type,
         subgroup: form.subgroup,
-        ...(form.type === "SERVICE"
+        ...(form.type === "Service"
           ? { request: form.group }
           : { report: form.group })
       };
@@ -111,8 +113,8 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
       <label>Type</label>
       <select value={form.type} onChange={onTypeChange} required style={{ width: "100%", marginBottom: 8 }}>
         <option value="">--เลือก Type--</option>
-        <option value="SERVICE">SERVICE</option>
-        <option value="HELPDESK">HELPDESK</option>
+        <option value="Service">Service</option>
+        <option value="Helpdesk">Helpdesk</option>
       </select>
 
       {/* GROUP */}
