@@ -10,6 +10,7 @@ import { useAuth } from './AuthContext';
 import './styles.css';
 import DashboardSection from "./DashboardSection";
 import StatusLogsPage from './StatusLogsPage';
+import StatusChangeModal from './StatusChangeModal';
 
 // Define the type-group-subgroup mapping
 const TYPE_GROUP_SUBGROUP = {
@@ -1678,6 +1679,16 @@ const BlinkingRow = styled(TableRow)`
   }
 `;
 
+// เพิ่ม State สำหรับป๊อปอัพหมายเหตุ
+const [statusChangeModal, setStatusChangeModal] = useState({
+  isOpen: false,
+  ticketId: null,
+  oldStatus: '',
+  newStatus: '',
+  remarks: '',
+  isSaving: false
+});
+
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -1765,16 +1776,6 @@ function App() {
   const [availableGroups, setAvailableGroups] = useState([]);
   const [availableSubgroups, setAvailableSubgroups] = useState([]);
 
-  // เพิ่ม state สำหรับป๊อปอัพเปลี่ยนสถานะ
-  const [statusChangeModal, setStatusChangeModal] = useState({
-    isOpen: false,
-    ticketId: null,
-    oldStatus: '',
-    newStatus: '',
-    remarks: '',
-    isSaving: false
-  });
-
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
     if (backendStatus === 'offline' || backendStatus === 'error') {
@@ -1820,7 +1821,7 @@ function App() {
   // Health check function to test backend connectivity
   const checkBackendHealth = async () => {
     try {
-      const response = await axios.get("http://127.0.0.1:5001/api/health", {
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/health", {
         timeout: 5000,
         headers: {
           'Content-Type': 'application/json',
@@ -1842,7 +1843,7 @@ function App() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get("http://127.0.0.1:5001/api/data", {
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
         timeout: 10000, // 10 second timeout
         headers: {
           'Content-Type': 'application/json',
@@ -1917,7 +1918,7 @@ function App() {
     // ฟังก์ชันดึงข้อมูล ticket
     const pollData = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:5001/api/data");
+        const response = await fetch("https://backend-oa-pqy2.onrender.com/api/data");
         const data = await response.json();
         setData(Array.isArray(data) ? data : []);
         setLastSync(new Date());
@@ -2051,7 +2052,7 @@ function App() {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const response = await axios.get("http://127.0.0.1:5001/api/notifications", {
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/notifications", {
           timeout: 5000, // 5 second timeout for notifications
           headers: {
             'Content-Type': 'application/json',
@@ -2094,7 +2095,7 @@ function App() {
     if (!startDate) return;
 
     axios
-      .get("http://127.0.0.1:5001/api/data-by-date", {
+      .get("https://backend-oa-pqy2.onrender.com/api/data-by-date", {
         params: { date: startDate },
       })
       .then((res) => {
@@ -2115,7 +2116,7 @@ function App() {
     setTypeFilter("all");
 
     axios
-      .get("http://127.0.0.1:5001/api/data")
+      .get("https://backend-oa-pqy2.onrender.com/api/data")
       .then((res) => setData(Array.isArray(res.data) ? res.data : []))
       .catch((err) => {
         console.error(err);
@@ -2127,7 +2128,7 @@ function App() {
     if (id) {
       // Mark single notification as read
       axios
-        .post("http://127.0.0.1:5001/mark-notification-read", { id })
+        .post("https://backend-oa-pqy2.onrender.com/mark-notification-read", { id })
         .then(() => {
           setNotifications((prev) =>
             prev.map((n) => (n.id === id ? { ...n, read: true } : n))
@@ -2137,7 +2138,7 @@ function App() {
     } else {
       // Mark all notifications as read
       axios
-        .post("http://127.0.0.1:5001/mark-all-notifications-read")
+        .post("https://backend-oa-pqy2.onrender.com/mark-all-notifications-read")
         .then(() => {
           setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
           setHasUnread(false);
@@ -2209,7 +2210,7 @@ function App() {
     if (newStatus === oldStatus) return;
     try {
       const response = await axios.post(
-        "http://127.0.0.1:5001/update-status",
+        "https://backend-oa-pqy2.onrender.com/update-status",
         {
           ticket_id: ticketId,
           status: newStatus,
@@ -2230,7 +2231,7 @@ function App() {
               : item
           )
         );
-        // logStatusChange (ถ้ามี)
+        // บันทึกการเปลี่ยนสถานะพร้อมหมายเหตุ
         await logStatusChange({
           ticket_id: ticketId,
           old_status: oldStatus,
@@ -2239,6 +2240,7 @@ function App() {
           change_timestamp: new Date().toISOString(),
           remarks: remarks
         });
+        // แสดงการแจ้งเตือนสำเร็จ
         setNotifications(prev => [
           {
             id: Date.now(),
@@ -2283,7 +2285,7 @@ function App() {
 
   const deleteNotification = async (id) => {
     try {
-      await axios.post("http://127.0.0.1:5001/delete-notification", { id });
+      await axios.post("https://backend-oa-pqy2.onrender.com/delete-notification", { id });
       setNotifications(notifications.filter((n) => n.id !== id));
     } catch (err) {
       console.error("Error deleting notification:", err);
@@ -2294,7 +2296,7 @@ function App() {
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?")) {
       try {
         const response = await axios.post(
-          "http://127.0.0.1:5001/delete-ticket",
+          "https://backend-oa-pqy2.onrender.com/delete-ticket",
           { ticket_id: ticketId },
           {
             headers: {
@@ -2330,7 +2332,7 @@ function App() {
     
     setLoadingChat(true);
     try {
-      const response = await axios.get("http://127.0.0.1:5001/api/messages", {
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
         params: { user_id: userId }
       });
       setChatMessages(response.data || []);
@@ -2352,7 +2354,7 @@ function App() {
         sender_type: 'admin', // ต้องเป็น 'admin' (ตัวเล็ก)
         message: newMessage
       };
-      const response = await axios.post("http://127.0.0.1:5001/api/messages", payload);
+      const response = await axios.post("https://backend-oa-pqy2.onrender.com/api/messages", payload);
 
       // Add new message to local state (ถ้า backend ส่งกลับ message ใหม่)
       setChatMessages(prev => [
@@ -2384,7 +2386,7 @@ function App() {
 
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบประวัติการสนทนาทั้งหมด?")) {
       try {
-        await axios.post("http://127.0.0.1:5001/api/messages/delete", {
+        await axios.post("https://backend-oa-pqy2.onrender.com/api/messages/delete", {
           user_id: selectedChatUser
         });
         setChatMessages([]);
@@ -2406,7 +2408,7 @@ function App() {
 
     try {
       const response = await axios.post(
-        "http://127.0.0.1:5001/send-announcement",
+        "https://backend-oa-pqy2.onrender.com/send-announcement",
         { message: announcementMessage },
         { headers: { "Content-Type": "application/json" } }
       );
@@ -2438,7 +2440,7 @@ function App() {
   useEffect(() => {
     const fetchChatUsers = async () => {
       try {
-        const response = await axios.get("http://127.0.0.1:5001/api/chat-users");
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/chat-users");
         // response.data should be an array of { user_id, name }
         setChatUsers(Array.isArray(response.data) ? response.data : []);
       } catch (error) {
@@ -2455,7 +2457,7 @@ function App() {
 
     const pollMessages = async () => {
       try {
-        const response = await axios.get("http://127.0.0.1:5001/api/messages", {
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
           params: { user_id: selectedChatUser }
         });
         
@@ -2506,7 +2508,7 @@ function App() {
     setRetryCount(prev => prev + 1);
     
     try {
-      const response = await axios.get("http://127.0.0.1:5001/api/data", {
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
         timeout: 15000, // 15 second timeout for manual retry
         headers: {
           'Content-Type': 'application/json',
@@ -3007,7 +3009,7 @@ const handleSubgroupChange = (e) => {
       if (isValid(editForm.status)) payload.status = editForm.status;
   
       const response = await axios.post(
-        "http://127.0.0.1:5001/update-ticket",
+        "https://backend-oa-pqy2.onrender.com/update-ticket",
         payload,
         {
           headers: {
@@ -3060,125 +3062,6 @@ const handleSubgroupChange = (e) => {
     } finally {
       setEditLoading(false);
     }
-  };
-
-  // Modal สำหรับเปลี่ยนสถานะ (inline component)
-  const StatusChangeModal = ({ 
-    isOpen, 
-    onClose, 
-    oldStatus, 
-    newStatus, 
-    remarks, 
-    onRemarksChange, 
-    onConfirm,
-    isSaving 
-  }) => {
-    if (!isOpen) return null;
-    return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000
-      }}>
-        <div style={{
-          background: 'white',
-          padding: '24px',
-          borderRadius: '12px',
-          width: '500px',
-          maxWidth: '90%',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
-        }}>
-          <h3 style={{ marginTop: 0, color: '#1e293b' }}>
-            เปลี่ยนสถานะจาก <span style={{ color: '#64748b' }}>{oldStatus}</span> เป็น{' '}
-            <span style={{ 
-              color: STATUS_OPTIONS.find(s => s.value === newStatus)?.textColor || '#1e293b',
-              fontWeight: 600
-            }}>
-              {newStatus}
-            </span>
-          </h3>
-          <div style={{ margin: '16px 0' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
-              หมายเหตุ (ไม่บังคับ)
-            </label>
-            <textarea
-              value={remarks}
-              onChange={(e) => onRemarksChange(e.target.value)}
-              style={{
-                width: '100%',
-                minHeight: '100px',
-                padding: '12px',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                fontSize: '0.95rem',
-                resize: 'vertical'
-              }}
-              placeholder="ระบุรายละเอียดเพิ่มเติมเกี่ยวกับการเปลี่ยนสถานะนี้..."
-            />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
-            <button
-              onClick={onClose}
-              disabled={isSaving}
-              style={{
-                padding: '10px 16px',
-                background: '#f1f5f9',
-                color: '#64748b',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 600
-              }}
-            >
-              ยกเลิก
-            </button>
-            <button
-              onClick={onConfirm}
-              disabled={isSaving}
-              style={{
-                padding: '10px 16px',
-                background: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              {isSaving ? (
-                <>
-                  <span>กำลังบันทึก...</span>
-                  <div style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                </>
-              ) : (
-                'ยืนยันการเปลี่ยนสถานะ'
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // helper สำหรับ modal confirm (แก้ปัญหา async/await ใน JSX)
-  const doStatusChangeModal = async () => {
-    setStatusChangeModal(prev => ({ ...prev, isSaving: true }));
-    await handleStatusChange(
-      statusChangeModal.ticketId,
-      statusChangeModal.newStatus,
-      statusChangeModal.remarks
-    );
-    setStatusChangeModal(prev => ({ ...prev, isOpen: false, isSaving: false }));
   };
 
   return (
@@ -3778,7 +3661,7 @@ const apptDateTime = row["appointment_datetime"]
                                 </TableCell>
                                 <StatusCell>
                                   {isEditing ? (
-                                    <StatusSelect
+                                    <select
                                       value={editForm.status}
                                       onChange={e => {
                                         const newStatus = e.target.value;
@@ -3794,17 +3677,42 @@ const apptDateTime = row["appointment_datetime"]
                                         }
                                       }}
                                       disabled={editLoading}
+                                      style={{
+                                        width: '100%',
+                                        padding: '6px 12px',
+                                        borderRadius: '20px',
+                                        border: '1px solid #e2e8f0',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 500,
+                                        backgroundColor: 'white',
+                                        cursor: 'pointer',
+                                        appearance: 'none',
+                                        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'%23475569\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
+                                        backgroundRepeat: 'no-repeat',
+                                        backgroundPosition: 'right 12px center',
+                                        backgroundSize: '16px',
+                                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                      }}
                                     >
                                       {STATUS_OPTIONS.map(opt => (
                                         <option key={opt.value} value={opt.value}>
-                                          {`${opt.icon || '📌'} ${opt.label}`}
+                                          {`${opt.icon ? opt.icon + ' ' : ''}${opt.label}`}
                                         </option>
                                       ))}
-                                    </StatusSelect>
+                                    </select>
                                   ) : (
-                                    <div className="status-badge" data-status={row["สถานะ"]}>
-                                      {STATUS_OPTIONS.find(opt => opt.value === row["สถานะ"])?.icon || '📌'} {row["สถานะ"]}
-                                    </div>
+                                    (() => {
+                                      const status = row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None";
+                                      const statusOption = STATUS_OPTIONS.find(opt => opt.value === status);
+                                      return (
+                                        <div
+                                          className="status-badge"
+                                          data-status={status}
+                                        >
+                                          {statusOption?.icon || '📌'} {status}
+                                        </div>
+                                      );
+                                    })()
                                   )}
                                 </StatusCell>
                                 <TableCell $isEditing={isEditing}>
@@ -4202,16 +4110,28 @@ const apptDateTime = row["appointment_datetime"]
                 {editSuccess && (
                   <div style={{ color: '#10b981', textAlign: 'center', margin: '8px' }}>{editSuccess}</div>
                 )}
-                <StatusChangeModal
-                  isOpen={statusChangeModal.isOpen}
-                  onClose={() => setStatusChangeModal(prev => ({ ...prev, isOpen: false }))}
-                  oldStatus={statusChangeModal.oldStatus}
-                  newStatus={statusChangeModal.newStatus}
-                  remarks={statusChangeModal.remarks}
-                  onRemarksChange={remarks => setStatusChangeModal(prev => ({ ...prev, remarks }))}
-                  onConfirm={doStatusChangeModal}
-                  isSaving={statusChangeModal.isSaving}
-                />
+        
++                {/* Modal สำหรับใส่หมายเหตุเมื่อเปลี่ยนสถานะ */}
++                <StatusChangeModal
++                  isOpen={statusChangeModal.isOpen}
++                  onClose={() => setStatusChangeModal(prev => ({ ...prev, isOpen: false }))}
++                  oldStatus={statusChangeModal.oldStatus}
++                  newStatus={statusChangeModal.newStatus}
++                  remarks={statusChangeModal.remarks}
++                  onRemarksChange={(remarks) => setStatusChangeModal(prev => ({ ...prev, remarks }))}
++                  onConfirm={async () => {
++                    setStatusChangeModal(prev => ({ ...prev, isSaving: true }));
++                    await handleStatusChange(
++                      statusChangeModal.ticketId, 
++                      statusChangeModal.newStatus,
++                      statusChangeModal.remarks
++                    );
++                    // อัปเดตค่าในฟอร์มแก้ไข
++                    setEditForm(prev => ({ ...prev, status: statusChangeModal.newStatus }));
++                    setStatusChangeModal(prev => ({ ...prev, isOpen: false, isSaving: false }));
++                  }}
++                  isSaving={statusChangeModal.isSaving}
++                />
               </Container>
             </MainContent>
           </>
