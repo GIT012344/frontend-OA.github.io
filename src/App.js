@@ -13,7 +13,7 @@ import StatusLogsPage from './StatusLogsPage';
 
 // Define the type-group-subgroup mapping
 const TYPE_GROUP_SUBGROUP = {
-  SERVICE: {
+  Service: {
     Hardware: [
       "ลงทะเบียน USB", "ติดตั้งอุปกรณ์", "ทดสอบอุปกรณ์", "ตรวจสอบอุปกรณ์"
     ],
