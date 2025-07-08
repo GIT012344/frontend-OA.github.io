@@ -1697,11 +1697,11 @@ const ModalTitle = styled.h3`
 
 const NoteTextarea = styled.textarea`
   width: 100%;
-  min-height: 100px;
+  min-height: 80px;
   padding: 12px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   font-family: inherit;
   resize: vertical;
   
@@ -1712,10 +1712,17 @@ const NoteTextarea = styled.textarea`
   }
 `;
 
+const RemarksTextarea = styled(NoteTextarea)`
+  min-height: 100px;
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+`;
+
 const ModalButtonGroup = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  margin-top: 16px;
 `;
 
 const ConfirmButton = styled.button`
@@ -1744,6 +1751,20 @@ const CancelButton = styled.button`
   &:hover {
     background: #dc2626;
   }
+`;
+
+const Label = styled.label`
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #334155;
+`;
+
+const SubLabel = styled.span`
+  font-size: 0.8rem;
+  color: #64748b;
+  display: block;
+  margin-top: 2px;
 `;
 
 function App() {
@@ -1790,6 +1811,7 @@ function App() {
   const [chatUsers, setChatUsers] = useState([]);
   const [showStatusChangeModal, setShowStatusChangeModal] = useState(false);
   const [statusChangeNote, setStatusChangeNote] = useState("");
+  const [statusChangeRemarks, setStatusChangeRemarks] = useState("");
   const [tempNewStatus, setTempNewStatus] = useState("");
   const [tempTicketId, setTempTicketId] = useState("");
 
@@ -1864,46 +1886,52 @@ function App() {
   }, [backendStatus, data]);
 
   const handleStatusChangeWithNote = (ticketId, newStatus) => {
-    setTempTicketId(ticketId);
-    setTempNewStatus(newStatus);
-    setStatusChangeNote("");
-    setShowStatusChangeModal(true);
-  };
-  
-  const confirmStatusChange = async () => {
-    try {
-      // เรียก API เพื่ออัปเดตสถานะพร้อมหมายเหตุ
-      const response = await axios.post(
-        "https://backend-oa-pqy2.onrender.com/update-status",
-        {
-          ticket_id: tempTicketId,
-          status: tempNewStatus,
-          changed_by: authUser?.name || authUser?.pin || "admin",
-          note: statusChangeNote
-        }
-      );
-  
-      if (response.data.success) {
-        // อัปเดต state ภายในแอป
-        setData(prevData =>
-          prevData.map(item =>
-            item["Ticket ID"] === tempTicketId
-              ? { ...item, status: tempNewStatus, สถานะ: tempNewStatus }
-              : item
-          )
-        );
-        
-        // ปิดป๊อปอัพ
-        setShowStatusChangeModal(false);
+  setTempTicketId(ticketId);
+  setTempNewStatus(newStatus);
+  setStatusChangeNote("");
+  setStatusChangeRemarks("");
+  setShowStatusChangeModal(true);
+};
+
+const confirmStatusChange = async () => {
+  try {
+    const response = await axios.post(
+      "https://backend-oa-pqy2.onrender.com/update-status-with-note",
+      {
+        ticket_id: tempTicketId,
+        status: tempNewStatus,
+        changed_by: authUser?.name || authUser?.pin || "admin",
+        note: statusChangeNote,
+        remarks: statusChangeRemarks
       }
-    } catch (error) {
-      console.error("Error updating status with note:", error);
+    );
+
+    if (response.data.success) {
+      // อัปเดต state ภายในแอป
+      setData(prevData =>
+        prevData.map(item =>
+          item["Ticket ID"] === tempTicketId
+            ? { ...item, status: tempNewStatus, สถานะ: tempNewStatus }
+            : item
+        )
+      );
+      
+      // ปิด modal และยกเลิกการแก้ไข
+      setShowStatusChangeModal(false);
+      setEditingTicketId(null);
+      setEditSuccess("อัปเดตสถานะและบันทึกหมายเหตุเรียบร้อยแล้ว");
+      setTimeout(() => setEditSuccess(""), 3000);
     }
-  };
-  
-  const cancelStatusChange = () => {
-    setShowStatusChangeModal(false);
-  };
+  } catch (error) {
+    console.error("Error updating status with note:", error);
+    setEditError("เกิดข้อผิดพลาดในการอัปเดตสถานะ");
+    setTimeout(() => setEditError(""), 3000);
+  }
+};
+
+const cancelStatusChange = () => {
+  setShowStatusChangeModal(false);
+};
 
   // Use offline data when backend is unavailable
   const displayData = isOfflineMode ? offlineData : data;
@@ -3969,12 +3997,31 @@ const apptDateTime = row["appointment_datetime"]
                     <StatusChangeModal>
                       <ModalContent>
                         <ModalTitle>เปลี่ยนสถานะเป็น: {tempNewStatus}</ModalTitle>
-                        <p style={{ marginBottom: '12px' }}>กรุณากรอกหมายเหตุ (ถ้ามี):</p>
-                        <NoteTextarea
-                          value={statusChangeNote}
-                          onChange={(e) => setStatusChangeNote(e.target.value)}
-                          placeholder="ระบุรายละเอียดเพิ่มเติมเกี่ยวกับการเปลี่ยนสถานะนี้..."
-                        />
+                        
+                        <div>
+                          <Label>
+                            หมายเหตุ (แสดงในแจ้งเตือน):
+                            <SubLabel>ข้อความนี้จะแสดงในแจ้งเตือนให้ผู้ใช้ทราบ</SubLabel>
+                          </Label>
+                          <NoteTextarea
+                            value={statusChangeNote}
+                            onChange={(e) => setStatusChangeNote(e.target.value)}
+                            placeholder="ระบุรายละเอียดเกี่ยวกับการเปลี่ยนสถานะนี้ที่จะแสดงในแจ้งเตือน..."
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label>
+                            หมายเหตุเพิ่มเติม (สำหรับการวิเคราะห์):
+                            <SubLabel>ข้อความนี้จะไม่แสดงในแจ้งเตือน แต่จะเก็บไว้ในระบบ</SubLabel>
+                          </Label>
+                          <RemarksTextarea
+                            value={statusChangeRemarks}
+                            onChange={(e) => setStatusChangeRemarks(e.target.value)}
+                            placeholder="ระบุรายละเอียดเพิ่มเติมสำหรับการวิเคราะห์หรือติดตามผล..."
+                          />
+                        </div>
+
                         <ModalButtonGroup>
                           <CancelButton onClick={cancelStatusChange}>ยกเลิก</CancelButton>
                           <ConfirmButton onClick={confirmStatusChange}>ยืนยันการเปลี่ยนสถานะ</ConfirmButton>

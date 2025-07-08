@@ -267,6 +267,8 @@ function StatusLogsPage() {
               <Th>สถานะใหม่</Th>
               <Th>ผู้ดำเนินการ</Th>
               <Th>วันที่/เวลา</Th>
+              <Th>หมายเหตุ</Th>
+              <Th>หมายเหตุเพิ่มเติม</Th>
             </tr>
           </thead>
           <tbody>
@@ -295,6 +297,8 @@ function StatusLogsPage() {
                     }) : 
                     '-'}
                 </Td>
+                <Td>{log.note || '-'}</Td>
+                <Td>{log.remarks || '-'}</Td>
               </tr>
             ))}
           </tbody>

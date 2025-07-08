@@ -105,10 +105,12 @@ export const fetchTicket = async (ticketId) => {
   return response.data;
 };
 
-export const updateTicketStatus = async (ticketId, newStatus) => {
-  const response = await apiClient.post('/update-status', {
+export const updateTicketStatus = async (ticketId, newStatus, note = "", remarks = "") => {
+  const response = await apiClient.post('/update-status-with-note', {
     ticket_id: ticketId,
-    status: newStatus
+    status: newStatus,
+    note,
+    remarks
   });
   return response.data;
 };
@@ -118,13 +120,15 @@ export const updateTicketStatus = async (ticketId, newStatus) => {
 // ------------------------------------------------------------
 
 // Log a status change (POST /api/log-status-change)
-export const logStatusChange = async ({ ticket_id, old_status, new_status, changed_by, change_timestamp }) => {
+export const logStatusChange = async ({ ticket_id, old_status, new_status, changed_by, change_timestamp, note = "", remarks = "" }) => {
   const response = await apiClient.post('/api/log-status-change', {
     ticket_id,
     old_status,
     new_status,
     changed_by,
     change_timestamp,
+    note,
+    remarks
   });
   return response.data;
 };
