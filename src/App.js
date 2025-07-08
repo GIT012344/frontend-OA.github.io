@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
-import { logStatusChange } from "./api";
+import { logStatusChange, setupRealtimeUpdates } from "./api";
 import styled from "styled-components";
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Login from './Login';
@@ -3178,6 +3178,19 @@ const handleSubgroupChange = (e) => {
       setEditLoading(false);
     }
   };
+
+  // ในฟังก์ชัน App() ให้เพิ่ม useEffect สำหรับ real-time updates
+  useEffect(() => {
+    // ติดตั้ง real-time updates
+    const cleanup = setupRealtimeUpdates((updatedTicket) => {
+      setData(prev => prev.map(ticket =>
+        ticket["Ticket ID"] === updatedTicket.ticket_id ?
+          { ...ticket, status: updatedTicket.new_status, สถานะ: updatedTicket.new_status } :
+          ticket
+      ));
+    });
+    return cleanup;
+  }, []);
 
   return (
 

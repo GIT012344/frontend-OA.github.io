@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { io } from 'socket.io-client';
 
 const API_BASE_URL = 'https://backend-oa-pqy2.onrender.com';
 
@@ -34,6 +35,25 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+const socket = io('https://backend-oa-pqy2.onrender.com', {
+  transports: ['websocket'],
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+});
+
+// ฟังก์ชันสำหรับจัดการ real-time updates
+export const setupRealtimeUpdates = (callback) => {
+  socket.on('ticket_updated', (data) => {
+    console.log('Real-time update received:', data);
+    callback(data);
+  });
+  return () => {
+    socket.off('ticket_updated');
+  };
+};
+
 export const TYPE_GROUP_SUBGROUP = {
   Service: {
     Hardware: [
