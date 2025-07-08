@@ -4435,7 +4435,7 @@ const handleSubgroupChange = (e) => {
         </>
       ) : <Navigate to="/login" />} />
       <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
-      <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
+      <Route path="/" element={<Navigate to={token ? "/" : "/login"} />} />
     </Routes>
 
   );
