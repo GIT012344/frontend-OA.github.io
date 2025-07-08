@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
-import { logStatusChange, setupRealtimeUpdates } from "./api";
+import { logStatusChange } from "./api";
 import styled from "styled-components";
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Login from './Login';
@@ -2334,52 +2334,72 @@ const cancelStatusChange = () => {
   // Build list of unique types (case-insensitive) in canonical UPPERCASE form
   const uniqueTypes = [...new Set(displayData.map(item => (item["Type"] || "").toUpperCase()).filter(t => t))];
 
+  // ใช้ useRef เพื่อติดตามว่ากำลังอัปเดตอยู่หรือไม่
+  const isUpdatingRef = React.useRef({});
+
   // อัปเดตสถานะและบันทึกการเปลี่ยนแปลง
   const handleStatusChange = (ticketId, newStatus) => {
+    // ตรวจสอบว่ากำลังอัปเดตอยู่หรือไม่
+    if (isUpdatingRef.current[ticketId]) return;
+    
+    // ตั้งค่าสถานะกำลังอัปเดต
+    isUpdatingRef.current[ticketId] = true;
+    
     // ค้นหาข้อมูล ticket เดิมเพื่อหา old_status
     const target = data.find((d) => d["Ticket ID"] === ticketId);
     const oldStatus = target?.status || target?.สถานะ || "";
 
     // ถ้าไม่เปลี่ยนสถานะ ไม่ต้องดำเนินการใด ๆ
-    if (newStatus === oldStatus) return;
+    if (newStatus === oldStatus) {
+      isUpdatingRef.current[ticketId] = false;
+      return;
+    }
 
-    axios
-      .post(
-        "https://backend-oa-pqy2.onrender.com/update-status",
-        {
-          ticket_id: ticketId,
-          status: newStatus,
-          changed_by: authUser?.name || authUser?.pin || "admin",
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      )
-      .then(() => {
-        console.log("✅ Status updated");
-        // อัปเดต state ภายในแอป
-        setData((prevData) =>
-          prevData.map((item) =>
-            item["Ticket ID"] === ticketId
-              ? { ...item, status: newStatus, สถานะ: newStatus }
-              : item
-          )
-        );
+    // สร้างข้อมูลใหม่เพื่อป้องกันการอ้างอิงเดิม
+    const newData = data.map((item) =>
+      item["Ticket ID"] === ticketId
+        ? { ...item, status: newStatus, สถานะ: newStatus }
+        : item
+    );
 
-        // เรียก API เพื่อบันทึกการเปลี่ยนสถานะ
-        logStatusChange({
-          ticket_id: ticketId,
-          old_status: oldStatus,
-          new_status: newStatus,
-          changed_by: user?.name || "unknown",
-          change_timestamp: new Date().toISOString(),
-        }).catch((err) =>
-          console.error("❌ Failed to log status change:", err)
-        );
-      })
-      .catch((err) => console.error("❌ Failed to update status:", err));
+    // อัปเดต state ด้วยข้อมูลใหม่ทั้งหมด
+    setData(newData);
+
+    // เรียก API เพื่ออัปเดตสถานะ
+    axios({
+      method: 'post',
+      url: "https://backend-oa-pqy2.onrender.com/update-status",
+      data: {
+        ticket_id: ticketId,
+        status: newStatus,
+        changed_by: authUser?.name || authUser?.pin || "admin",
+      },
+      headers: {
+        "Content-Type": "application/json",
+      },
+      timeout: 10000 // ตั้งค่า timeout 10 วินาที
+    })
+    .then(() => {
+      console.log("✅ Status updated successfully");
+      
+      // บันทึกประวัติการเปลี่ยนสถานะ (ไม่ต้องรอให้เสร็จ)
+      logStatusChange({
+        ticket_id: ticketId,
+        old_status: oldStatus,
+        new_status: newStatus,
+        changed_by: user?.name || "unknown",
+        change_timestamp: new Date().toISOString(),
+      }).catch(err => console.error("❌ Failed to log status change:", err));
+    })
+    .catch((err) => {
+      console.error("❌ Failed to update status on server:", err);
+      // แจ้งเตือนผู้ใช้ แต่ไม่ย้อนกลับสถานะ
+      console.log("⚠️ Failed to sync with server, but UI remains updated");
+    })
+    .finally(() => {
+      // ปลดล็อกเมื่อการอัปเดตเสร็จสิ้น
+      isUpdatingRef.current[ticketId] = false;
+    });
   };
 
   // Remove old chat functions and replace with new chat system
@@ -3178,19 +3198,6 @@ const handleSubgroupChange = (e) => {
       setEditLoading(false);
     }
   };
-
-  // ในฟังก์ชัน App() ให้เพิ่ม useEffect สำหรับ real-time updates
-  useEffect(() => {
-    // ติดตั้ง real-time updates
-    const cleanup = setupRealtimeUpdates((updatedTicket) => {
-      setData(prev => prev.map(ticket =>
-        ticket["Ticket ID"] === updatedTicket.ticket_id ?
-          { ...ticket, status: updatedTicket.new_status, สถานะ: updatedTicket.new_status } :
-          ticket
-      ));
-    });
-    return cleanup;
-  }, []);
 
   return (
 
