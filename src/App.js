@@ -3337,6 +3337,45 @@ const handleSubgroupChange = (e) => {
     setSidebarMobileOpen(false);
   };
 
+  const [popupMessage, setPopupMessage] = useState(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const lastPopupId = useRef(null);
+
+  // Poll ข้อความใหม่ทุก 5 วินาที
+  useEffect(() => {
+    const poll = setInterval(async () => {
+      try {
+        const res = await axios.get('https://backend-oa-pqy2.onrender.com/api/notifications', { timeout: 5000 });
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          // หา notification ที่ยังไม่ได้อ่านและเป็นข้อความใหม่สุด
+          const latest = res.data.find(n => !n.read);
+          if (latest && lastPopupId.current !== latest.id) {
+            setPopupMessage(latest);
+            setShowPopup(true);
+            lastPopupId.current = latest.id;
+            setTimeout(() => setShowPopup(false), 7000);
+          }
+        }
+      } catch (e) {
+        // ไม่ต้องแจ้ง error
+      }
+    }, 5000);
+    return () => clearInterval(poll);
+  }, []);
+
+  // เมื่อคลิกแจ้งเตือน
+  const handleNotificationClick = (msg) => {
+    setShowPopup(false);
+    // ถ้ามี user_id ให้ navigate ไปหน้าสนทนา
+    if (msg && msg.message && msg.message.includes('ticket')) {
+      // พยายาม extract ticket_id จากข้อความ เช่น "ticket 1234"
+      const match = msg.message.match(/ticket\s*#?(\w+)/i);
+      if (match && match[1]) {
+        navigate(`/chat/${match[1]}`);
+      }
+    }
+  };
+
   return (
     <React.Fragment>
       <Routes>
@@ -4460,6 +4499,13 @@ const handleSubgroupChange = (e) => {
         handleNotificationClick={handleNotificationClick}
         handleClose={handleNotificationClose}
       />
+      {showPopup && popupMessage && (
+        <NewMessageNotification
+          messages={[popupMessage]}
+          handleNotificationClick={handleNotificationClick}
+          handleClose={() => setShowPopup(false)}
+        />
+      )}
     </React.Fragment>
   );
 }
