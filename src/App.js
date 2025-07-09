@@ -2699,66 +2699,57 @@ const cancelStatusChange = () => {
     }, 7000); // แสดง 7 วินาที
   };
 
-  // Polling for new messages
+  // Polling for new messages (ปรับใหม่ให้ detect ข้อความใหม่จาก user ทุกคน)
   useEffect(() => {
-    if (!selectedChatUser || selectedChatUser === "announcement") return;
-
-    let lastMessageId = null;
-    if (chatMessages.length > 0) {
-      lastMessageId = chatMessages[chatMessages.length - 1].id;
-    }
-
-    const pollMessages = async () => {
+    // Poll ข้อความของทุก user (admin เห็นทุกคน)
+    const pollAllUserMessages = async () => {
       try {
-        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
-          params: { user_id: selectedChatUser }
-        });
-        if (response.data && Array.isArray(response.data)) {
-          // ตรวจสอบว่ามีข้อความใหม่จาก user หรือไม่
-          const newMsgs = response.data.filter(msg =>
-            msg.sender_type === 'user' &&
-            (!chatMessages.some(m => m.id === msg.id))
-          );
-          if (newMsgs.length > 0) {
-            // แสดง toast สำหรับแต่ละข้อความใหม่ (แต่เอาแค่ล่าสุด)
-            const latest = newMsgs[newMsgs.length - 1];
-            showToast({
-              userId: latest.user_id,
-              userName: chatUsers.find(u => u.user_id === latest.user_id)?.name || 'User',
-              message: latest.message,
-              timestamp: latest.timestamp
-            });
-            // เพิ่มเข้า notifications ด้วย
-            setNotifications(prev => [
-              {
-                id: `msg-${latest.id}`,
-                message: `ข้อความใหม่จาก ${chatUsers.find(u => u.user_id === latest.user_id)?.name || 'User'}: ${latest.message}`,
-                timestamp: latest.timestamp,
-                read: false,
-                type: 'chat',
-                userId: latest.user_id,
-                userName: chatUsers.find(u => u.user_id === latest.user_id)?.name || 'User',
-                content: latest.message
-              },
-              ...prev
-            ]);
-            setHasUnread(true);
+        // ดึง user ทั้งหมด
+        const usersRes = await axios.get("https://backend-oa-pqy2.onrender.com/api/chat-users");
+        const users = Array.isArray(usersRes.data) ? usersRes.data : [];
+        for (const u of users) {
+          const res = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", { params: { user_id: u.user_id } });
+          if (res.data && Array.isArray(res.data)) {
+            // หา message ใหม่จาก user (sender_type === 'user') ที่ยังไม่เคยแจ้งเตือน
+            const newMsgs = res.data.filter(msg =>
+              msg.sender_type === 'user' &&
+              !notifications.some(n => n.type === 'chat' && n.id === `msg-${msg.id}`)
+            );
+            if (newMsgs.length > 0) {
+              const latest = newMsgs[newMsgs.length - 1];
+              // Toast เด้งทันที
+              showToast({
+                userId: u.user_id,
+                userName: u.name || 'User',
+                message: latest.message,
+                timestamp: latest.timestamp
+              });
+              // เพิ่มเข้า notifications
+              setNotifications(prev => [
+                {
+                  id: `msg-${latest.id}`,
+                  message: `ข้อความใหม่จาก ${u.name || 'User'}: ${latest.message}`,
+                  timestamp: latest.timestamp,
+                  read: false,
+                  type: 'chat',
+                  userId: u.user_id,
+                  userName: u.name || 'User',
+                  content: latest.message
+                },
+                ...prev
+              ]);
+              setHasUnread(true);
+            }
           }
-          setChatMessages(response.data);
         }
       } catch (error) {
-        console.error("Failed to poll messages:", error);
+        // ไม่ต้องแจ้ง error
       }
     };
-
-    // Poll immediately
-    pollMessages();
-
-    // Set up polling every 3 seconds
-    const interval = setInterval(pollMessages, 3000);
-
+    // Poll ทุก 3 วินาที
+    const interval = setInterval(pollAllUserMessages, 3000);
     return () => clearInterval(interval);
-  }, [selectedChatUser, chatMessages, chatUsers]);
+  }, [notifications, chatUsers]);
 
   // Format last sync time
   const formatLastSync = () => {
