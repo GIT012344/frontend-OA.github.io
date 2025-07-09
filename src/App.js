@@ -10,6 +10,8 @@ import { useAuth } from './AuthContext';
 import './styles.css';
 import DashboardSection from "./DashboardSection";
 import StatusLogsPage from './StatusLogsPage';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Define the type-group-subgroup mapping
 const TYPE_GROUP_SUBGROUP = {
@@ -1956,6 +1958,9 @@ function App() {
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [mobileActiveTab, setMobileActiveTab] = useState("dashboard");
 
+  // state สำหรับเก็บ id ข้อความล่าสุดที่แจ้งเตือนไปแล้ว
+  const [lastNotifiedMessageId, setLastNotifiedMessageId] = useState(null);
+
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
     if (backendStatus === 'offline' || backendStatus === 'error') {
@@ -2690,28 +2695,57 @@ const cancelStatusChange = () => {
   useEffect(() => {
     if (!selectedChatUser || selectedChatUser === "announcement") return;
 
+    let prevLastMessageId = lastNotifiedMessageId;
+
     const pollMessages = async () => {
       try {
         const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
           params: { user_id: selectedChatUser }
         });
-        
         if (response.data && Array.isArray(response.data)) {
           setChatMessages(response.data);
+          // ตรวจสอบว่ามีข้อความใหม่จาก user หรือไม่ (ไม่ใช่ admin)
+          if (response.data.length > 0) {
+            const lastMsg = response.data[response.data.length - 1];
+            if (
+              lastMsg.id !== prevLastMessageId &&
+              lastMsg.sender_type !== 'admin'
+            ) {
+              // เด้ง toast แจ้งเตือนข้อความใหม่
+              toast.info(
+                <div>
+                  <div style={{ fontWeight: 600 }}>📩 ข้อความใหม่จาก {chatUsers.find(u => u.user_id === lastMsg.user_id)?.name || 'ผู้ใช้'}</div>
+                  <div style={{ fontSize: '0.9em', color: '#64748b' }}>{lastMsg.message}</div>
+                  <div style={{ fontSize: '0.8em', color: '#94a3b8', marginTop: 4 }}>{lastMsg.timestamp ? new Date(lastMsg.timestamp).toLocaleTimeString('th-TH') : ''}</div>
+                </div>,
+                {
+                  position: "top-right",
+                  autoClose: 15000,
+                  hideProgressBar: false,
+                  closeOnClick: true,
+                  pauseOnHover: true,
+                  draggable: true,
+                  onClick: () => {
+                    setSelectedChatUser(lastMsg.user_id);
+                    setActiveTab('chat');
+                    scrollToChat();
+                  },
+                  toastId: `msg-${lastMsg.id}`
+                }
+              );
+              setLastNotifiedMessageId(lastMsg.id);
+              prevLastMessageId = lastMsg.id;
+            }
+          }
         }
       } catch (error) {
         console.error("Failed to poll messages:", error);
       }
     };
-
-    // Poll immediately
     pollMessages();
-    
-    // Set up polling every 3 seconds
     const interval = setInterval(pollMessages, 3000);
-    
     return () => clearInterval(interval);
-  }, [selectedChatUser]);
+  }, [selectedChatUser, chatUsers]);
 
   // Format last sync time
   const formatLastSync = () => {
@@ -4429,7 +4463,7 @@ const handleSubgroupChange = (e) => {
               {editSuccess && (
                 <div style={{ color: '#10b981', textAlign: 'center', margin: '8px' }}>{editSuccess}</div>
               )}
-        
+              <ToastContainer />
             </Container>
           </MainContent>
         </>
