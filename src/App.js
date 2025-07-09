@@ -10,8 +10,6 @@ import { useAuth } from './AuthContext';
 import './styles.css';
 import DashboardSection from "./DashboardSection";
 import StatusLogsPage from './StatusLogsPage';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 
 // Define the type-group-subgroup mapping
 const TYPE_GROUP_SUBGROUP = {
@@ -1958,9 +1956,6 @@ function App() {
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [mobileActiveTab, setMobileActiveTab] = useState("dashboard");
 
-  // state สำหรับเก็บ id ข้อความล่าสุดที่แจ้งเตือนไปแล้ว
-  const [lastNotifiedMessageId, setLastNotifiedMessageId] = useState(null);
-
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
     if (backendStatus === 'offline' || backendStatus === 'error') {
@@ -2691,11 +2686,27 @@ const cancelStatusChange = () => {
     fetchChatUsers();
   }, []);
 
+  // --- Toast Notification ---
+  const [toastNotification, setToastNotification] = useState(null); // { userId, userName, message, timestamp }
+  const toastTimeoutRef = useRef(null);
+
+  // ฟังก์ชันแสดง toast notification
+  const showToast = (notif) => {
+    setToastNotification(notif);
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastNotification(null);
+    }, 7000); // แสดง 7 วินาที
+  };
+
   // Polling for new messages
   useEffect(() => {
     if (!selectedChatUser || selectedChatUser === "announcement") return;
 
-    let prevLastMessageId = lastNotifiedMessageId;
+    let lastMessageId = null;
+    if (chatMessages.length > 0) {
+      lastMessageId = chatMessages[chatMessages.length - 1].id;
+    }
 
     const pollMessages = async () => {
       try {
@@ -2703,49 +2714,51 @@ const cancelStatusChange = () => {
           params: { user_id: selectedChatUser }
         });
         if (response.data && Array.isArray(response.data)) {
-          setChatMessages(response.data);
-          // ตรวจสอบว่ามีข้อความใหม่จาก user หรือไม่ (ไม่ใช่ admin)
-          if (response.data.length > 0) {
-            const lastMsg = response.data[response.data.length - 1];
-            if (
-              lastMsg.id !== prevLastMessageId &&
-              lastMsg.sender_type !== 'admin'
-            ) {
-              // เด้ง toast แจ้งเตือนข้อความใหม่
-              toast.info(
-                <div>
-                  <div style={{ fontWeight: 600 }}>📩 ข้อความใหม่จาก {chatUsers.find(u => u.user_id === lastMsg.user_id)?.name || 'ผู้ใช้'}</div>
-                  <div style={{ fontSize: '0.9em', color: '#64748b' }}>{lastMsg.message}</div>
-                  <div style={{ fontSize: '0.8em', color: '#94a3b8', marginTop: 4 }}>{lastMsg.timestamp ? new Date(lastMsg.timestamp).toLocaleTimeString('th-TH') : ''}</div>
-                </div>,
-                {
-                  position: "top-right",
-                  autoClose: 15000,
-                  hideProgressBar: false,
-                  closeOnClick: true,
-                  pauseOnHover: true,
-                  draggable: true,
-                  onClick: () => {
-                    setSelectedChatUser(lastMsg.user_id);
-                    setActiveTab('chat');
-                    scrollToChat();
-                  },
-                  toastId: `msg-${lastMsg.id}`
-                }
-              );
-              setLastNotifiedMessageId(lastMsg.id);
-              prevLastMessageId = lastMsg.id;
-            }
+          // ตรวจสอบว่ามีข้อความใหม่จาก user หรือไม่
+          const newMsgs = response.data.filter(msg =>
+            msg.sender_type === 'user' &&
+            (!chatMessages.some(m => m.id === msg.id))
+          );
+          if (newMsgs.length > 0) {
+            // แสดง toast สำหรับแต่ละข้อความใหม่ (แต่เอาแค่ล่าสุด)
+            const latest = newMsgs[newMsgs.length - 1];
+            showToast({
+              userId: latest.user_id,
+              userName: chatUsers.find(u => u.user_id === latest.user_id)?.name || 'User',
+              message: latest.message,
+              timestamp: latest.timestamp
+            });
+            // เพิ่มเข้า notifications ด้วย
+            setNotifications(prev => [
+              {
+                id: `msg-${latest.id}`,
+                message: `ข้อความใหม่จาก ${chatUsers.find(u => u.user_id === latest.user_id)?.name || 'User'}: ${latest.message}`,
+                timestamp: latest.timestamp,
+                read: false,
+                type: 'chat',
+                userId: latest.user_id,
+                userName: chatUsers.find(u => u.user_id === latest.user_id)?.name || 'User',
+                content: latest.message
+              },
+              ...prev
+            ]);
+            setHasUnread(true);
           }
+          setChatMessages(response.data);
         }
       } catch (error) {
         console.error("Failed to poll messages:", error);
       }
     };
+
+    // Poll immediately
     pollMessages();
+
+    // Set up polling every 3 seconds
     const interval = setInterval(pollMessages, 3000);
+
     return () => clearInterval(interval);
-  }, [selectedChatUser, chatUsers]);
+  }, [selectedChatUser, chatMessages, chatUsers]);
 
   // Format last sync time
   const formatLastSync = () => {
@@ -4404,25 +4417,26 @@ const handleSubgroupChange = (e) => {
                     <NotificationItem
                       key={notification.id}
                       $unread={!notification.read}
+                      onClick={() => {
+                        if (notification.type === 'chat' && notification.userId) {
+                          setSelectedChatUser(notification.userId);
+                          setActiveTab('chat');
+                          scrollToChat();
+                          setShowNotifications(false);
+                        }
+                      }}
                     >
                       <NotificationContent>
-                        {notification.message &&
-                          typeof notification.message === "string" &&
-                          notification.message.includes("New message from") ? (
+                        {notification.type === 'chat' ? (
                           <>
                             <span style={{ fontWeight: "bold", marginBottom: "4px", display: "block" }}>
-                              New Message 📩 from{" "}
-                              {notification.message
-                                .split(" from ")[1]
-                                ?.split(" for ticket")[0] || "Unknown"}
+                              ข้อความใหม่จาก {notification.userName}
                             </span>
                             <span style={{ background: "#f0f4f8", padding: "8px", borderRadius: "4px", display: "block" }}>
-                              {notification.message.split(": ").slice(1).join(": ")}
+                              {notification.content}
                             </span>
                           </>
-                        ) : (
-                          notification.message || "No message content"
-                        )}
+                        ) : notification.message || "No message content"}
                       </NotificationContent>
                       <div
                         style={{
@@ -4433,10 +4447,10 @@ const handleSubgroupChange = (e) => {
                         }}
                       >
                         <NotificationTime>
-                          {new Date(notification.timestamp).toLocaleString()}
+                          {notification.timestamp ? new Date(notification.timestamp).toLocaleString() : ''}
                         </NotificationTime>
                         <button
-                          onClick={(e) => {
+                          onClick={e => {
                             e.stopPropagation();
                             deleteNotification(notification.id);
                           }}
@@ -4463,7 +4477,47 @@ const handleSubgroupChange = (e) => {
               {editSuccess && (
                 <div style={{ color: '#10b981', textAlign: 'center', margin: '8px' }}>{editSuccess}</div>
               )}
-              <ToastContainer />
+              {toastNotification && (
+                <div
+                  style={{
+                    position: 'fixed',
+                    right: 32,
+                    bottom: 32,
+                    zIndex: 9999,
+                    minWidth: 340,
+                    maxWidth: 420,
+                    background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                    borderRadius: 16,
+                    padding: 24,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                    border: '2px solid #3b82f6',
+                    animation: 'toast-pop 0.3s cubic-bezier(0.4,0,0.2,1)'
+                  }}
+                  onClick={() => {
+                    setSelectedChatUser(toastNotification.userId);
+                    setActiveTab('chat');
+                    scrollToChat();
+                    setToastNotification(null);
+                  }}
+                >
+                  <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '1.1rem', marginBottom: 2 }}>
+                    📩 ข้อความใหม่จาก {toastNotification.userName}
+                  </div>
+                  <div style={{ color: '#334155', fontSize: '1rem', marginBottom: 2 }}>
+                    {toastNotification.message}
+                  </div>
+                  <div style={{ color: '#64748b', fontSize: '0.85rem', textAlign: 'right' }}>
+                    {toastNotification.timestamp ? new Date(toastNotification.timestamp).toLocaleTimeString('th-TH') : ''}
+                  </div>
+                  <div style={{ color: '#3b82f6', fontSize: '0.85rem', textAlign: 'right', fontWeight: 500 }}>
+                    คลิกเพื่อไปยังแชท
+                  </div>
+                </div>
+              )}
+        
             </Container>
           </MainContent>
         </>
