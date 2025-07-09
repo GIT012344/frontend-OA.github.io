@@ -1,12 +1,7 @@
 "use client";
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import { useState, useEffect, useCallback, useRef } from "react";
-import axios from "axios";
-import { logStatusChange } from "./api";
-import styled from "styled-components";
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Login from './Login';
 import { useAuth } from './AuthContext';
@@ -14,6 +9,7 @@ import './styles.css';
 import DashboardSection from "./DashboardSection";
 import StatusLogsPage from './StatusLogsPage';
 import NewMessageNotification from './NewMessageNotification';
+import { logStatusChange } from "./api";
 
 // Define the type-group-subgroup mapping
 const TYPE_GROUP_SUBGROUP = {
