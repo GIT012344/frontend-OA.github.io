@@ -2751,18 +2751,22 @@ const cancelStatusChange = () => {
           const prevIds = new Set(chatMessages.map(m => m.id));
           const newMsgs = response.data.filter(m => !prevIds.has(m.id) && m.sender_type === 'user');
           if (newMsgs.length > 0) {
+            console.log('[TOAST] พบข้อความใหม่', newMsgs);
             newMsgs.forEach(msg => {
               // เพิ่มเข้า toast popup
-              setToastList(prev => [
-                ...prev,
-                {
-                  id: msg.id,
-                  sender: (chatUsers.find(u => u.user_id === msg.user_id)?.name) || 'User',
-                  message: msg.message,
-                  time: msg.timestamp,
-                  userId: msg.user_id
-                }
-              ]);
+              setToastList(prev => {
+                console.log('[TOAST] เพิ่ม toast ใหม่', msg);
+                return [
+                  ...prev,
+                  {
+                    id: msg.id,
+                    sender: (chatUsers.find(u => u.user_id === msg.user_id)?.name) || 'User',
+                    message: msg.message,
+                    time: msg.timestamp,
+                    userId: msg.user_id
+                  }
+                ];
+              });
               // เพิ่มเข้า notification list (ถ้ายังไม่มี)
               setNotifications(prev => {
                 if (prev.some(n => n.id === msg.id)) return prev;
@@ -2778,6 +2782,10 @@ const cancelStatusChange = () => {
               });
               setHasUnread(true);
             });
+          } else {
+            if (response.data.length > 0) {
+              console.log('[TOAST] ไม่มีข้อความใหม่', response.data.length, 'ข้อความ');
+            }
           }
           setChatMessages(response.data);
         }
@@ -2796,6 +2804,7 @@ const cancelStatusChange = () => {
     if (toastList.length === 0) return;
     const timers = toastList.map(toast =>
       setTimeout(() => {
+        console.log('[TOAST] auto-dismiss', toast);
         setToastList(prev => prev.filter(t => t.id !== toast.id));
       }, 15000)
     );
@@ -4525,6 +4534,7 @@ const handleSubgroupChange = (e) => {
           <ToastContainer>
             {toastList.map(toast => (
               <Toast key={toast.id} onClick={() => {
+                console.log('[TOAST] คลิก toast', toast);
                 setSelectedChatUser(toast.userId);
                 setActiveTab("chat");
                 setToastList(prev => prev.filter(t => t.id !== toast.id));
@@ -4533,7 +4543,7 @@ const handleSubgroupChange = (e) => {
                 <div style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: 2 }}>ข้อความใหม่จาก {toast.sender}</div>
                 <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: 4 }}>{toast.time ? new Date(toast.time).toLocaleString('th-TH') : ''}</div>
                 <div style={{ marginBottom: 8 }}>{toast.message}</div>
-                <ToastClose onClick={e => { e.stopPropagation(); setToastList(prev => prev.filter(t => t.id !== toast.id)); }}>&times;</ToastClose>
+                <ToastClose onClick={e => { e.stopPropagation(); console.log('[TOAST] ปิด toast', toast); setToastList(prev => prev.filter(t => t.id !== toast.id)); }}>&times;</ToastClose>
               </Toast>
             ))}
           </ToastContainer>
