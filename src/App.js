@@ -1962,11 +1962,6 @@ function App() {
     // { id: 1, sender_name: 'ทดสอบ', message: 'ข้อความใหม่จากระบบ', timestamp: new Date().toISOString() },
   ]);
 
-  // ฟังก์ชันปิด notification
-  const handleNotificationClose = (id, e) => {
-    setNewMsgNotifications((prev) => prev.filter((m) => m.id !== id));
-  };
-
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
     if (backendStatus === 'offline' || backendStatus === 'error') {
@@ -3357,11 +3352,6 @@ const handleSubgroupChange = (e) => {
     return () => clearInterval(poll);
   }, []);
 
-  // เมื่อคลิกแจ้งเตือน
-  const handleNotificationClose = (id, e) => {
-    setNewMsgNotifications((prev) => prev.filter((m) => m.id !== id));
-  };
-
   return (
     <React.Fragment>
       <Routes>
@@ -4482,12 +4472,10 @@ const handleSubgroupChange = (e) => {
       </Routes>
       <NewMessageNotification 
         messages={newMsgNotifications} 
-        handleNotificationClose={handleNotificationClose}
       />
       {showPopup && popupMessage && (
         <NewMessageNotification
           messages={[popupMessage]}
-          handleNotificationClose={handleNotificationClose}
         />
       )}
     </React.Fragment>
