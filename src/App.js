@@ -1859,6 +1859,50 @@ const MobileNavItemBar = styled.div`
   `}
 `;
 
+// เพิ่ม styled-components สำหรับ toast popup
+const ToastContainer = styled.div`
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 16px;
+`;
+const Toast = styled.div`
+  min-width: 320px;
+  max-width: 400px;
+  background: #fff;
+  color: #1e293b;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  padding: 24px 28px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-left: 6px solid #3b82f6;
+  font-size: 1rem;
+  animation: toast-in 0.3s cubic-bezier(0.4,0,0.2,1);
+  cursor: pointer;
+  position: relative;
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(40px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+`;
+const ToastClose = styled.button`
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 1.2rem;
+  cursor: pointer;
+  &:hover { color: #ef4444; }
+`;
+
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -1955,6 +1999,9 @@ function App() {
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [mobileActiveTab, setMobileActiveTab] = useState("dashboard");
+
+  // --- Toast popup state ---
+  const [toastList, setToastList] = useState([]); // [{id, sender, message, time, userId}]
 
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
@@ -2686,70 +2733,74 @@ const cancelStatusChange = () => {
     fetchChatUsers();
   }, []);
 
-  // --- Toast Notification ---
-  const [toastNotification, setToastNotification] = useState(null); // { userId, userName, message, timestamp }
-  const toastTimeoutRef = useRef(null);
-
-  // ฟังก์ชันแสดง toast notification
-  const showToast = (notif) => {
-    setToastNotification(notif);
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-    toastTimeoutRef.current = setTimeout(() => {
-      setToastNotification(null);
-    }, 7000); // แสดง 7 วินาที
-  };
-
-  // Polling for new messages (ปรับใหม่ให้ detect ข้อความใหม่จาก user ทุกคน)
+  // --- Polling for new messages (เพิ่ม logic ตรวจจับข้อความใหม่) ---
   useEffect(() => {
-    // Poll ข้อความของทุก user (admin เห็นทุกคน)
-    const pollAllUserMessages = async () => {
+    if (!selectedChatUser || selectedChatUser === "announcement") return;
+    let lastMessageIdRef = { current: null };
+    // ใช้ ref เพื่อเก็บ id ข้อความล่าสุดที่เคยเห็น (กัน rerender loop)
+    if (chatMessages.length > 0) {
+      lastMessageIdRef.current = chatMessages[chatMessages.length - 1].id;
+    }
+    const pollMessages = async () => {
       try {
-        // ดึง user ทั้งหมด
-        const usersRes = await axios.get("https://backend-oa-pqy2.onrender.com/api/chat-users");
-        const users = Array.isArray(usersRes.data) ? usersRes.data : [];
-        for (const u of users) {
-          const res = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", { params: { user_id: u.user_id } });
-          if (res.data && Array.isArray(res.data)) {
-            // หา message ใหม่จาก user (sender_type === 'user') ที่ยังไม่เคยแจ้งเตือน
-            const newMsgs = res.data.filter(msg =>
-              msg.sender_type === 'user' &&
-              !notifications.some(n => n.type === 'chat' && n.id === `msg-${msg.id}`)
-            );
-            if (newMsgs.length > 0) {
-              const latest = newMsgs[newMsgs.length - 1];
-              // Toast เด้งทันที
-              showToast({
-                userId: u.user_id,
-                userName: u.name || 'User',
-                message: latest.message,
-                timestamp: latest.timestamp
-              });
-              // เพิ่มเข้า notifications
-              setNotifications(prev => [
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
+          params: { user_id: selectedChatUser }
+        });
+        if (response.data && Array.isArray(response.data)) {
+          // ตรวจจับข้อความใหม่ (จาก user เท่านั้น)
+          const prevIds = new Set(chatMessages.map(m => m.id));
+          const newMsgs = response.data.filter(m => !prevIds.has(m.id) && m.sender_type === 'user');
+          if (newMsgs.length > 0) {
+            newMsgs.forEach(msg => {
+              // เพิ่มเข้า toast popup
+              setToastList(prev => [
+                ...prev,
                 {
-                  id: `msg-${latest.id}`,
-                  message: `ข้อความใหม่จาก ${u.name || 'User'}: ${latest.message}`,
-                  timestamp: latest.timestamp,
-                  read: false,
-                  type: 'chat',
-                  userId: u.user_id,
-                  userName: u.name || 'User',
-                  content: latest.message
-                },
-                ...prev
+                  id: msg.id,
+                  sender: (chatUsers.find(u => u.user_id === msg.user_id)?.name) || 'User',
+                  message: msg.message,
+                  time: msg.timestamp,
+                  userId: msg.user_id
+                }
               ]);
+              // เพิ่มเข้า notification list (ถ้ายังไม่มี)
+              setNotifications(prev => {
+                if (prev.some(n => n.id === msg.id)) return prev;
+                return [
+                  {
+                    id: msg.id,
+                    message: `ข้อความใหม่จาก ${chatUsers.find(u => u.user_id === msg.user_id)?.name || 'User'}: ${msg.message}`,
+                    timestamp: msg.timestamp,
+                    read: false
+                  },
+                  ...prev
+                ];
+              });
               setHasUnread(true);
-            }
+            });
           }
+          setChatMessages(response.data);
         }
       } catch (error) {
-        // ไม่ต้องแจ้ง error
+        console.error("Failed to poll messages:", error);
       }
     };
-    // Poll ทุก 3 วินาที
-    const interval = setInterval(pollAllUserMessages, 3000);
+    pollMessages();
+    const interval = setInterval(pollMessages, 3000);
     return () => clearInterval(interval);
-  }, [notifications, chatUsers]);
+  // eslint-disable-next-line
+  }, [selectedChatUser, chatUsers, chatMessages]);
+
+  // --- Toast popup auto-dismiss ---
+  useEffect(() => {
+    if (toastList.length === 0) return;
+    const timers = toastList.map(toast =>
+      setTimeout(() => {
+        setToastList(prev => prev.filter(t => t.id !== toast.id));
+      }, 15000)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [toastList]);
 
   // Format last sync time
   const formatLastSync = () => {
@@ -4408,26 +4459,25 @@ const handleSubgroupChange = (e) => {
                     <NotificationItem
                       key={notification.id}
                       $unread={!notification.read}
-                      onClick={() => {
-                        if (notification.type === 'chat' && notification.userId) {
-                          setSelectedChatUser(notification.userId);
-                          setActiveTab('chat');
-                          scrollToChat();
-                          setShowNotifications(false);
-                        }
-                      }}
                     >
                       <NotificationContent>
-                        {notification.type === 'chat' ? (
+                        {notification.message &&
+                          typeof notification.message === "string" &&
+                          notification.message.includes("New message from") ? (
                           <>
                             <span style={{ fontWeight: "bold", marginBottom: "4px", display: "block" }}>
-                              ข้อความใหม่จาก {notification.userName}
+                              New Message 📩 from{" "}
+                              {notification.message
+                                .split(" from ")[1]
+                                ?.split(" for ticket")[0] || "Unknown"}
                             </span>
                             <span style={{ background: "#f0f4f8", padding: "8px", borderRadius: "4px", display: "block" }}>
-                              {notification.content}
+                              {notification.message.split(": ").slice(1).join(": ")}
                             </span>
                           </>
-                        ) : notification.message || "No message content"}
+                        ) : (
+                          notification.message || "No message content"
+                        )}
                       </NotificationContent>
                       <div
                         style={{
@@ -4438,10 +4488,10 @@ const handleSubgroupChange = (e) => {
                         }}
                       >
                         <NotificationTime>
-                          {notification.timestamp ? new Date(notification.timestamp).toLocaleString() : ''}
+                          {new Date(notification.timestamp).toLocaleString()}
                         </NotificationTime>
                         <button
-                          onClick={e => {
+                          onClick={(e) => {
                             e.stopPropagation();
                             deleteNotification(notification.id);
                           }}
@@ -4468,49 +4518,25 @@ const handleSubgroupChange = (e) => {
               {editSuccess && (
                 <div style={{ color: '#10b981', textAlign: 'center', margin: '8px' }}>{editSuccess}</div>
               )}
-              {toastNotification && (
-                <div
-                  style={{
-                    position: 'fixed',
-                    right: 32,
-                    bottom: 32,
-                    zIndex: 9999,
-                    minWidth: 340,
-                    maxWidth: 420,
-                    background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-                    borderRadius: 16,
-                    padding: 24,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 8,
-                    border: '2px solid #3b82f6',
-                    animation: 'toast-pop 0.3s cubic-bezier(0.4,0,0.2,1)'
-                  }}
-                  onClick={() => {
-                    setSelectedChatUser(toastNotification.userId);
-                    setActiveTab('chat');
-                    scrollToChat();
-                    setToastNotification(null);
-                  }}
-                >
-                  <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '1.1rem', marginBottom: 2 }}>
-                    📩 ข้อความใหม่จาก {toastNotification.userName}
-                  </div>
-                  <div style={{ color: '#334155', fontSize: '1rem', marginBottom: 2 }}>
-                    {toastNotification.message}
-                  </div>
-                  <div style={{ color: '#64748b', fontSize: '0.85rem', textAlign: 'right' }}>
-                    {toastNotification.timestamp ? new Date(toastNotification.timestamp).toLocaleTimeString('th-TH') : ''}
-                  </div>
-                  <div style={{ color: '#3b82f6', fontSize: '0.85rem', textAlign: 'right', fontWeight: 500 }}>
-                    คลิกเพื่อไปยังแชท
-                  </div>
-                </div>
-              )}
         
             </Container>
           </MainContent>
+          {/* Toast Popup */}
+          <ToastContainer>
+            {toastList.map(toast => (
+              <Toast key={toast.id} onClick={() => {
+                setSelectedChatUser(toast.userId);
+                setActiveTab("chat");
+                setToastList(prev => prev.filter(t => t.id !== toast.id));
+                scrollToChat && scrollToChat();
+              }}>
+                <div style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: 2 }}>ข้อความใหม่จาก {toast.sender}</div>
+                <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: 4 }}>{toast.time ? new Date(toast.time).toLocaleString('th-TH') : ''}</div>
+                <div style={{ marginBottom: 8 }}>{toast.message}</div>
+                <ToastClose onClick={e => { e.stopPropagation(); setToastList(prev => prev.filter(t => t.id !== toast.id)); }}>&times;</ToastClose>
+              </Toast>
+            ))}
+          </ToastContainer>
         </>
       ) : <Navigate to="/login" />} />
       <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
