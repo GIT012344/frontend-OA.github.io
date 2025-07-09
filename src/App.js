@@ -1962,12 +1962,6 @@ function App() {
     // { id: 1, sender_name: 'ทดสอบ', message: 'ข้อความใหม่จากระบบ', timestamp: new Date().toISOString() },
   ]);
 
-  // ฟังก์ชันเมื่อคลิก notification
-  const handleNotificationClick = (msg) => {
-    // ตัวอย่าง: ลบ notification เมื่อคลิก
-    setNewMsgNotifications((prev) => prev.filter((m) => m.id !== msg.id));
-    // สามารถเพิ่ม logic เปิดแชท/แสดงรายละเอียดได้
-  };
   // ฟังก์ชันปิด notification
   const handleNotificationClose = (id, e) => {
     setNewMsgNotifications((prev) => prev.filter((m) => m.id !== id));
@@ -3364,16 +3358,8 @@ const handleSubgroupChange = (e) => {
   }, []);
 
   // เมื่อคลิกแจ้งเตือน
-  const handleNotificationClick = (msg) => {
-    setShowPopup(false);
-    // ถ้ามี user_id ให้ navigate ไปหน้าสนทนา
-    if (msg && msg.message && msg.message.includes('ticket')) {
-      // พยายาม extract ticket_id จากข้อความ เช่น "ticket 1234"
-      const match = msg.message.match(/ticket\s*#?(\w+)/i);
-      if (match && match[1]) {
-        navigate(`/chat/${match[1]}`);
-      }
-    }
+  const handleNotificationClose = (id, e) => {
+    setNewMsgNotifications((prev) => prev.filter((m) => m.id !== id));
   };
 
   return (
@@ -4496,14 +4482,12 @@ const handleSubgroupChange = (e) => {
       </Routes>
       <NewMessageNotification 
         messages={newMsgNotifications} 
-        handleNotificationClick={handleNotificationClick}
-        handleClose={handleNotificationClose}
+        handleNotificationClose={handleNotificationClose}
       />
       {showPopup && popupMessage && (
         <NewMessageNotification
           messages={[popupMessage]}
-          handleNotificationClick={handleNotificationClick}
-          handleClose={() => setShowPopup(false)}
+          handleNotificationClose={handleNotificationClose}
         />
       )}
     </React.Fragment>
