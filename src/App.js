@@ -10,6 +10,7 @@ import { useAuth } from './AuthContext';
 import './styles.css';
 import DashboardSection from "./DashboardSection";
 import StatusLogsPage from './StatusLogsPage';
+import { io } from "socket.io-client";
 
 // Define the type-group-subgroup mapping
 const TYPE_GROUP_SUBGROUP = {
@@ -1859,48 +1860,12 @@ const MobileNavItemBar = styled.div`
   `}
 `;
 
-// เพิ่ม styled-components สำหรับ toast popup
-const ToastContainer = styled.div`
-  position: fixed;
-  bottom: 32px;
-  right: 32px;
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 16px;
-`;
-const Toast = styled.div`
-  min-width: 320px;
-  max-width: 400px;
-  background: #fff;
-  color: #1e293b;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-  padding: 24px 28px 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  border-left: 6px solid #3b82f6;
-  font-size: 1rem;
-  animation: toast-in 0.3s cubic-bezier(0.4,0,0.2,1);
-  cursor: pointer;
-  position: relative;
-  @keyframes toast-in {
-    from { opacity: 0; transform: translateY(40px) scale(0.95); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+// เพิ่ม GlobalStyles สำหรับ animation
+const GlobalStyles = styled.div`
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
   }
-`;
-const ToastClose = styled.button`
-  position: absolute;
-  top: 10px;
-  right: 14px;
-  background: none;
-  border: none;
-  color: #64748b;
-  font-size: 1.2rem;
-  cursor: pointer;
-  &:hover { color: #ef4444; }
 `;
 
 function App() {
@@ -2000,8 +1965,10 @@ function App() {
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [mobileActiveTab, setMobileActiveTab] = useState("dashboard");
 
-  // --- Toast popup state ---
-  const [toastList, setToastList] = useState([]); // [{id, sender, message, time, userId}]
+  // เพิ่ม state สำหรับ socket, แจ้งเตือน, และเสียง
+  const [socket, setSocket] = useState(null);
+  const [newMessageAlert, setNewMessageAlert] = useState(null);
+  const [notificationSound] = useState(() => new Audio('/notification.mp3'));
 
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
@@ -2733,83 +2700,32 @@ const cancelStatusChange = () => {
     fetchChatUsers();
   }, []);
 
-  // --- Polling for new messages (เพิ่ม logic ตรวจจับข้อความใหม่) ---
+  // Polling for new messages
   useEffect(() => {
     if (!selectedChatUser || selectedChatUser === "announcement") return;
-    let lastMessageIdRef = { current: null };
-    // ใช้ ref เพื่อเก็บ id ข้อความล่าสุดที่เคยเห็น (กัน rerender loop)
-    if (chatMessages.length > 0) {
-      lastMessageIdRef.current = chatMessages[chatMessages.length - 1].id;
-    }
+
     const pollMessages = async () => {
       try {
         const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
           params: { user_id: selectedChatUser }
         });
+        
         if (response.data && Array.isArray(response.data)) {
-          // ตรวจจับข้อความใหม่ (จาก user เท่านั้น)
-          const prevIds = new Set(chatMessages.map(m => m.id));
-          const newMsgs = response.data.filter(m => !prevIds.has(m.id) && m.sender_type === 'user');
-          if (newMsgs.length > 0) {
-            console.log('[TOAST] พบข้อความใหม่', newMsgs);
-            newMsgs.forEach(msg => {
-              // เพิ่มเข้า toast popup
-              setToastList(prev => {
-                console.log('[TOAST] เพิ่ม toast ใหม่', msg);
-                return [
-                  ...prev,
-                  {
-                    id: msg.id,
-                    sender: (chatUsers.find(u => u.user_id === msg.user_id)?.name) || 'User',
-                    message: msg.message,
-                    time: msg.timestamp,
-                    userId: msg.user_id
-                  }
-                ];
-              });
-              // เพิ่มเข้า notification list (ถ้ายังไม่มี)
-              setNotifications(prev => {
-                if (prev.some(n => n.id === msg.id)) return prev;
-                return [
-                  {
-                    id: msg.id,
-                    message: `ข้อความใหม่จาก ${chatUsers.find(u => u.user_id === msg.user_id)?.name || 'User'}: ${msg.message}`,
-                    timestamp: msg.timestamp,
-                    read: false
-                  },
-                  ...prev
-                ];
-              });
-              setHasUnread(true);
-            });
-          } else {
-            if (response.data.length > 0) {
-              console.log('[TOAST] ไม่มีข้อความใหม่', response.data.length, 'ข้อความ');
-            }
-          }
           setChatMessages(response.data);
         }
       } catch (error) {
         console.error("Failed to poll messages:", error);
       }
     };
-    pollMessages();
-    const interval = setInterval(pollMessages, 3000);
-    return () => clearInterval(interval);
-  // eslint-disable-next-line
-  }, [selectedChatUser, chatUsers, chatMessages]);
 
-  // --- Toast popup auto-dismiss ---
-  useEffect(() => {
-    if (toastList.length === 0) return;
-    const timers = toastList.map(toast =>
-      setTimeout(() => {
-        console.log('[TOAST] auto-dismiss', toast);
-        setToastList(prev => prev.filter(t => t.id !== toast.id));
-      }, 15000)
-    );
-    return () => timers.forEach(clearTimeout);
-  }, [toastList]);
+    // Poll immediately
+    pollMessages();
+    
+    // Set up polling every 3 seconds
+    const interval = setInterval(pollMessages, 3000);
+    
+    return () => clearInterval(interval);
+  }, [selectedChatUser]);
 
   // Format last sync time
   const formatLastSync = () => {
@@ -3417,6 +3333,66 @@ const handleSubgroupChange = (e) => {
     if (tab === "logs") navigate("/logs");
     setSidebarMobileOpen(false);
   };
+
+  // เพิ่ม useEffect สำหรับเชื่อมต่อ WebSocket
+  useEffect(() => {
+    if (!token) return;
+
+    const newSocket = io("https://backend-oa-pqy2.onrender.com", {
+      transports: ["websocket"],
+      auth: { token }
+    });
+
+    setSocket(newSocket);
+
+    // รับ event ข้อความใหม่
+    newSocket.on('new_message', (data) => {
+      notificationSound.play().catch(e => console.log("Audio play failed:", e));
+      setNewMessageAlert({
+        user_id: data.user_id,
+        user_name: data.user_name || 'Unknown User',
+        message: data.message,
+        timestamp: new Date(data.timestamp).toLocaleTimeString()
+      });
+      setHasUnread(true);
+      setNotifications(prev => [{
+        id: Date.now(),
+        message: `New message from ${data.user_name || 'Unknown User'}: ${data.message.substring(0, 50)}...`,
+        timestamp: new Date().toISOString(),
+        read: false,
+        related_user_id: data.user_id
+      }, ...prev]);
+      if (selectedChatUser === data.user_id) {
+        setChatMessages(prev => [...prev, {
+          id: data.id,
+          user_id: data.user_id,
+          sender_type: data.sender_type,
+          message: data.message,
+          timestamp: data.timestamp
+        }]);
+      }
+      // ปิด popup อัตโนมัติหลัง 10 วินาที
+      setTimeout(() => {
+        setNewMessageAlert(prev => prev?.user_id === data.user_id ? null : prev);
+      }, 10000);
+    });
+
+    // รับ event การแจ้งเตือนใหม่
+    newSocket.on('new_notification', (data) => {
+      setNotifications(prev => [{
+        id: data.id,
+        message: data.message,
+        timestamp: data.timestamp,
+        read: data.read,
+        related_user_id: data.related_user_id
+      }, ...prev]);
+      setHasUnread(true);
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [token, selectedChatUser]);
 
   return (
     <Routes>
@@ -4468,6 +4444,14 @@ const handleSubgroupChange = (e) => {
                     <NotificationItem
                       key={notification.id}
                       $unread={!notification.read}
+                      onClick={() => {
+                        if (notification.related_user_id) {
+                          setSelectedChatUser(notification.related_user_id);
+                          scrollToChat();
+                          loadChatMessages(notification.related_user_id);
+                        }
+                        markAsRead(notification.id);
+                      }}
                     >
                       <NotificationContent>
                         {notification.message &&
@@ -4529,24 +4513,18 @@ const handleSubgroupChange = (e) => {
               )}
         
             </Container>
+            <GlobalStyles />
+            <NewMessageAlert
+              alert={newMessageAlert}
+              onClose={() => setNewMessageAlert(null)}
+              onNavigate={(userId) => {
+                setSelectedChatUser(userId);
+                setNewMessageAlert(null);
+                scrollToChat();
+                loadChatMessages(userId);
+              }}
+            />
           </MainContent>
-          {/* Toast Popup */}
-          <ToastContainer>
-            {toastList.map(toast => (
-              <Toast key={toast.id} onClick={() => {
-                console.log('[TOAST] คลิก toast', toast);
-                setSelectedChatUser(toast.userId);
-                setActiveTab("chat");
-                setToastList(prev => prev.filter(t => t.id !== toast.id));
-                scrollToChat && scrollToChat();
-              }}>
-                <div style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: 2 }}>ข้อความใหม่จาก {toast.sender}</div>
-                <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: 4 }}>{toast.time ? new Date(toast.time).toLocaleString('th-TH') : ''}</div>
-                <div style={{ marginBottom: 8 }}>{toast.message}</div>
-                <ToastClose onClick={e => { e.stopPropagation(); console.log('[TOAST] ปิด toast', toast); setToastList(prev => prev.filter(t => t.id !== toast.id)); }}>&times;</ToastClose>
-              </Toast>
-            ))}
-          </ToastContainer>
         </>
       ) : <Navigate to="/login" />} />
       <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
@@ -4557,3 +4535,63 @@ const handleSubgroupChange = (e) => {
 }
 
 export default App;
+
+// เพิ่ม Component แจ้งเตือน popup
+const NewMessageAlert = ({ alert, onClose, onNavigate }) => {
+  if (!alert) return null;
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: '20px',
+      right: '20px',
+      width: '350px',
+      backgroundColor: '#ffffff',
+      borderRadius: '12px',
+      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+      zIndex: 1000,
+      padding: '16px',
+      borderLeft: '5px solid #3b82f6',
+      animation: 'slideIn 0.3s ease-out'
+    }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '8px'
+      }}>
+        <h4 style={{ margin: 0, color: '#1e293b' }}>📩 ข้อความใหม่</h4>
+        <button onClick={onClose} style={{
+          background: 'none',
+          border: 'none',
+          fontSize: '1.2rem',
+          cursor: 'pointer',
+          color: '#64748b'
+        }}>×</button>
+      </div>
+      <div style={{ marginBottom: '8px' }}>
+        <strong>จาก:</strong> {alert.user_name}
+      </div>
+      <div style={{ marginBottom: '12px', whiteSpace: 'pre-line' }}>
+        {alert.message.length > 100 ? alert.message.substring(0, 100) + '...' : alert.message}
+      </div>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <small style={{ color: '#64748b' }}>{alert.timestamp}</small>
+        <button onClick={() => onNavigate(alert.user_id)} style={{
+          padding: '6px 12px',
+          backgroundColor: '#3b82f6',
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontSize: '0.85rem'
+        }}>
+          ไปที่แชท
+        </button>
+      </div>
+    </div>
+  );
+};
