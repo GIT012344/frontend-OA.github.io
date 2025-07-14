@@ -1966,6 +1966,17 @@ function App() {
   // --- เพิ่ม state สำหรับ highlight ข้อความล่าสุด ---
   const [highlightMsgId, setHighlightMsgId] = useState(null);
 
+  // --- เพิ่ม map userId -> name จาก tickets หลัก ---
+  const userIdToNameMap = React.useMemo(() => {
+    const map = {};
+    data.forEach(ticket => {
+      if (ticket.user_id && (ticket["ชื่อ"] || ticket["name"])) {
+        map[ticket.user_id] = ticket["ชื่อ"] || ticket["name"];
+      }
+    });
+    return map;
+  }, [data]);
+
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
     if (backendStatus === 'offline' || backendStatus === 'error') {
@@ -4575,10 +4586,10 @@ const handleSubgroupChange = (e) => {
                 {notifications.length > 0 ? (
                   notifications.map((notification) => {
                     const isNewMsg = notification.metadata?.type === 'new_message';
+                    // --- ปรับ logic หา senderName ---
                     let senderName = notification.sender_name || notification.metadata?.sender_name;
-                    if (!senderName && notification.metadata?.user_id && Array.isArray(chatUsers)) {
-                      const found = chatUsers.find(u => u.user_id === notification.metadata.user_id);
-                      senderName = found ? found.name : notification.metadata.user_id;
+                    if (!senderName && notification.metadata?.user_id) {
+                      senderName = userIdToNameMap[notification.metadata.user_id] || notification.metadata.user_id;
                     }
                     senderName = senderName || '-';
                     return (
