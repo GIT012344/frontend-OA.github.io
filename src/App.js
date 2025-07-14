@@ -3476,14 +3476,14 @@ const handleSubgroupChange = (e) => {
         // เพิ่มเข้า notifications ด้วย
         setNotifications(prev => [
           {
-            id: `newmsg-${latestMsg.id}`,
+            id: `newmsg-${latestMsg.id || Date.now()}`,
             message: latestMsg.message,
             timestamp: latestMsg.timestamp,
             read: false,
             metadata: {
               type: 'new_message',
               user_id: latestGroup.user_id,
-              name: latestGroup.name
+              name: latestGroup.name // ใช้ name (sender_name) แทน user_id
             }
           },
           ...prev
