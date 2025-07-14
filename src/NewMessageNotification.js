@@ -100,17 +100,12 @@ const timeStyle = {
 };
 
 export default function NewMessageNotification({ alert, onClose, onReply }) {
-  useEffect(() => {
-    if (!alert) return;
-    const timer = setTimeout(onClose, 60000); // แสดง 1 นาที
-    return () => clearTimeout(timer);
-  }, [alert, onClose]);
-
+  // ไม่ต้อง setTimeout ลบเอง ให้ปิดเองเท่านั้น
   if (!alert) return null;
   return (
     <div style={popupStyle}>
       <div style={headerStyle}>
-        <span>📩 ข้อความใหม่จาก {alert.user}</span>
+        <span>📩 ข้อความใหม่จาก {alert.sender_name || alert.user}</span>
         <button onClick={onClose} style={{
           background: 'none', border: 'none', fontSize: 22, color: '#64748b', cursor: 'pointer'
         }}>&times;</button>

@@ -2017,13 +2017,13 @@ function App() {
     forceUpdate();
     
     // 2. เตรียมข้อมูลสำหรับ modal
-  setTempTicketId(ticketId);
-  setTempNewStatus(newStatus);
-  setStatusChangeNote("");
-  setStatusChangeRemarks("");
+    setTempTicketId(ticketId);
+    setTempNewStatus(newStatus);
+    setStatusChangeNote("");
+    setStatusChangeRemarks("");
     
     // 3. เปิด modal
-  setShowStatusChangeModal(true);
+    setShowStatusChangeModal(true);
   }; // end handleStatusChangeWithNote
   const showErrorToast = (message) => {
     // แสดง toast notification
@@ -2067,13 +2067,13 @@ function App() {
   
     try {
       // 3. ส่งข้อมูลไป backend
-    const response = await axios.post(
+      const response = await axios.post(
         "https://backend-oa-pqy2.onrender.com/update-status",
-      {
-        ticket_id: tempTicketId,
-        status: tempNewStatus,
-        changed_by: authUser?.name || authUser?.pin || "admin",
-        note: statusChangeNote,
+        {
+          ticket_id: tempTicketId,
+          status: tempNewStatus,
+          changed_by: authUser?.name || authUser?.pin || "admin",
+          note: statusChangeNote,
           remarks: statusChangeRemarks,
           updated_at: new Date().toISOString()
         },
@@ -2084,11 +2084,11 @@ function App() {
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache'
           }
-      }
-    );
-
+        }
+      );
+  
       // 4. จัดการผลลัพธ์
-    if (response.data.success) {
+      if (response.data.success) {
         // 4.1 อัพเดท UI แบบ Optimistic
         // update local data again to ensure freshest state
       const updateLocalData = (items) =>
@@ -2116,13 +2116,13 @@ function App() {
         }
   
         // 4.3 แสดงข้อความสำเร็จ
-      setEditSuccess("อัปเดตสถานะและบันทึกหมายเหตุเรียบร้อยแล้ว");
-      setTimeout(() => setEditSuccess(""), 3000);
+        setEditSuccess("อัปเดตสถานะและบันทึกหมายเหตุเรียบร้อยแล้ว");
+        setTimeout(() => setEditSuccess(""), 3000);
   
         // 4.4 ดึงข้อมูลใหม่เพื่อ sync
         await fetchData();
   
-    } else {
+      } else {
         // 5. จัดการกรณี backend ตอบกลับ error
         console.error("Backend update failed:", response.data.error);
         setData(originalData); // rollback
@@ -2132,8 +2132,8 @@ function App() {
         
         // แสดง toast หรือ notification
         showErrorToast(`ไม่สามารถอัพเดทสถานะได้: ${response.data.error}`);
-    }
-  } catch (error) {
+      }
+    } catch (error) {
       // 6. จัดการกรณีเกิด error ในการเชื่อมต่อ
       console.error("Error updating status:", error);
       setData(originalData); // rollback
@@ -2292,7 +2292,7 @@ const cancelStatusChange = () => {
 
     // Poll ทันทีเมื่อโหลดหน้า (หากไม่ได้ pause)
     if (!isPollingPaused) {
-    pollData();
+      pollData();
     }
     // Poll ทุก 5 วินาที โดยจะข้ามหากกำลัง pause
     const interval = setInterval(() => {
@@ -2569,10 +2569,10 @@ const cancelStatusChange = () => {
   // ใช้ข้อมูลต้นฉบับเพื่อเช็ก oldStatus และ rollback หากจำเป็น
   const originalItems = isOfflineMode ? [...offlineData] : [...data];
   const target = originalItems.find((d) => d["Ticket ID"] === ticketId);
-    const oldStatus = target?.status || target?.สถานะ || "";
+  const oldStatus = target?.status || target?.สถานะ || "";
 
-    // ถ้าไม่เปลี่ยนสถานะ ไม่ต้องดำเนินการใด ๆ
-    if (newStatus === oldStatus) return;
+  // ถ้าไม่เปลี่ยนสถานะ ไม่ต้องดำเนินการใด ๆ
+  if (newStatus === oldStatus) return;
 
   // ---------- Optimistic Update ---------- //
   const updateFn = (items) =>
@@ -2602,21 +2602,21 @@ const cancelStatusChange = () => {
     try { pollControllerRef.current.abort(); } catch {}
   }
 
-    axios
-      .post(
-        "https://backend-oa-pqy2.onrender.com/update-status",
-        {
-          ticket_id: ticketId,
-          status: newStatus,
-          changed_by: authUser?.name || authUser?.pin || "admin",
+  axios
+    .post(
+      "https://backend-oa-pqy2.onrender.com/update-status",
+      {
+        ticket_id: ticketId,
+        status: newStatus,
+        changed_by: authUser?.name || authUser?.pin || "admin",
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
         },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      )
-      .then(() => {
+      }
+    )
+    .then(() => {
       console.log("✅ Status updated (server confirmed)");
       // Wait briefly so the backend has written the new status, then refresh and resume polling
       setTimeout(() => {
@@ -2636,7 +2636,7 @@ const cancelStatusChange = () => {
       // Resume polling even on failure
       setIsPollingPaused(false);
     });
-  };
+};  
 
   // Remove old chat functions and replace with new chat system
   const handleUserSelect = (e) => {
@@ -3467,27 +3467,33 @@ const handleSubgroupChange = (e) => {
         const latestGroup = response.data.new_messages[0];
         const latestMsg = latestGroup.messages[latestGroup.messages.length - 1];
         setNewMessageAlert({
-          user: latestGroup.name,
+          user: latestGroup.name, // ใช้ชื่อผู้ส่ง
           message: latestMsg.message,
           timestamp: latestMsg.timestamp,
-          user_id: latestGroup.user_id
+          user_id: latestGroup.user_id,
+          sender_name: latestGroup.name // เพิ่ม sender_name
         });
         setLastMessageCheck(new Date(latestMsg.timestamp));
-        // เพิ่มเข้า notifications ด้วย
-        setNotifications(prev => [
-          {
-            id: `newmsg-${latestMsg.id || Date.now()}`,
-            message: latestMsg.message,
-            timestamp: latestMsg.timestamp,
-            read: false,
-            metadata: {
-              type: 'new_message',
-              user_id: latestGroup.user_id,
-              name: latestGroup.name // ใช้ name (sender_name) แทน user_id
-            }
-          },
-          ...prev
-        ]);
+        // เพิ่มเข้า notifications แบบถาวร (ไม่ลบเอง)
+        setNotifications(prev => {
+          // ตรวจสอบว่ามี notification นี้อยู่แล้วหรือยัง (กันซ้ำ)
+          const exists = prev.some(n => n.id === `newmsg-${latestMsg.id}`);
+          if (exists) return prev;
+          return [
+            {
+              id: `newmsg-${latestMsg.id}`,
+              message: latestMsg.message,
+              timestamp: latestMsg.timestamp,
+              read: false,
+              metadata: {
+                type: 'new_message',
+                user_id: latestGroup.user_id,
+                sender_name: latestGroup.name // ใช้ sender_name
+              }
+            },
+            ...prev
+          ];
+        });
         setHasUnread(true);
       }
     } catch (e) {
@@ -4146,24 +4152,24 @@ const handleSubgroupChange = (e) => {
                               <StatusCell>
                                 {isEditing ? (
                                   <StatusSelect
-                                    value={editForm.status}
-                                    onChange={e => {
+                                  value={editForm.status}
+                                  onChange={e => {
                                     const newStatus = e.target.value;
                                     // อัพเดท local state ทันที
                                     setEditForm(prev => ({ ...prev, status: newStatus }));
                                     // เปิด modal สำหรับกรอกหมายเหตุ
                                     if (editForm.status !== newStatus) {
                                       handleStatusChangeWithNote(row["Ticket ID"], newStatus);
-                                      }
-                                    }}
-                                    disabled={editLoading}
-                                  >
-                                    {STATUS_OPTIONS.map(opt => (
-                                      <option key={opt.value} value={opt.value}>
-                                        {`${opt.icon ? opt.icon + ' ' : ''}${opt.label}`}
-                                      </option>
-                                    ))}
-                                  </StatusSelect>
+                                    }
+                                  }}
+                                  disabled={editLoading}
+                                >
+                                  {STATUS_OPTIONS.map(opt => (
+                                    <option key={opt.value} value={opt.value}>
+                                      {`${opt.icon ? opt.icon + ' ' : ''}${opt.label}`}
+                                    </option>
+                                  ))}
+                                </StatusSelect>
                                 ) : (
                                   (() => {
                                     const status = row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None";
@@ -4171,8 +4177,8 @@ const handleSubgroupChange = (e) => {
                                     return (
                                       <div
                                          key={`status-${row["Ticket ID"]}-${row["สถานะ"]}`}
-                                        className="status-badge"
-                                        data-status={status}
+                                         className="status-badge"
+                                         data-status={status}
                                       >
                                         {statusOption?.icon || '📌'} {status}
                                       </div>
@@ -4403,7 +4409,7 @@ const handleSubgroupChange = (e) => {
   >
     {isUpdatingStatus ? 'กำลังอัปเดต...' : 'ยืนยันการเปลี่ยนสถานะ'}
   </ConfirmButton>
-                      </ModalButtonGroup>
+</ModalButtonGroup>
                     </ModalContent>
                   </StatusChangeModal>
                 )}
@@ -4570,7 +4576,7 @@ const handleSubgroupChange = (e) => {
                       <NotificationContent>
                         {notification.metadata?.type === 'new_message' ? (
                           <>
-                            <div><b>ผู้ส่ง:</b> {notification.metadata?.name || notification.metadata?.user_id}</div>
+                            <div><b>ผู้ส่ง:</b> {notification.metadata?.sender_name || notification.metadata?.name || notification.metadata?.user_id}</div>
                             <div><b>เนื้อหา:</b> {notification.message}</div>
                             <div><b>เวลา:</b> {new Date(notification.timestamp).toLocaleString('th-TH')}</div>
                           </>
@@ -4622,7 +4628,7 @@ const handleSubgroupChange = (e) => {
             {/* ป๊อบอัพแจ้งเตือนข้อความใหม่ */}
             {newMessageAlert && (
               <NewMessageNotification
-                alert={newMessageAlert}
+                alert={{ ...newMessageAlert, sender_name: newMessageAlert.sender_name || newMessageAlert.user }}
                 onClose={() => setNewMessageAlert(null)}
                 onReply={(user_id) => {
                   setSelectedChatUser(user_id);
