@@ -4575,7 +4575,12 @@ const handleSubgroupChange = (e) => {
                 {notifications.length > 0 ? (
                   notifications.map((notification) => {
                     const isNewMsg = notification.metadata?.type === 'new_message';
-                    const senderName = notification.metadata?.sender_name || notification.sender_name || notification.metadata?.name || chatUsers.find(u => u.user_id === notification.metadata?.user_id)?.name || notification.metadata?.user_id || '-';
+                    let senderName = notification.sender_name || notification.metadata?.sender_name;
+                    if (!senderName && notification.metadata?.user_id && Array.isArray(chatUsers)) {
+                      const found = chatUsers.find(u => u.user_id === notification.metadata.user_id);
+                      senderName = found ? found.name : notification.metadata.user_id;
+                    }
+                    senderName = senderName || '-';
                     return (
                       <NotificationItem
                         key={notification.id}
@@ -4585,8 +4590,8 @@ const handleSubgroupChange = (e) => {
                           setSelectedChatUser(notification.metadata.user_id);
                           setActiveTab('chat');
                           scrollToChat();
-                          loadChatMessages(notification.metadata.user_id); // โหลดแชททันที
-                          setHighlightMsgId(null); // ไม่ต้องรอ msg_id
+                          loadChatMessages(notification.metadata.user_id);
+                          setHighlightMsgId(null);
                           markAsRead(notification.id);
                         } : undefined}
                       >
