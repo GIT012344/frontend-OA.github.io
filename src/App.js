@@ -4619,6 +4619,18 @@ const handleSubgroupChange = (e) => {
               )}
         
             <ToastContainer />
+            {/* ป๊อบอัพแจ้งเตือนข้อความใหม่ */}
+            {newMessageAlert && (
+              <NewMessageNotification
+                alert={newMessageAlert}
+                onClose={() => setNewMessageAlert(null)}
+                onReply={(user_id) => {
+                  setSelectedChatUser(user_id);
+                  setActiveTab('chat');
+                  scrollToChat();
+                }}
+              />
+            )}
             </Container>
           </MainContent>
         </>
