@@ -2063,7 +2063,7 @@ function App() {
     try {
       // 3. ส่งข้อมูลไป backend
       const response = await axios.post(
-        "http://127.0.0.1:5001/update-status",
+        "https://backend-oa-pqy2.onrender.com/update-status",
         {
           ticket_id: tempTicketId,
           status: tempNewStatus,
@@ -2212,7 +2212,7 @@ const cancelStatusChange = () => {
   // Health check function to test backend connectivity
   const checkBackendHealth = async () => {
     try {
-      const response = await axios.get("http://127.0.0.1:5001/api/health", {
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/health", {
         timeout: 5000,
         headers: {
           'Content-Type': 'application/json',
@@ -2234,7 +2234,7 @@ const cancelStatusChange = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await axios.get("http://127.0.0.1:5001/api/data", {
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
         params: { ts: Date.now() },
         headers: { 'Cache-Control': 'no-cache' }
       });
@@ -2262,7 +2262,7 @@ const cancelStatusChange = () => {
   const controller = new AbortController();
   pollControllerRef.current = controller;
       try {
-        const response = await fetch(`http://127.0.0.1:5001/api/data?ts=${Date.now()}`, {
+        const response = await fetch(`https://backend-oa-pqy2.onrender.com/api/data?ts=${Date.now()}`, {
           signal: controller.signal,
           cache: "no-store",
           headers: {
@@ -2408,7 +2408,7 @@ const cancelStatusChange = () => {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const response = await axios.get("http://127.0.0.1:5001/api/notifications", {
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/notifications", {
           timeout: 5000, // 5 second timeout for notifications
           headers: {
             'Content-Type': 'application/json',
@@ -2451,7 +2451,7 @@ const cancelStatusChange = () => {
     if (!startDate) return;
 
     axios
-      .get("http://127.0.0.1:5001/api/data-by-date", {
+      .get("https://backend-oa-pqy2.onrender.com/api/data-by-date", {
         params: { date: startDate },
       })
       .then((res) => {
@@ -2472,7 +2472,7 @@ const cancelStatusChange = () => {
     setTypeFilter("all");
 
     axios
-      .get("http://127.0.0.1:5001/api/data")
+      .get("https://backend-oa-pqy2.onrender.com/api/data")
       .then((res) => setData(Array.isArray(res.data) ? res.data : []))
       .catch((err) => {
         console.error(err);
@@ -2484,7 +2484,7 @@ const cancelStatusChange = () => {
     if (id) {
       // Mark single notification as read
       axios
-        .post("http://127.0.0.1:5001/mark-notification-read", { id })
+        .post("https://backend-oa-pqy2.onrender.com/mark-notification-read", { id })
         .then(() => {
           setNotifications((prev) =>
             prev.map((n) => (n.id === id ? { ...n, read: true } : n))
@@ -2494,7 +2494,7 @@ const cancelStatusChange = () => {
     } else {
       // Mark all notifications as read
       axios
-        .post("http://127.0.0.1:5001/mark-all-notifications-read")
+        .post("https://backend-oa-pqy2.onrender.com/mark-all-notifications-read")
         .then(() => {
           setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
           setHasUnread(false);
@@ -2592,14 +2592,14 @@ const cancelStatusChange = () => {
   // --------------------------------------- //
   // Pause polling; will resume after backend confirms
   setIsPollingPaused(true);
-  // abort any current polling request so old data won’t overwrite optimistic UI
+  // abort any current polling request so old data won't overwrite optimistic UI
   if (pollControllerRef.current) {
     try { pollControllerRef.current.abort(); } catch {}
   }
 
   axios
     .post(
-      "http://127.0.0.1:5001/update-status",
+      "https://backend-oa-pqy2.onrender.com/update-status",
       {
         ticket_id: ticketId,
         status: newStatus,
@@ -2651,7 +2651,7 @@ const cancelStatusChange = () => {
 
   const deleteNotification = async (id) => {
     try {
-      await axios.post("http://127.0.0.1:5001/delete-notification", { id });
+      await axios.post("https://backend-oa-pqy2.onrender.com/delete-notification", { id });
       setNotifications(notifications.filter((n) => n.id !== id));
     } catch (err) {
       console.error("Error deleting notification:", err);
@@ -2662,7 +2662,7 @@ const cancelStatusChange = () => {
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?")) {
       try {
         const response = await axios.post(
-          "http://127.0.0.1:5001/delete-ticket",
+          "https://backend-oa-pqy2.onrender.com/delete-ticket",
           { ticket_id: ticketId },
           {
             headers: {
@@ -2698,7 +2698,7 @@ const cancelStatusChange = () => {
     
     setLoadingChat(true);
     try {
-      const response = await axios.get("http://127.0.0.1:5001/api/messages", {
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
         params: { user_id: userId }
       });
       setChatMessages(response.data || []);
@@ -2720,7 +2720,7 @@ const cancelStatusChange = () => {
         sender_type: 'admin', // ต้องเป็น 'admin' (ตัวเล็ก)
         message: newMessage
       };
-      const response = await axios.post("http://127.0.0.1:5001/api/messages", payload);
+      const response = await axios.post("https://backend-oa-pqy2.onrender.com/api/messages", payload);
 
       // Add new message to local state (ถ้า backend ส่งกลับ message ใหม่)
       setChatMessages(prev => [
@@ -2752,7 +2752,7 @@ const cancelStatusChange = () => {
 
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบประวัติการสนทนาทั้งหมด?")) {
       try {
-        await axios.post("http://127.0.0.1:5001/api/messages/delete", {
+        await axios.post("https://backend-oa-pqy2.onrender.com/api/messages/delete", {
           user_id: selectedChatUser
         });
         setChatMessages([]);
@@ -2774,7 +2774,7 @@ const cancelStatusChange = () => {
 
     try {
       const response = await axios.post(
-        "http://127.0.0.1:5001/send-announcement",
+        "https://backend-oa-pqy2.onrender.com/send-announcement",
         { message: announcementMessage },
         { headers: { "Content-Type": "application/json" } }
       );
@@ -2806,7 +2806,7 @@ const cancelStatusChange = () => {
   useEffect(() => {
     const fetchChatUsers = async () => {
       try {
-        const response = await axios.get("http://127.0.0.1:5001/api/chat-users");
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/chat-users");
         // response.data should be an array of { user_id, name }
         setChatUsers(Array.isArray(response.data) ? response.data : []);
       } catch (error) {
@@ -2823,7 +2823,7 @@ const cancelStatusChange = () => {
 
     const pollMessages = async () => {
       try {
-        const response = await axios.get("http://127.0.0.1:5001/api/messages", {
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
           params: { user_id: selectedChatUser }
         });
         
@@ -2874,7 +2874,7 @@ const cancelStatusChange = () => {
     setRetryCount(prev => prev + 1);
     
     try {
-      const response = await axios.get("http://127.0.0.1:5001/api/data", {
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
         timeout: 15000, // 15 second timeout for manual retry
         headers: {
           'Content-Type': 'application/json',
@@ -3375,7 +3375,7 @@ const handleSubgroupChange = (e) => {
       if (isValid(editForm.status)) payload.status = editForm.status;
   
       const response = await axios.post(
-        "http://127.0.0.1:5001/update-ticket",
+        "https://backend-oa-pqy2.onrender.com/update-ticket",
         payload,
         {
           headers: {

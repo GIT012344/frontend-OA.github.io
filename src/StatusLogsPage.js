@@ -175,7 +175,7 @@ function StatusLogsPage() {
 
   // ดึงข้อมูล Ticket ทั้งหมดเพื่อ map หมวดหมู่
   useEffect(() => {
-    axios.get('http://127.0.0.1:5001/api/data')
+    axios.get('https://backend-oa-pqy2.onrender.com/api/data')
       .then(res => {
         if (!Array.isArray(res.data)) return;
         const m = {};
