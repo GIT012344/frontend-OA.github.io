@@ -3474,26 +3474,18 @@ const handleSubgroupChange = (e) => {
           sender_name: latestGroup.name // เพิ่ม sender_name
         });
         setLastMessageCheck(new Date(latestMsg.timestamp));
-        // เพิ่มเข้า notifications แบบถาวร (ไม่ลบเอง)
-        setNotifications(prev => {
-          // ตรวจสอบว่ามี notification นี้อยู่แล้วหรือยัง (กันซ้ำ)
-          const exists = prev.some(n => n.id === `newmsg-${latestMsg.id}`);
-          if (exists) return prev;
-          return [
-            {
-              id: `newmsg-${latestMsg.id}`,
-              message: latestMsg.message,
-              timestamp: latestMsg.timestamp,
-              read: false,
-              metadata: {
-                type: 'new_message',
-                user_id: latestGroup.user_id,
-                sender_name: latestGroup.name // ใช้ sender_name
-              }
-            },
-            ...prev
-          ];
+        // --- เรียก backend เพื่อบันทึก notification ลงฐานข้อมูล ---
+        await axios.post("https://backend-oa-pqy2.onrender.com/api/add-notification", {
+          message: latestMsg.message,
+          sender_name: latestGroup.name,
+          user_id: latestGroup.user_id,
+          meta_data: {
+            type: 'new_message',
+            user_id: latestGroup.user_id,
+            sender_name: latestGroup.name
+          }
         });
+        // ไม่ต้อง setNotifications ฝั่ง client โดยตรง ให้ fetch จาก backend เท่านั้น
         setHasUnread(true);
       }
     } catch (e) {
