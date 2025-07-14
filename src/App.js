@@ -11,6 +11,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import DashboardSection from "./DashboardSection";
 import StatusLogsPage from './StatusLogsPage';
+import NewMessageNotification from './NewMessageNotification';
 
 // Define the type-group-subgroup mapping
 const TYPE_GROUP_SUBGROUP = {
@@ -1958,6 +1959,10 @@ function App() {
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [mobileActiveTab, setMobileActiveTab] = useState("dashboard");
 
+  // --- แจ้งเตือนข้อความใหม่ ---
+  const [newMessageAlert, setNewMessageAlert] = useState(null);
+  const [lastMessageCheck, setLastMessageCheck] = useState(new Date());
+
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
     if (backendStatus === 'offline' || backendStatus === 'error') {
@@ -3451,6 +3456,49 @@ const handleSubgroupChange = (e) => {
     setSidebarMobileOpen(false);
   };
 
+  // --- ฟังก์ชันเช็คข้อความใหม่ ---
+  const checkForNewMessages = useCallback(async () => {
+    try {
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/check-new-messages", {
+        params: { last_checked: lastMessageCheck.toISOString() }
+      });
+      if (response.data.new_messages && response.data.new_messages.length > 0) {
+        // แสดงเฉพาะข้อความใหม่ล่าสุดจาก user คนล่าสุด
+        const latestGroup = response.data.new_messages[0];
+        const latestMsg = latestGroup.messages[latestGroup.messages.length - 1];
+        setNewMessageAlert({
+          user: latestGroup.name,
+          message: latestMsg.message,
+          timestamp: latestMsg.timestamp,
+          user_id: latestGroup.user_id
+        });
+        setLastMessageCheck(new Date(latestMsg.timestamp));
+        // เพิ่มเข้า notifications ด้วย
+        setNotifications(prev => [
+          {
+            id: `newmsg-${latestMsg.id}`,
+            message: latestMsg.message,
+            timestamp: latestMsg.timestamp,
+            read: false,
+            metadata: {
+              type: 'new_message',
+              user_id: latestGroup.user_id,
+              name: latestGroup.name
+            }
+          },
+          ...prev
+        ]);
+        setHasUnread(true);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [lastMessageCheck]);
+  useEffect(() => {
+    const interval = setInterval(checkForNewMessages, 7000);
+    return () => clearInterval(interval);
+  }, [checkForNewMessages]);
+
   return (
     <Routes>
       <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
@@ -4510,24 +4558,24 @@ const handleSubgroupChange = (e) => {
                     <NotificationItem
                       key={notification.id}
                       $unread={!notification.read}
+                      onClick={() => {
+                        if (notification.metadata?.type === 'new_message') {
+                          setSelectedChatUser(notification.metadata.user_id);
+                          setActiveTab('chat');
+                          scrollToChat();
+                          markAsRead(notification.id);
+                        }
+                      }}
                     >
                       <NotificationContent>
-                        {notification.message &&
-                          typeof notification.message === "string" &&
-                          notification.message.includes("New message from") ? (
+                        {notification.metadata?.type === 'new_message' ? (
                           <>
-                            <span style={{ fontWeight: "bold", marginBottom: "4px", display: "block" }}>
-                              New Message 📩 from{" "}
-                              {notification.message
-                                .split(" from ")[1]
-                                ?.split(" for ticket")[0] || "Unknown"}
-                            </span>
-                            <span style={{ background: "#f0f4f8", padding: "8px", borderRadius: "4px", display: "block" }}>
-                              {notification.message.split(": ").slice(1).join(": ")}
-                            </span>
+                            <div><b>ผู้ส่ง:</b> {notification.metadata?.name || notification.metadata?.user_id}</div>
+                            <div><b>เนื้อหา:</b> {notification.message}</div>
+                            <div><b>เวลา:</b> {new Date(notification.timestamp).toLocaleString('th-TH')}</div>
                           </>
                         ) : (
-                          notification.message || "No message content"
+                          notification.message
                         )}
                       </NotificationContent>
                       <div

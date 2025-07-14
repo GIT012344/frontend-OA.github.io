@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import styled from 'styled-components';
 
 const NotificationContainer = styled.div`
@@ -60,33 +60,85 @@ const CloseButton = styled.button`
   &:hover { color: #ef4444; }
 `;
 
-export default function NewMessageNotification({ messages = [], handleNotificationClick, handleClose }) {
-  if (!messages || messages.length === 0) return null;
+const popupStyle = {
+  position: 'fixed',
+  bottom: 32,
+  right: 32,
+  minWidth: 340,
+  maxWidth: 420,
+  background: '#fff',
+  borderRadius: 16,
+  boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+  zIndex: 2000,
+  padding: 0,
+  overflow: 'hidden',
+  animation: 'slideInNotif 0.3s',
+  borderLeft: '8px solid #3b82f6'
+};
+
+const headerStyle = {
+  background: '#f1f5f9',
+  padding: '16px 20px',
+  fontWeight: 700,
+  fontSize: '1.1rem',
+  color: '#1e293b',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between'
+};
+
+const bodyStyle = {
+  padding: '18px 20px',
+  fontSize: '1rem',
+  color: '#334155'
+};
+
+const timeStyle = {
+  fontSize: '0.85rem',
+  color: '#64748b',
+  marginTop: 8
+};
+
+export default function NewMessageNotification({ alert, onClose, onReply }) {
+  useEffect(() => {
+    if (!alert) return;
+    const timer = setTimeout(onClose, 7000); // แสดง 7 วินาที
+    return () => clearTimeout(timer);
+  }, [alert, onClose]);
+
+  if (!alert) return null;
   return (
-    <NotificationContainer>
-      {messages.map(msg => (
-        <NotificationItem 
-          key={msg.id} 
-          onClick={() => handleNotificationClick && handleNotificationClick(msg)}
-        >
-          <NotificationHeader>
-            <SenderName>
-              {msg.sender_name || 'ผู้ใช้ไม่ระบุชื่อ'}
-              <CloseButton onClick={e => { e.stopPropagation(); handleClose && handleClose(msg.id, e); }}>
-                &times;
-              </CloseButton>
-            </SenderName>
-            <Timestamp>
-              {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
-            </Timestamp>
-          </NotificationHeader>
-          <MessageContent>
-            {msg.message && msg.message.length > 100 
-              ? `${msg.message.substring(0, 100)}...` 
-              : msg.message}
-          </MessageContent>
-        </NotificationItem>
-      ))}
-    </NotificationContainer>
+    <div style={popupStyle}>
+      <div style={headerStyle}>
+        <span>📩 ข้อความใหม่จาก {alert.user}</span>
+        <button onClick={onClose} style={{
+          background: 'none', border: 'none', fontSize: 22, color: '#64748b', cursor: 'pointer'
+        }}>&times;</button>
+      </div>
+      <div style={bodyStyle}>
+        <div style={{ marginBottom: 8 }}>{alert.message}</div>
+        <div style={timeStyle}>{new Date(alert.timestamp).toLocaleString('th-TH')}</div>
+        <button
+          onClick={() => { onReply(alert.user_id); onClose(); }}
+          style={{
+            marginTop: 12,
+            background: '#3b82f6',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 8,
+            padding: '8px 18px',
+            fontWeight: 600,
+            fontSize: '1rem',
+            cursor: 'pointer'
+          }}
+        >ไปที่แชท</button>
+      </div>
+      <style>
+        {`@keyframes slideInNotif {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }`}
+      </style>
+    </div>
   );
 } 
