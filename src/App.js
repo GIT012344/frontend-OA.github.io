@@ -1963,6 +1963,9 @@ function App() {
   const [newMessageAlert, setNewMessageAlert] = useState(null);
   const [lastMessageCheck, setLastMessageCheck] = useState(new Date());
 
+  // --- เพิ่ม state สำหรับ highlight ข้อความล่าสุด ---
+  const [highlightMsgId, setHighlightMsgId] = useState(null);
+
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
     if (backendStatus === 'offline' || backendStatus === 'error') {
@@ -3497,6 +3500,20 @@ const handleSubgroupChange = (e) => {
     return () => clearInterval(interval);
   }, [checkForNewMessages]);
 
+  useEffect(() => {
+    if (highlightMsgId && chatMessages.length > 0) {
+      setTimeout(() => {
+        const el = document.getElementById(`msg-${highlightMsgId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.style.background = '#fef9c3';
+          setTimeout(() => { el.style.background = ''; }, 2000);
+        }
+        setHighlightMsgId(null);
+      }, 300);
+    }
+  }, [highlightMsgId, chatMessages]);
+
   return (
     <Routes>
       <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
@@ -4466,7 +4483,11 @@ const handleSubgroupChange = (e) => {
                           </div>
                         )}
                         {chatMessages.map((msg) => (
-                          <MessageBubble key={msg.id} $isAdmin={msg.sender_type === 'admin'}>
+                          <MessageBubble
+                            key={msg.id}
+                            $isAdmin={msg.sender_type === 'admin'}
+                            id={`msg-${msg.id}`}
+                          >
                             <MessageSender $isAdmin={msg.sender_type === 'admin'}>
                               {msg.sender_type === 'admin'
                                 ? 'Admin'
@@ -4561,6 +4582,7 @@ const handleSubgroupChange = (e) => {
                           setSelectedChatUser(notification.metadata.user_id);
                           setActiveTab('chat');
                           scrollToChat();
+                          setHighlightMsgId(notification.metadata?.msg_id || null); // ถ้ามี msg_id
                           markAsRead(notification.id);
                         }
                       }}
