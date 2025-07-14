@@ -100,7 +100,12 @@ const timeStyle = {
 };
 
 export default function NewMessageNotification({ alert, onClose, onReply }) {
-  // ไม่ต้อง setTimeout ลบเอง ให้ปิดเองเท่านั้น
+  useEffect(() => {
+    if (!alert) return;
+    const timer = setTimeout(onClose, 7000); // แสดง 7 วินาที
+    return () => clearTimeout(timer);
+  }, [alert, onClose]);
+
   if (!alert) return null;
   return (
     <div style={popupStyle}>

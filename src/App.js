@@ -4582,7 +4582,7 @@ const handleSubgroupChange = (e) => {
                           setSelectedChatUser(notification.metadata.user_id);
                           setActiveTab('chat');
                           scrollToChat();
-                          setHighlightMsgId(notification.metadata?.msg_id || null); // ถ้ามี msg_id
+                          setHighlightMsgId(notification.metadata?.msg_id || null);
                           markAsRead(notification.id);
                         }
                       }}
@@ -4590,7 +4590,7 @@ const handleSubgroupChange = (e) => {
                       <NotificationContent>
                         {notification.metadata?.type === 'new_message' ? (
                           <>
-                            <div><b>ผู้ส่ง:</b> {notification.metadata?.sender_name || notification.metadata?.name || notification.metadata?.user_id}</div>
+                            <div><b>ผู้ส่ง:</b> {notification.metadata?.sender_name || notification.sender_name || notification.metadata?.name || notification.metadata?.user_id}</div>
                             <div><b>เนื้อหา:</b> {notification.message}</div>
                             <div><b>เวลา:</b> {new Date(notification.timestamp).toLocaleString('th-TH')}</div>
                           </>
