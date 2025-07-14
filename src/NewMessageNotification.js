@@ -102,7 +102,7 @@ const timeStyle = {
 export default function NewMessageNotification({ alert, onClose, onReply }) {
   useEffect(() => {
     if (!alert) return;
-    const timer = setTimeout(onClose, 7000); // แสดง 7 วินาที
+    const timer = setTimeout(onClose, 60000); // แสดง 1 นาที
     return () => clearTimeout(timer);
   }, [alert, onClose]);
 
