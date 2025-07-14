@@ -4573,60 +4573,62 @@ const handleSubgroupChange = (e) => {
                 </NotificationHeader>
 
                 {notifications.length > 0 ? (
-                  notifications.map((notification) => (
-                    <NotificationItem
-                      key={notification.id}
-                      $unread={!notification.read}
-                      onClick={() => {
-                        if (notification.metadata?.type === 'new_message') {
+                  notifications.map((notification) => {
+                    const isNewMsg = notification.metadata?.type === 'new_message';
+                    return (
+                      <NotificationItem
+                        key={notification.id}
+                        $unread={!notification.read}
+                        style={{ cursor: isNewMsg ? 'pointer' : 'default' }}
+                        onClick={isNewMsg ? () => {
                           setSelectedChatUser(notification.metadata.user_id);
                           setActiveTab('chat');
                           scrollToChat();
                           setHighlightMsgId(notification.metadata?.msg_id || null);
                           markAsRead(notification.id);
-                        }
-                      }}
-                    >
-                      <NotificationContent>
-                        {notification.metadata?.type === 'new_message' ? (
-                          <>
-                            <div><b>ผู้ส่ง:</b> {notification.metadata?.sender_name || notification.sender_name || notification.metadata?.name || notification.metadata?.user_id}</div>
-                            <div><b>เนื้อหา:</b> {notification.message}</div>
-                            <div><b>เวลา:</b> {new Date(notification.timestamp).toLocaleString('th-TH')}</div>
-                          </>
-                        ) : (
-                          notification.message
-                        )}
-                      </NotificationContent>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          marginTop: "8px",
-                        }}
+                        } : undefined}
                       >
-                        <NotificationTime>
-                          {new Date(notification.timestamp).toLocaleString()}
-                        </NotificationTime>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteNotification(notification.id);
-                          }}
+                        <NotificationContent>
+                          {isNewMsg ? (
+                            <>
+                              <div><b>ผู้ส่ง:</b> {notification.metadata?.sender_name || notification.sender_name || notification.metadata?.name || notification.metadata?.user_id || '-'}</div>
+                              <div><b>เนื้อหา:</b> {notification.message}</div>
+                              <div><b>เวลา:</b> {new Date(notification.timestamp).toLocaleString('th-TH')}</div>
+                            </>
+                          ) : (
+                            notification.message
+                          )}
+                        </NotificationContent>
+                        <div
                           style={{
-                            background: "none",
-                            border: "none",
-                            color: "#ef4444",
-                            cursor: "pointer",
-                            fontSize: "0.75rem",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginTop: "8px",
                           }}
                         >
-                          ลบ
-                        </button>
-                      </div>
-                    </NotificationItem>
-                  ))
+                          <NotificationTime>
+                            {new Date(notification.timestamp).toLocaleString()}
+                          </NotificationTime>
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              deleteNotification(notification.id);
+                            }}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: "#ef4444",
+                              cursor: "pointer",
+                              fontSize: "0.75rem",
+                            }}
+                          >
+                            ลบ
+                          </button>
+                        </div>
+                      </NotificationItem>
+                    );
+                  })
                 ) : (
                   <EmptyNotifications>ไม่มีการแจ้งเตือน</EmptyNotifications>
                 )}
