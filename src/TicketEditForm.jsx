@@ -51,7 +51,7 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
 
         const rawType = initialTicket.type || "";
     const typeUpper = rawType.toUpperCase();
-    const type = typeUpper === "SERVICE" ? "Service" : typeUpper === "HELPDESK" ? "Helpdesk" : rawType;
+    const type = typeUpper === "Service" ? "Service" : typeUpper === "HELPDESK" ? "Helpdesk" : rawType;
     const group = type === "Service" ? initialTicket.request : type === "Helpdesk" ? initialTicket.report : "";
     const subgroup = initialTicket.subgroup || "";
 
@@ -97,7 +97,7 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
           ? { request: form.group }
           : { report: form.group })
       };
-      await axios.post("https://backend-oa-pqy2.onrender.com/update-ticket", payload);
+      await axios.post("http://127.0.0.1:5001/update-ticket", payload);
       setSaving(false);
       onSave?.();
     } catch (err) {

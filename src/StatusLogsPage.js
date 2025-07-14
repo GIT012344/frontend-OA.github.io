@@ -151,7 +151,13 @@ function StatusLogsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterTicketId, setFilterTicketId] = useState('');
-  const [filterDate, setFilterDate] = useState('');
+  // range filters
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [ticketMap, setTicketMap] = useState({});
 
   // ดึง ticket_id จาก URL ถ้ามี
   useEffect(() => {
@@ -166,6 +172,25 @@ function StatusLogsPage() {
     fetchLogs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ดึงข้อมูล Ticket ทั้งหมดเพื่อ map หมวดหมู่
+  useEffect(() => {
+    axios.get('http://127.0.0.1:5001/api/data')
+      .then(res => {
+        if (!Array.isArray(res.data)) return;
+        const m = {};
+        const catSet = new Set();
+        res.data.forEach(t => {
+          m[t["Ticket ID"]] = t;
+          const cat = (t.type || t.type_main || t.type_group || t.group || '').trim();
+          if (cat) catSet.add(cat);
+        });
+        setTicketMap(m);
+        setCategories(prev => [...new Set([...prev, ...catSet])]);
+      })
+      .catch(err => console.error('Ticket metadata fetch error', err));
+  }, []);
+
 
   const fetchLogs = async () => {
     try {
@@ -188,7 +213,12 @@ function StatusLogsPage() {
       }
   
       console.log('Logs response:', response.data);
-      setLogs(Array.isArray(response.data) ? response.data : []);
+      const dataArr = Array.isArray(response.data) ? response.data : [];
+      setLogs(dataArr);
+      // build category list dynamically
+      const deriveCat = l => (l.category || '').trim();
+      const uniqueCats = [...new Set(dataArr.map(deriveCat).filter(Boolean))];
+      setCategories(uniqueCats);
       
     } catch (err) {
       console.error('Error details:', {
@@ -219,16 +249,49 @@ function StatusLogsPage() {
     const ticketIdMatch = !filterTicketId || 
       (log.ticket_id && String(log.ticket_id).includes(filterTicketId));
     
-    const dateMatch = !filterDate || 
-      (log.changed_at && log.changed_at.startsWith(filterDate));
+    const startMatch = !startDate || (log.changed_at && new Date(log.changed_at) >= new Date(startDate));
+    const endMatch = !endDate || (log.changed_at && new Date(log.changed_at) <= new Date(endDate + "T23:59:59"));
+    const statusMatch = !statusFilter || log.new_status === statusFilter;
+    let categorySource = (log.category || '').trim();
+    if(!categorySource){
+      const ticket = ticketMap[log.ticket_id];
+      categorySource = (ticket?.type || ticket?.type_main || ticket?.type_group || ticket?.group || '').trim();
+    }
+    const categoryMatch = !categoryFilter || categorySource.toLowerCase() === categoryFilter.toLowerCase();
+
+    const dateMatch = startMatch && endMatch;
     
-    return ticketIdMatch && dateMatch;
+    return ticketIdMatch && dateMatch && statusMatch && categoryMatch;
   });
 
   // เรียงลำดับข้อมูลตามเวลาใหม่ไปเก่า
   const sortedLogs = [...filteredLogs].sort((a, b) => {
     return new Date(b.changed_at) - new Date(a.changed_at);
   });
+
+  // ---------- Export CSV ---------- //
+  function exportCsv() {
+    if (sortedLogs.length === 0) return;
+    const headers = ['Ticket ID','Old Status','New Status','Changed By','Changed At','Note','Remarks'];
+    const rows = sortedLogs.map(l=>[
+      l.ticket_id,
+      l.old_status,
+      l.new_status,
+      l.changed_by,
+      l.changed_at,
+      (l.note||'').replace(/\n/g,' ').replace(/,/g,';'),
+      (l.remarks||'').replace(/\n/g,' ').replace(/,/g,';')
+    ]);
+    const csvContent = [headers,...rows].map(r=>r.map(v=>`"${v??''}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent],{type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download',`status_logs_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 
   return (
     <PageContainer>
@@ -247,9 +310,39 @@ function StatusLogsPage() {
         />
         <DateInput
           type="date"
-          value={filterDate}
-          onChange={e => setFilterDate(e.target.value)}
+          value={startDate}
+          onChange={e => setStartDate(e.target.value)}
+          title="เริ่มวันที่"
         />
+        <DateInput
+          type="date"
+          value={endDate}
+          onChange={e => setEndDate(e.target.value)}
+          title="ถึงวันที่"
+        />
+        <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} style={{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:'8px'}}>
+          <option value="">ทุกสถานะ</option>
+          <option value="New">New</option>
+          <option value="In Process">In Process</option>
+          <option value="Pending">Pending</option>
+          <option value="Closed">Closed</option>
+          <option value="Cancelled">Cancelled</option>
+          <option value="Reject">Reject</option>
+        </select>
+        <select value={categoryFilter} onChange={e=>setCategoryFilter(e.target.value)} style={{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:'8px'}}>
+          <option value="">ทุกประเภท</option>
+          {categories.length === 0 ? (
+            <>
+              <option value="Service">Service</option>
+              <option value="Helpdesk">Helpdesk</option>
+            </>
+          ) : (
+            categories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))
+          )}
+        </select>
+        <button onClick={exportCsv} style={{padding:'8px 16px',background:'#475569',color:'#fff',border:'none',borderRadius:'8px',cursor:'pointer'}}>Export CSV</button>
       </FilterSection>
       
       {loading ? (

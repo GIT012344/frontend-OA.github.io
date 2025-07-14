@@ -1,15 +1,16 @@
 "use client";
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import styled from 'styled-components';
-import axios from 'axios';
+
+import { useState, useEffect, useCallback, useRef } from "react";
+import axios from "axios";
+import styled from "styled-components";
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Login from './Login';
 import { useAuth } from './AuthContext';
 import './styles.css';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import DashboardSection from "./DashboardSection";
 import StatusLogsPage from './StatusLogsPage';
-import NewMessageNotification from './NewMessageNotification';
-import { logStatusChange } from "./api";
 
 // Define the type-group-subgroup mapping
 const TYPE_GROUP_SUBGROUP = {
@@ -334,7 +335,9 @@ const TableCell = styled.td`
   }
 `;
 
+// Override to disable transition for instant change
 const StatusCell = styled(TableCell)`
+  transition: none !important;
   max-width: 140px;
   min-width: 100px;
   white-space: nowrap;
@@ -363,32 +366,27 @@ const StatusCell = styled(TableCell)`
       color: #0369a1;
       border-color: #bae6fd;
     }
-    
     &[data-status="In Process"] {
       background-color: #e0e7ff;
       color: #4338ca;
       border-color: #c7d2fe;
     }
-    
     &[data-status="Pending"] {
       background-color: #fffbeb;
       color: #b45309;
       border-color: #fde68a;
     }
-    
     &[data-status="Closed"] {
       background-color: #ecfdf5;
       color: #047857;
       border-color: #a7f3d0;
     }
-    
     &[data-status="Cancelled"] {
       background-color: #f9fafb;
       color: #4b5563;
       border-color: #e5e7eb;
       text-decoration: line-through;
     }
-    
     &[data-status="Reject"] {
       background-color: #fef2f2;
       color: #b91c1c;
@@ -1886,6 +1884,8 @@ function App() {
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
   const [lastError, setLastError] = useState(null);
+  // Pause backend polling temporarily after ticket updates
+  const [isPollingPaused, setIsPollingPaused] = useState(false);
   // Current authenticated user info (name, role, etc.) from AuthContext
   const { user: authUser } = useAuth();
   
@@ -1956,12 +1956,6 @@ function App() {
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [mobileActiveTab, setMobileActiveTab] = useState("dashboard");
 
-  // --- เพิ่ม state สำหรับ notification แบบใหม่ ---
-  const [newMsgNotifications, setNewMsgNotifications] = useState([
-    // ตัวอย่าง notification ทดสอบ (สามารถลบออกได้)
-    // { id: 1, sender_name: 'ทดสอบ', message: 'ข้อความใหม่จากระบบ', timestamp: new Date().toISOString() },
-  ]);
-
   // Load cached data from localStorage when backend is offline
   useEffect(() => {
     if (backendStatus === 'offline' || backendStatus === 'error') {
@@ -1988,73 +1982,211 @@ function App() {
     }
   }, [backendStatus, data]);
 
+  // Optimistic status change with forced re-render
+  const forceUpdate = useCallback(() => {
+    setData(prev => [...prev]);
+  }, []);
+
   const handleStatusChangeWithNote = (ticketId, newStatus) => {
-  setTempTicketId(ticketId);
-  setTempNewStatus(newStatus);
-  setStatusChangeNote("");
-  setStatusChangeRemarks("");
-  setShowStatusChangeModal(true);
-};
-
-const confirmStatusChange = async () => {
-  // --- Optimistic UI ---
-  // 1. เก็บสถานะเดิมไว้ก่อน
-  let oldStatus = null;
-  setData(prevData => {
-    return prevData.map(item => {
-      if (item["Ticket ID"] === tempTicketId) {
-        oldStatus = item.status || item["สถานะ"];
-        return { ...item, status: tempNewStatus, สถานะ: tempNewStatus };
-      }
-      return item;
+    // 1. อัพเดท UI ทันทีแบบ Optimistic Update
+    // 1. optimistic update & keep immutable array reference
+    setData(prev => {
+      const newData = prev.map(item => 
+      item["Ticket ID"] === ticketId 
+        ? { 
+            ...item, 
+            status: newStatus, 
+            สถานะ: newStatus,
+            // เพิ่มข้อมูลการอัพเดทล่าสุด
+            last_updated: new Date().toISOString(),
+            updated_by: authUser?.name || authUser?.pin || "admin"
+          } 
+        : item
+    );
+      return [...newData]; // force list reconciliation
     });
-  });
 
-  try {
-    const response = await axios.post(
-      "https://backend-oa-pqy2.onrender.com/update-status-with-note",
-      {
-        ticket_id: tempTicketId,
-        status: tempNewStatus,
-        changed_by: authUser?.name || authUser?.pin || "admin",
-        note: statusChangeNote,
-        remarks: statusChangeRemarks
-      }
-    );
-
-    if (response.data.success) {
-      // สำเร็จ: ไม่ต้องทำอะไรเพิ่ม
-      setShowStatusChangeModal(false);
-      setEditingTicketId(null);
-      setEditSuccess("อัปเดตสถานะและบันทึกหมายเหตุเรียบร้อยแล้ว");
-      setTimeout(() => setEditSuccess(""), 3000);
-    } else {
-      // ถ้า backend ตอบกลับไม่สำเร็จ ให้ revert กลับ
-      setData(prevData =>
-        prevData.map(item =>
-          item["Ticket ID"] === tempTicketId
-            ? { ...item, status: oldStatus, สถานะ: oldStatus }
-            : item
-        )
+    // force component update in case shallow compare caches
+    forceUpdate();
+    
+    // 2. เตรียมข้อมูลสำหรับ modal
+    setTempTicketId(ticketId);
+    setTempNewStatus(newStatus);
+    setStatusChangeNote("");
+    setStatusChangeRemarks("");
+    
+    // 3. เปิด modal
+    setShowStatusChangeModal(true);
+  }; // end handleStatusChangeWithNote
+  const showErrorToast = (message) => {
+    // แสดง toast notification
+    toast.error(message, {
+      position: "top-right",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true
+    });
+  };
+  
+  const showDetailedError = ({ title, message, ticket_id, original_status, attempted_status }) => {
+    // แสดง detailed error modal หรือ notification
+    setErrorDetails({
+      title,
+      message,
+      timestamp: new Date().toISOString(),
+      ticket_id,
+      original_status,
+      attempted_status,
+      user: authUser?.name || authUser?.pin || "admin"
+    });
+  };
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [errorDetails, setErrorDetails] = useState(null);
+  const errorTimeoutRef = useRef(null);
+  // Confirm change – simplified (no polling pause / rollback handled inline)
+  const confirmStatusChange = async () => {
+    // 1. เก็บข้อมูลสถานะก่อนการอัพเดทเพื่อใช้ rollback
+    const originalData = [...data];
+    const ticketToUpdate = originalData.find(t => t["Ticket ID"] === tempTicketId);
+    const originalStatus = ticketToUpdate?.สถานะ || ticketToUpdate?.status;
+  
+    // 2. ปิด modal และเตรียมสถานะ
+    setShowStatusChangeModal(false);
+    setEditingTicketId(null);
+    setIsUpdatingStatus(true);
+    // polling disabled – no need to pause
+  
+    try {
+      // 3. ส่งข้อมูลไป backend
+      const response = await axios.post(
+        "https://backend-oa-pqy2.onrender.com/update-status",
+        {
+          ticket_id: tempTicketId,
+          status: tempNewStatus,
+          changed_by: authUser?.name || authUser?.pin || "admin",
+          note: statusChangeNote,
+          remarks: statusChangeRemarks,
+          updated_at: new Date().toISOString()
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            // เพิ่ม headers ที่จำเป็น
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        }
       );
-      setEditError("เกิดข้อผิดพลาดในการอัปเดตสถานะ");
-      setTimeout(() => setEditError(""), 3000);
+  
+      // 4. จัดการผลลัพธ์
+      if (response.data.success) {
+        // 4.1 อัพเดท UI แบบ Optimistic
+        // update local data again to ensure freshest state
+      const updateLocalData = (items) =>
+          items.map((item) =>
+            item["Ticket ID"] === tempTicketId
+              ? {
+                  ...item,
+                  status: tempNewStatus,
+                  สถานะ: tempNewStatus,
+                  last_updated: new Date().toISOString(),
+                  updated_by: authUser?.name || authUser?.pin || "admin"
+                }
+              : item
+          );
+  
+        // 4.2 อัพเดทข้อมูลตาม mode การทำงาน
+        if (isOfflineMode) {
+          setOfflineData(prev => updateLocalData(prev));
+          localStorage.setItem(
+            "cachedTicketData",
+            JSON.stringify(updateLocalData(offlineData))
+          );
+        } else {
+          setData(prev => updateLocalData(prev));
+        }
+  
+        // 4.3 แสดงข้อความสำเร็จ
+        setEditSuccess("อัปเดตสถานะและบันทึกหมายเหตุเรียบร้อยแล้ว");
+        setTimeout(() => setEditSuccess(""), 3000);
+  
+        // 4.4 ดึงข้อมูลใหม่เพื่อ sync
+        await fetchData();
+  
+      } else {
+        // 5. จัดการกรณี backend ตอบกลับ error
+        console.error("Backend update failed:", response.data.error);
+        setData(originalData); // rollback
+        setEditError(
+          response.data.error || "เกิดข้อผิดพลาดในการอัปเดตสถานะ"
+        );
+        
+        // แสดง toast หรือ notification
+        showErrorToast(`ไม่สามารถอัพเดทสถานะได้: ${response.data.error}`);
+      }
+    } catch (error) {
+      // 6. จัดการกรณีเกิด error ในการเชื่อมต่อ
+      console.error("Error updating status:", error);
+      setData(originalData); // rollback
+      setEditError(
+        "เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์ กรุณาลองใหม่อีกครั้ง"
+      );
+      
+      // แสดงรายละเอียด error
+      showDetailedError({
+        title: "การอัพเดทสถานะล้มเหลว",
+        message: error.message,
+        ticket_id: tempTicketId,
+        original_status: originalStatus,
+        attempted_status: tempNewStatus
+      });
+    } finally {
+      // 7. Reset สถานะทั้งหมด
+      setIsUpdatingStatus(false);
+      // polling disabled – nothing to resume
+      clearTimeout(errorTimeoutRef.current);
+      errorTimeoutRef.current = setTimeout(() => setEditError(""), 20000);
     }
-  } catch (error) {
-    // ถ้า error: revert กลับ
-    setData(prevData =>
-      prevData.map(item =>
-        item["Ticket ID"] === tempTicketId
-          ? { ...item, status: oldStatus, สถานะ: oldStatus }
-          : item
-      )
-    );
-    console.error("Error updating status with note:", error);
-    setEditError("เกิดข้อผิดพลาดในการอัปเดตสถานะ");
-    setTimeout(() => setEditError(""), 3000);
-  }
-};
+  };
+  const LoadingIndicator = styled.div`
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #3b82f6;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 1000;
+  animation: slideIn 0.3s ease;
 
+  @keyframes slideIn {
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+`;
+
+// ใช้งานใน JSX
+{isUpdatingStatus && (
+  <LoadingIndicator>
+    <span className="loading-icon">⚡</span>
+    <span>กำลังอัพเดทสถานะ...</span>
+    <span className="ticket-info">
+      Ticket ID: {tempTicketId} • {tempNewStatus}
+    </span>
+  </LoadingIndicator>
+)}
 const cancelStatusChange = () => {
   setShowStatusChangeModal(false);
 };
@@ -2093,7 +2225,7 @@ const cancelStatusChange = () => {
       console.warn("⚠️ Backend health check failed:", error.message);
       return false;
     }
-    return false;
+    setIsUpdatingStatus(false);
   };
 
   // Updated fetchData function with loading state
@@ -2101,66 +2233,12 @@ const cancelStatusChange = () => {
     setLoading(true);
     try {
       const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
-        timeout: 10000, // 10 second timeout
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        headers: { 'Cache-Control': 'no-cache' } // ป้องกันการใช้ cache
       });
       setData(Array.isArray(response.data) ? response.data : []);
       setLastSync(new Date());
-      setBackendStatus('connected');
-      setLastError(null);
-      setRetryCount(0); // Reset retry count on success
     } catch (error) {
       console.error("Error fetching data:", error);
-      
-      // Handle different types of errors
-      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
-        setBackendStatus('offline');
-        setLastError({
-          status: 'NETWORK',
-          message: 'Network connection failed',
-          details: 'Unable to connect to backend server. Please check your internet connection.'
-        });
-      } else if (error.response) {
-        console.error("Server error:", error.response.status, error.response.data);
-        if (error.response.status === 500) {
-          setBackendStatus('error');
-          setLastError({
-            status: error.response.status,
-            message: error.response.data?.message || 'Database transaction error',
-            details: error.response.data?.error || 'Unknown server error'
-          });
-        } else if (error.response.status === 404) {
-          setBackendStatus('error');
-          setLastError({
-            status: error.response.status,
-            message: 'API endpoint not found',
-            details: 'The requested API endpoint does not exist'
-          });
-        } else {
-          setBackendStatus('error');
-          setLastError({
-            status: error.response.status,
-            message: `HTTP ${error.response.status} Error`,
-            details: error.response.data?.message || 'Server error occurred'
-          });
-        }
-      } else if (error.request) {
-        setBackendStatus('offline');
-        setLastError({
-          status: 'NETWORK',
-          message: 'No response from server',
-          details: 'Backend server may be down or unreachable. Please try again later.'
-        });
-      } else {
-        setBackendStatus('error');
-        setLastError({
-          status: 'ERROR',
-          message: error.message,
-          details: 'Request setup failed'
-        });
-      }
     } finally {
       setLoading(false);
     }
@@ -2192,12 +2270,18 @@ const cancelStatusChange = () => {
       }
     };
 
-    // Poll ทันทีเมื่อโหลดหน้า
-    pollData();
-    // Poll ทุก 5 วินาที
-    const interval = setInterval(pollData, 5000);
+    // Poll ทันทีเมื่อโหลดหน้า (หากไม่ได้ pause)
+    if (!isPollingPaused) {
+      pollData();
+    }
+    // Poll ทุก 5 วินาที โดยจะข้ามหากกำลัง pause
+    const interval = setInterval(() => {
+      if (!isPollingPaused) {
+        pollData();
+      }
+    }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isPollingPaused]);
 
   const handleMouseMove = useCallback(
     (e) => {
@@ -2462,51 +2546,72 @@ const cancelStatusChange = () => {
 
   // อัปเดตสถานะและบันทึกการเปลี่ยนแปลง
   const handleStatusChange = (ticketId, newStatus) => {
-    // ค้นหาข้อมูล ticket เดิมเพื่อหา old_status
-    const target = data.find((d) => d["Ticket ID"] === ticketId);
-    const oldStatus = target?.status || target?.สถานะ || "";
+  // ใช้ข้อมูลต้นฉบับเพื่อเช็ก oldStatus และ rollback หากจำเป็น
+  const originalItems = isOfflineMode ? [...offlineData] : [...data];
+  const target = originalItems.find((d) => d["Ticket ID"] === ticketId);
+  const oldStatus = target?.status || target?.สถานะ || "";
 
-    // ถ้าไม่เปลี่ยนสถานะ ไม่ต้องดำเนินการใด ๆ
-    if (newStatus === oldStatus) return;
+  // ถ้าไม่เปลี่ยนสถานะ ไม่ต้องดำเนินการใด ๆ
+  if (newStatus === oldStatus) return;
 
-    axios
-      .post(
-        "https://backend-oa-pqy2.onrender.com/update-status",
-        {
-          ticket_id: ticketId,
-          status: newStatus,
-          changed_by: authUser?.name || authUser?.pin || "admin",
+  // ---------- Optimistic Update ---------- //
+  const updateFn = (items) =>
+    items.map((item) =>
+      item["Ticket ID"] === ticketId
+        ? { ...item, status: newStatus, สถานะ: newStatus }
+        : item
+    );
+
+  // Reuse the same mapper when updating cached offline data
+  const updateLocalData = updateFn;
+
+  if (isOfflineMode) {
+    setOfflineData((prev) => updateFn(prev));
+    localStorage.setItem(
+      "cachedTicketData",
+      JSON.stringify(updateLocalData(offlineData))
+    );
+  } else {
+    setData((prev) => updateFn(prev));
+  }
+  // --------------------------------------- //
+  // Pause polling; will resume after backend confirms
+  setIsPollingPaused(true);
+
+  axios
+    .post(
+      "https://backend-oa-pqy2.onrender.com/update-status",
+      {
+        ticket_id: ticketId,
+        status: newStatus,
+        changed_by: authUser?.name || authUser?.pin || "admin",
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
         },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      )
-      .then(() => {
-        console.log("✅ Status updated");
-        // อัปเดต state ภายในแอป
-        setData((prevData) =>
-          prevData.map((item) =>
-            item["Ticket ID"] === ticketId
-              ? { ...item, status: newStatus, สถานะ: newStatus }
-              : item
-          )
-        );
-
-        // เรียก API เพื่อบันทึกการเปลี่ยนสถานะ
-        logStatusChange({
-          ticket_id: ticketId,
-          old_status: oldStatus,
-          new_status: newStatus,
-          changed_by: user?.name || "unknown",
-          change_timestamp: new Date().toISOString(),
-        }).catch((err) =>
-          console.error("❌ Failed to log status change:", err)
-        );
-      })
-      .catch((err) => console.error("❌ Failed to update status:", err));
-  };
+      }
+    )
+    .then(() => {
+      console.log("✅ Status updated (server confirmed)");
+      // รีเฟรชข้อมูลจากเซิร์ฟเวอร์หลังเว้นช่วงเล็กน้อย เพื่อให้ backend sync เสร็จก่อน
+      fetchData();
+      // Resume polling
+      setIsPollingPaused(false);
+    })
+    .catch((err) => {
+      console.error("❌ Failed to update status:", err);
+      // ---------- Rollback UI ---------- //
+      if (isOfflineMode) {
+        setOfflineData(originalItems);
+        localStorage.setItem("cachedTicketData", JSON.stringify(originalItems));
+      } else {
+        setData(originalItems);
+      }
+      // Resume polling even on failure
+      setIsPollingPaused(false);
+    });
+};  
 
   // Remove old chat functions and replace with new chat system
   const handleUserSelect = (e) => {
@@ -3326,368 +3431,341 @@ const handleSubgroupChange = (e) => {
     setSidebarMobileOpen(false);
   };
 
-  const [popupMessage, setPopupMessage] = useState(null);
-  const [showPopup, setShowPopup] = useState(false);
-  const lastPopupId = useRef(null);
-
-  // Poll ข้อความใหม่ทุก 5 วินาที
-  useEffect(() => {
-    const poll = setInterval(async () => {
-      try {
-        const res = await axios.get('https://backend-oa-pqy2.onrender.com/api/notifications', { timeout: 5000 });
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          // หา notification ที่ยังไม่ได้อ่านและเป็นข้อความใหม่สุด
-          const latest = res.data.find(n => !n.read);
-          if (latest && lastPopupId.current !== latest.id) {
-            setPopupMessage(latest);
-            setShowPopup(true);
-            lastPopupId.current = latest.id;
-            setTimeout(() => setShowPopup(false), 7000);
-          }
-        }
-      } catch (e) {
-        // ไม่ต้องแจ้ง error
-      }
-    }, 5000);
-    return () => clearInterval(poll);
-  }, []);
-
   return (
-    <React.Fragment>
-      <Routes>
-        <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
-        <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <Login />} />
-        <Route path="/dashboard" element={token ? (
-          <>
-            {/* TopNav สำหรับ mobile */}
-            {isMobile && (
-              <TopNavMobile>
-                <MobileMenuBtn onClick={() => setSidebarMobileOpen(!sidebarMobileOpen)}>
-                  ☰
-                </MobileMenuBtn>
-                <div>Helpdesk System</div>
-                <div style={{ width: '44px' }}></div>
-              </TopNavMobile>
-            )}
-            <Sidebar
+    <Routes>
+      <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
+      <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <Login />} />
+      <Route path="/dashboard" element={token ? (
+        <>
+          {/* TopNav สำหรับ mobile */}
+          {isMobile && (
+            <TopNavMobile>
+              <MobileMenuBtn onClick={() => setSidebarMobileOpen(!sidebarMobileOpen)}>
+                ☰
+              </MobileMenuBtn>
+              <div>Helpdesk System</div>
+              <div style={{ width: '44px' }}></div>
+            </TopNavMobile>
+          )}
+          <Sidebar
+            $collapsed={!sidebarOpen}
+            $hovered={sidebarHover}
+            onMouseEnter={() => setSidebarHover(true)}
+            onMouseLeave={() => setSidebarHover(false)}
+            $mobileOpen={sidebarMobileOpen}
+          >
+            <Logo>{sidebarOpen || sidebarHover ? "Helpdesk-System" : "HS"}</Logo>
+            <ToggleButton
+              onClick={() => setSidebarOpen(!sidebarOpen)}
               $collapsed={!sidebarOpen}
-              $hovered={sidebarHover}
-              onMouseEnter={() => setSidebarHover(true)}
-              onMouseLeave={() => setSidebarHover(false)}
-              $mobileOpen={sidebarMobileOpen}
-            >
-              <Logo>{sidebarOpen || sidebarHover ? "Helpdesk-System" : "HS"}</Logo>
-              <ToggleButton
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                $collapsed={!sidebarOpen}
-              />
-              <NavItem
-                $icon="dashboard"
-                $active={activeTab === "dashboard"}
-                onClick={() => {
-                  setActiveTab("dashboard");
-                  scrollToDashboard();
-                }}
-                $collapsed={!sidebarOpen}
-                data-tooltip="Dashboard"
-              >
-                <span>Dashboard</span>
-              </NavItem>
-              <NavItem
-                $icon="list"
-                $active={activeTab === "list"}
-                onClick={() => {
-                  setActiveTab("list");
-                  scrollToList();
-                }}
-                $collapsed={!sidebarOpen}
-                data-tooltip="List"
-              >
-                <span>Ticket List</span>
-              </NavItem>
-              <NavItem
-                $icon="chat"
-                $active={activeTab === "chat"}
-                onClick={() => {
-                  setActiveTab("chat");
-                  scrollToChat();
-                }}
-                $collapsed={!sidebarOpen}
-                data-tooltip="Chat"
-              >
-                <span>Chat</span>
-              </NavItem>
-              <NavItem
-              $icon="history"
-              $active={activeTab === "logs" || location.pathname === "/logs"}
+            />
+            <NavItem
+              $icon="dashboard"
+              $active={activeTab === "dashboard"}
               onClick={() => {
-                setActiveTab("logs");
-                navigate("/logs");
+                setActiveTab("dashboard");
+                scrollToDashboard();
               }}
               $collapsed={!sidebarOpen}
-              data-tooltip="Status Logs"
+              data-tooltip="Dashboard"
             >
-              <span>Status Logs</span>
+              <span>Dashboard</span>
             </NavItem>
-            </Sidebar>
-            {/* Mobile Bottom Navigation */}
-            {isMobile && (
-              <div style={{
-                position: 'fixed',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                background: 'white',
-                display: 'flex',
-                justifyContent: 'space-around',
-                padding: '12px 0',
-                boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
-                zIndex: 1000
-              }}>
-                <MobileNavItemBar 
-                  onClick={() => handleMobileTabChange("dashboard")}
-                  $active={mobileActiveTab === "dashboard"}
-                >
-                  Dashboard
-                </MobileNavItemBar>
-                <MobileNavItemBar 
-                  onClick={() => handleMobileTabChange("list")}
-                  $active={mobileActiveTab === "list"}
-                >
-                  Tickets
-                </MobileNavItemBar>
-                <MobileNavItemBar 
-                  onClick={() => handleMobileTabChange("chat")}
-                  $active={mobileActiveTab === "chat"}
-                >
-                  Chat
-                </MobileNavItemBar>
-                <MobileNavItemBar 
-                  onClick={() => handleMobileTabChange("logs")}
-                  $active={mobileActiveTab === "logs"}
-                >
-                  Logs
-                </MobileNavItemBar>
-              </div>
-            )}
-            <MainContent style={{ marginLeft: sidebarOpen && !isMobile ? "240px" : "0" }}>
-              <Container>
-                <div ref={dashboardRef}>
-                  <Title>Ticket Management System</Title>
-                  <DashboardSection
-                    stats={getBasicStats()}
-                    daily={getDailySummary()}
-                    upcoming={getUpcomingAppointments()}
-                    overdue={getOverdueAppointments()}
-                  />
-                  <SyncIndicator>{formatLastSync()}</SyncIndicator>
-                  <BackendStatusIndicator $status={backendStatus}>
-                    {getBackendStatusText()}
-                    {(backendStatus === 'error' || backendStatus === 'offline') && (
-                      <RetryButton 
-                        onClick={handleManualRetry} 
-                        disabled={isRetrying}
-                      >
-                        {isRetrying ? 'Retrying...' : 'Retry'}
-                      </RetryButton>
+            <NavItem
+              $icon="list"
+              $active={activeTab === "list"}
+              onClick={() => {
+                setActiveTab("list");
+                scrollToList();
+              }}
+              $collapsed={!sidebarOpen}
+              data-tooltip="List"
+            >
+              <span>Ticket List</span>
+            </NavItem>
+            <NavItem
+              $icon="chat"
+              $active={activeTab === "chat"}
+              onClick={() => {
+                setActiveTab("chat");
+                scrollToChat();
+              }}
+              $collapsed={!sidebarOpen}
+              data-tooltip="Chat"
+            >
+              <span>Chat</span>
+            </NavItem>
+            <NavItem
+            $icon="history"
+            $active={activeTab === "logs" || location.pathname === "/logs"}
+            onClick={() => {
+              setActiveTab("logs");
+              navigate("/logs");
+            }}
+            $collapsed={!sidebarOpen}
+            data-tooltip="Status Logs"
+          >
+            <span>Status Logs</span>
+          </NavItem>
+          </Sidebar>
+          {/* Mobile Bottom Navigation */}
+          {isMobile && (
+            <div style={{
+              position: 'fixed',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              background: 'white',
+              display: 'flex',
+              justifyContent: 'space-around',
+              padding: '12px 0',
+              boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
+              zIndex: 1000
+            }}>
+              <MobileNavItemBar 
+                onClick={() => handleMobileTabChange("dashboard")}
+                $active={mobileActiveTab === "dashboard"}
+              >
+                Dashboard
+              </MobileNavItemBar>
+              <MobileNavItemBar 
+                onClick={() => handleMobileTabChange("list")}
+                $active={mobileActiveTab === "list"}
+              >
+                Tickets
+              </MobileNavItemBar>
+              <MobileNavItemBar 
+                onClick={() => handleMobileTabChange("chat")}
+                $active={mobileActiveTab === "chat"}
+              >
+                Chat
+              </MobileNavItemBar>
+              <MobileNavItemBar 
+                onClick={() => handleMobileTabChange("logs")}
+                $active={mobileActiveTab === "logs"}
+              >
+                Logs
+              </MobileNavItemBar>
+            </div>
+          )}
+          <MainContent style={{ marginLeft: sidebarOpen && !isMobile ? "240px" : "0" }}>
+            <Container>
+              <div ref={dashboardRef}>
+                <Title>Ticket Management System</Title>
+                <DashboardSection
+                  stats={getBasicStats()}
+                  daily={getDailySummary()}
+                  upcoming={getUpcomingAppointments()}
+                  overdue={getOverdueAppointments()}
+                />
+                <SyncIndicator>{formatLastSync()}</SyncIndicator>
+                <BackendStatusIndicator $status={backendStatus}>
+                  {getBackendStatusText()}
+                  {(backendStatus === 'error' || backendStatus === 'offline') && (
+                    <RetryButton 
+                      onClick={handleManualRetry} 
+                      disabled={isRetrying}
+                    >
+                      {isRetrying ? 'Retrying...' : 'Retry'}
+                    </RetryButton>
+                  )}
+                </BackendStatusIndicator>
+                {backendStatus === 'offline' && (
+                  <div style={{
+                    textAlign: 'center',
+                    color: '#f59e0b',
+                    fontSize: '0.875rem',
+                    marginBottom: '16px',
+                    padding: '12px',
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(245, 158, 11, 0.2)'
+                  }}>
+                    <strong>⚠️ Backend Server Offline</strong><br />
+                    The backend server is currently unavailable. Some features may not work properly.
+                    {retryCount > 0 && (
+                      <div style={{ marginTop: '8px', fontSize: '0.8rem' }}>
+                        Auto-retry attempts: {retryCount}
+                      </div>
                     )}
-                  </BackendStatusIndicator>
-                  {backendStatus === 'offline' && (
-                    <div style={{
-                      textAlign: 'center',
-                      color: '#f59e0b',
-                      fontSize: '0.875rem',
-                      marginBottom: '16px',
-                      padding: '12px',
-                      background: 'rgba(245, 158, 11, 0.1)',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(245, 158, 11, 0.2)'
-                    }}>
-                      <strong>⚠️ Backend Server Offline</strong><br />
-                      The backend server is currently unavailable. Some features may not work properly.
-                      {retryCount > 0 && (
-                        <div style={{ marginTop: '8px', fontSize: '0.8rem' }}>
-                          Auto-retry attempts: {retryCount}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {backendStatus === 'error' && (
-                    <div style={{
-                      textAlign: 'center',
-                      color: '#ef4444',
-                      fontSize: '0.875rem',
-                      marginBottom: '16px',
-                      padding: '12px',
-                      background: 'rgba(239, 68, 68, 0.1)',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(239, 68, 68, 0.2)'
-                    }}>
-                      <strong>🔴 Backend Server Error</strong><br />
-                      The backend server is experiencing issues. Please try again later.
-                    </div>
-                  )}
-                  {lastError && (
-                    <ErrorDetails>
-                      <div className="error-header">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                          <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z"/>
-                          <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
-                        </svg>
-                        <span>Error Details</span>
-                      </div>
-                      <div className="error-content">
-                        <div className="error-item">
-                          <span className="error-label">Status:</span>
-                          <span className="error-value">{lastError.status}</span>
-                        </div>
-                        <div className="error-item">
-                          <span className="error-label">Message:</span>
-                          <span className="error-value">{lastError.message}</span>
-                        </div>
-                        <div className="error-item">
-                          <span className="error-label">Details:</span>
-                          <span className="error-value">{lastError.details}</span>
-                        </div>
-                        {retryCount > 0 && (
-                          <div className="retry-info">
-                            <span className="error-label">Retry attempts:</span>
-                            <span className="error-value">{retryCount}</span>
-                          </div>
-                        )}
-                      </div>
-                    </ErrorDetails>
-                  )}
-                  <HeaderSection>
-                  <UserInfo>
-                  <div>
-                    <strong>{user?.username || user?.name || 'Admin'}</strong> ({user?.role || 'User'})
                   </div>
-                  <LogoutButton onClick={logout}>
-                    ออกจากระบบ
-                  </LogoutButton>
-                </UserInfo>
-                    <div></div>
-                    <ExportSection>
-                      <NotificationBell
-                        $hasUnread={hasUnread}
-                        onClick={() => {
-                          setShowNotifications(!showNotifications);
-                          if (hasUnread && !showNotifications) {
-                            markAsRead();
-                          }
-                        }}
-                      />
-                      <ExportButton 
-                        onClick={fetchData}
-                        disabled={loading}
-                        style={{ 
-                          background: loading ? '#e2e8f0' : 'rgba(255, 255, 255, 0.9)',
-                          color: loading ? '#94a3b8' : '#475569'
-                        }}
-                      >
-                        {loading ? 'กำลังโหลด...' : '🔄 รีเฟรช'}
-                      </ExportButton>
-                      <ExportButton onClick={exportToCSV}>ส่งออก CSV</ExportButton>
-                      <ExportButton $primary onClick={exportToJSON}>
-                        ส่งออก JSON
-                      </ExportButton>
-                    </ExportSection>
-                  </HeaderSection>
-                  {/* Dashboard */}
-                  <Dashboard>
-                    {/* 1. สรุปภาพรวม ticket รายวัน */}
-    
-
-                    
-
-                    
-                    
-
-                    {/* 4. สถิติอื่นๆ ที่มีอยู่เดิม */}
-                    <StatCard $accent="linear-gradient(90deg, #ec4899, #f43f5e)">
-                      <StatTitle>ประเภทของ Ticket</StatTitle>
-                      <div style={{ marginTop: "16px" }}>
-                        {Object.entries(
-                          data.reduce((acc, ticket) => {
-                            const type = ticket["Type"] || "None";
-                            acc[type] = (acc[type] || 0) + 1;
-                            return acc;
-                          }, {})
-                        ).map(([type, count]) => (
-                          <div
-                            key={type}
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              marginBottom: "8px",
-                            }}
-                          >
-                            <span>{type}</span>
-                            <span style={{ fontWeight: "600" }}>{count}</span>
-                          </div>
-                        ))}
+                )}
+                {backendStatus === 'error' && (
+                  <div style={{
+                    textAlign: 'center',
+                    color: '#ef4444',
+                    fontSize: '0.875rem',
+                    marginBottom: '16px',
+                    padding: '12px',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(239, 68, 68, 0.2)'
+                  }}>
+                    <strong>🔴 Backend Server Error</strong><br />
+                    The backend server is experiencing issues. Please try again later.
+                  </div>
+                )}
+                {lastError && (
+                  <ErrorDetails>
+                    <div className="error-header">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z"/>
+                        <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
+                      </svg>
+                      <span>Error Details</span>
+                    </div>
+                    <div className="error-content">
+                      <div className="error-item">
+                        <span className="error-label">Status:</span>
+                        <span className="error-value">{lastError.status}</span>
                       </div>
-                    </StatCard>
-
-                    {/* 5. อันดับผู้ใช้ Ticket มากที่สุด */}
-                    <RankingCard $accent="linear-gradient(90deg, #8b5cf6, #7c3aed)">
-                      <RankingHeader>
-                        <StatTitle>อันดับผู้ใช้ Ticket มากที่สุด</StatTitle>
-                        <RankingToggleButton onClick={() => setShowAllRankings(!showAllRankings)}>
-                          {showAllRankings ? (
-                            <>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 15l7-7 7 7" /></svg>
-                              แสดงเฉพาะ 5 อันดับแรก
-                            </>
-                          ) : (
-                            <>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 9l-7 7-7-7" /></svg>
-                              แสดงทั้งหมด
-                            </>
-                          )}
-                        </RankingToggleButton>
-                      </RankingHeader>
-                      <UserRankingList>
-                        {getDisplayRankings().map((user, index) => (
-                          <UserRankingItem key={user.email}>
-                            <UserRankingInfo>
-                              <UserRankBadge $rank={index + 1}>{index + 1}</UserRankBadge>
-                              <UserRankingEmail
-                                title={user.email}
-                                onClick={() => {
-                                  setSearchTerm(user.email);
-                                  setActiveTab("list");
-                                  scrollToList();
-                                }}
-                              >
-                                {user.email}
-                              </UserRankingEmail>
-                            </UserRankingInfo>
-                            <UserTicketCount>{user.count} Tickets</UserTicketCount>
-                          </UserRankingItem>
-                        ))}
-                        {getUserRankings().length === 0 && (
-                          <div style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
-                            ไม่มีข้อมูลผู้ใช้
-                          </div>
-                        )}
-                      </UserRankingList>
-                      {!showAllRankings && getUserRankings().length > 5 && (
-                        <div style={{
-                          textAlign: 'center',
-                          color: '#64748b',
-                          fontSize: '0.75rem',
-                          marginTop: '8px'
-                        }}>
-                          + อีก {getUserRankings().length - 5} รายการ
+                      <div className="error-item">
+                        <span className="error-label">Message:</span>
+                        <span className="error-value">{lastError.message}</span>
+                      </div>
+                      <div className="error-item">
+                        <span className="error-label">Details:</span>
+                        <span className="error-value">{lastError.details}</span>
+                      </div>
+                      {retryCount > 0 && (
+                        <div className="retry-info">
+                          <span className="error-label">Retry attempts:</span>
+                          <span className="error-value">{retryCount}</span>
                         </div>
                       )}
-                    </RankingCard>
-                  </Dashboard>
+                    </div>
+                  </ErrorDetails>
+                )}
+                <HeaderSection>
+                <UserInfo>
+                <div>
+                  <strong>{user?.username || user?.name || 'Admin'}</strong> ({user?.role || 'User'})
                 </div>
-                <div ref={listRef}>
-                <StatCard
+                <LogoutButton onClick={logout}>
+                  ออกจากระบบ
+                </LogoutButton>
+              </UserInfo>
+                  <div></div>
+                  <ExportSection>
+                    <NotificationBell
+                      $hasUnread={hasUnread}
+                      onClick={() => {
+                        setShowNotifications(!showNotifications);
+                        if (hasUnread && !showNotifications) {
+                          markAsRead();
+                        }
+                      }}
+                    />
+                    <ExportButton 
+                      onClick={fetchData}
+                      disabled={loading}
+                      style={{ 
+                        background: loading ? '#e2e8f0' : 'rgba(255, 255, 255, 0.9)',
+                        color: loading ? '#94a3b8' : '#475569'
+                      }}
+                    >
+                      {loading ? 'กำลังโหลด...' : '🔄 รีเฟรช'}
+                    </ExportButton>
+                    <ExportButton onClick={exportToCSV}>ส่งออก CSV</ExportButton>
+                    <ExportButton $primary onClick={exportToJSON}>
+                      ส่งออก JSON
+                    </ExportButton>
+                  </ExportSection>
+                </HeaderSection>
+                {/* Dashboard */}
+                <Dashboard>
+                  {/* 1. สรุปภาพรวม ticket รายวัน */}
+  
+
+                  
+
+                  
+                  
+
+                  {/* 4. สถิติอื่นๆ ที่มีอยู่เดิม */}
+                  <StatCard $accent="linear-gradient(90deg, #ec4899, #f43f5e)">
+                    <StatTitle>ประเภทของ Ticket</StatTitle>
+                    <div style={{ marginTop: "16px" }}>
+                      {Object.entries(
+                        data.reduce((acc, ticket) => {
+                          const type = ticket["Type"] || "None";
+                          acc[type] = (acc[type] || 0) + 1;
+                          return acc;
+                        }, {})
+                      ).map(([type, count]) => (
+                        <div
+                          key={type}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          <span>{type}</span>
+                          <span style={{ fontWeight: "600" }}>{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </StatCard>
+
+                  {/* 5. อันดับผู้ใช้ Ticket มากที่สุด */}
+                  <RankingCard $accent="linear-gradient(90deg, #8b5cf6, #7c3aed)">
+                    <RankingHeader>
+                      <StatTitle>อันดับผู้ใช้ Ticket มากที่สุด</StatTitle>
+                      <RankingToggleButton onClick={() => setShowAllRankings(!showAllRankings)}>
+                        {showAllRankings ? (
+                          <>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 15l7-7 7 7" /></svg>
+                            แสดงเฉพาะ 5 อันดับแรก
+                          </>
+                        ) : (
+                          <>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 9l-7 7-7-7" /></svg>
+                            แสดงทั้งหมด
+                          </>
+                        )}
+                      </RankingToggleButton>
+                    </RankingHeader>
+                    <UserRankingList>
+                      {getDisplayRankings().map((user, index) => (
+                        <UserRankingItem key={user.email}>
+                          <UserRankingInfo>
+                            <UserRankBadge $rank={index + 1}>{index + 1}</UserRankBadge>
+                            <UserRankingEmail
+                              title={user.email}
+                              onClick={() => {
+                                setSearchTerm(user.email);
+                                setActiveTab("list");
+                                scrollToList();
+                              }}
+                            >
+                              {user.email}
+                            </UserRankingEmail>
+                          </UserRankingInfo>
+                          <UserTicketCount>{user.count} Tickets</UserTicketCount>
+                        </UserRankingItem>
+                      ))}
+                      {getUserRankings().length === 0 && (
+                        <div style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
+                          ไม่มีข้อมูลผู้ใช้
+                        </div>
+                      )}
+                    </UserRankingList>
+                    {!showAllRankings && getUserRankings().length > 5 && (
+                      <div style={{
+                        textAlign: 'center',
+                        color: '#64748b',
+                        fontSize: '0.75rem',
+                        marginTop: '8px'
+                      }}>
+                        + อีก {getUserRankings().length - 5} รายการ
+                      </div>
+                    )}
+                  </RankingCard>
+                </Dashboard>
+              </div>
+              <div ref={listRef}>
+              <StatCard
   $accent="linear-gradient(90deg, #3b82f6, #2563eb)"
   style={{ gridColumn: "span 2" }}
 >
@@ -3854,631 +3932,633 @@ const handleSubgroupChange = (e) => {
     })()}
   </div>
 </StatCard>
-                  <TableContainer>
-                    <TableTitle>รายการ Ticket ทั้งหมด</TableTitle>
+                <TableContainer>
+                  <TableTitle>รายการ Ticket ทั้งหมด</TableTitle>
 
-                    {/* Search and Filter Section */}
-                    <SearchAndFilterContainer>
-                      <SearchInput
-                        type="text"
-                        placeholder="ค้นหา Ticket..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                  {/* Search and Filter Section */}
+                  <SearchAndFilterContainer>
+                    <SearchInput
+                      type="text"
+                      placeholder="ค้นหา Ticket..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+
+                    {/* Date Filter - Moved here */}
+                    <DateFilterContainer>
+                      <FilterLabel>วันที่:</FilterLabel>
+                      <DateInput
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
                       />
-
-                      {/* Date Filter - Moved here */}
-                      <DateFilterContainer>
-                        <FilterLabel>วันที่:</FilterLabel>
-                        <DateInput
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                        />
-                        <FilterButton onClick={fetchDataByDate} disabled={!startDate}>
-                          กรอง
-                        </FilterButton>
-                        <ResetButton onClick={resetDateFilter}>รีเซ็ต</ResetButton>
-                        {isDateFilterActive && (
-                          <div
-                            style={{
-                              marginTop: "8px",
-                              color: "#475569",
-                              fontSize: "0.875rem",
-                            }}
-                          >
-                            กำลังแสดงข้อมูลวันที่:{" "}
-                            {new Date(startDate).toLocaleDateString("th-TH")}
-                          </div>
-                        )}
-                      </DateFilterContainer>
-
-                      <FilterGroup>
-                        <FilterLabel>สถานะ:</FilterLabel>
-                        <FilterSelect
-                          value={statusFilter}
-                          onChange={(e) => setStatusFilter(e.target.value)}
-                        >
-                          <option value="all">ทั้งหมด</option>
-                          <option value="Pending">Pending</option>
-                          <option value="Scheduled">Scheduled</option>
-                          <option value="In Progress">In Progress</option>
-                          <option value="Waiting">Waiting</option>
-                          <option value="Completed">Completed</option>
-                        </FilterSelect>
-                      </FilterGroup>
-
-                      <FilterGroup>
-                        <FilterLabel>ประเภท:</FilterLabel>
-                        <FilterSelect
-                          value={typeFilter}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setTypeFilter(val === "all" ? "all" : val.toUpperCase());
+                      <FilterButton onClick={fetchDataByDate} disabled={!startDate}>
+                        กรอง
+                      </FilterButton>
+                      <ResetButton onClick={resetDateFilter}>รีเซ็ต</ResetButton>
+                      {isDateFilterActive && (
+                        <div
+                          style={{
+                            marginTop: "8px",
+                            color: "#475569",
+                            fontSize: "0.875rem",
                           }}
                         >
-                          <option value="all">ทั้งหมด</option>
-                          {uniqueTypes.map((type) => (
-                            <option key={type} value={type}>{type.charAt(0) + type.slice(1).toLowerCase()}</option>
-                          ))}
-                        </FilterSelect>
-                      </FilterGroup>
-                    </SearchAndFilterContainer>
+                          กำลังแสดงข้อมูลวันที่:{" "}
+                          {new Date(startDate).toLocaleDateString("th-TH")}
+                        </div>
+                      )}
+                    </DateFilterContainer>
 
-                    <ScrollContainer>
-                      <StyledTable>
-                        <TableHeader>
-                          <tr>
-                            <TableHeaderCell>Ticket ID</TableHeaderCell>
-                            <TableHeaderCell>อีเมล</TableHeaderCell>
-                            <TableHeaderCell>ชื่อ</TableHeaderCell>
-                            <TableHeaderCell>เบอร์ติดต่อ</TableHeaderCell>
-                            <TableHeaderCell>แผนก</TableHeaderCell>
-                            <TableHeaderCell>วันที่แจ้ง</TableHeaderCell>
-                            <TableHeaderCell>สถานะ</TableHeaderCell>
-                            <TableHeaderCell>Appointment</TableHeaderCell>
-                            
-                            
-                            <TableHeaderCell>Type</TableHeaderCell>
-                            <TableHeaderCell>Group</TableHeaderCell>  
-                            <TableHeaderCell>Subgroup</TableHeaderCell>
-                            <TableHeaderCell>Action</TableHeaderCell>
-                          </tr>
-                        </TableHeader>
-                        <tbody>
-                          {paginatedData.map((row, i) => {
-                            const rowColor = getRowColor(
-                              row["วันที่แจ้ง"],
-                              row["สถานะ"]
-                            );
-                            const isEditing = editingTicketId === row["Ticket ID"];
-                            // appointment_datetime logic
-                            const apptText = row["Appointment"] || "";
+                    <FilterGroup>
+                      <FilterLabel>สถานะ:</FilterLabel>
+                      <FilterSelect
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                      >
+                        <option value="all">ทั้งหมด</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Scheduled">Scheduled</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Waiting">Waiting</option>
+                        <option value="Completed">Completed</option>
+                      </FilterSelect>
+                    </FilterGroup>
+
+                    <FilterGroup>
+                      <FilterLabel>ประเภท:</FilterLabel>
+                      <FilterSelect
+                        value={typeFilter}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setTypeFilter(val === "all" ? "all" : val.toUpperCase());
+                        }}
+                      >
+                        <option value="all">ทั้งหมด</option>
+                        {uniqueTypes.map((type) => (
+                          <option key={type} value={type}>{type.charAt(0) + type.slice(1).toLowerCase()}</option>
+                        ))}
+                      </FilterSelect>
+                    </FilterGroup>
+                  </SearchAndFilterContainer>
+
+                  <ScrollContainer>
+                    <StyledTable>
+                      <TableHeader>
+                        <tr>
+                          <TableHeaderCell>Ticket ID</TableHeaderCell>
+                          <TableHeaderCell>อีเมล</TableHeaderCell>
+                          <TableHeaderCell>ชื่อ</TableHeaderCell>
+                          <TableHeaderCell>เบอร์ติดต่อ</TableHeaderCell>
+                          <TableHeaderCell>แผนก</TableHeaderCell>
+                          <TableHeaderCell>วันที่แจ้ง</TableHeaderCell>
+                          <TableHeaderCell>สถานะ</TableHeaderCell>
+                          <TableHeaderCell>Appointment</TableHeaderCell>
+                          
+                          
+                          <TableHeaderCell>Type</TableHeaderCell>
+                          <TableHeaderCell>Group</TableHeaderCell>  
+                          <TableHeaderCell>Subgroup</TableHeaderCell>
+                          <TableHeaderCell>Action</TableHeaderCell>
+                        </tr>
+                      </TableHeader>
+                      <tbody>
+                        {paginatedData.map((row, i) => {
+                          const rowColor = getRowColor(
+                            row["วันที่แจ้ง"],
+                            row["สถานะ"]
+                          );
+                          const isEditing = editingTicketId === row["Ticket ID"];
+                          // appointment_datetime logic
+                          const apptText = row["Appointment"] || "";
   const apptDateTime = row["appointment_datetime"] 
     ? new Date(row["appointment_datetime"])
     : parseAppointmentText(apptText);
-                            let apptSoon = false, apptNow = false;
-                            if (row["appointment_datetime"]) {
-                              const now = new Date();
-                              const appt = new Date(row["appointment_datetime"]);
-                              const diff = appt - now;
-                              if (diff > 0 && diff < 60 * 60 * 1000) apptSoon = true; // ภายใน 1 ชม.
-                              if (Math.abs(diff) < 5 * 60 * 1000) apptNow = true; // ถึงแล้ว (±5นาที)
-                            }
-                            const RowComponent = apptNow ? BlinkingRow : TableRow;
-                            return (
-                              <RowComponent
-                                key={i}
-                                $bgColor={apptSoon && !apptNow ? '#fef9c3' : rowColor}
-                                $isSelected={selectedTicket === row["Ticket ID"]}
-                              >
-                                <TableCell>{row["Ticket ID"] || "None"}</TableCell>
-                                <TableCell>
-                                  {isEditing ? (
-                                    <EditInput type="text" value={editForm.email} onChange={e => handleEditFormChange("email", e.target.value)} disabled={editLoading} />
-                                  ) : (row["อีเมล"] || "None")}
-                                </TableCell>
-                                <TableCell>
-                                  {isEditing ? (
-                                    <EditInput type="text" value={editForm.name} onChange={e => handleEditFormChange("name", e.target.value)} disabled={editLoading} />
-                                  ) : (row["ชื่อ"] || "None")}
-                                </TableCell>
-                                <TableCell>
-                                  {isEditing ? (
-                                    <EditInput type="text" value={editForm.phone} onChange={e => handleEditFormChange("phone", e.target.value)} disabled={editLoading} />
-                                  ) : (row["เบอร์ติดต่อ"] || "None")}
-                                </TableCell>
-                                <TableCell>
-                                  {isEditing ? (
-                                    <EditInput type="text" value={editForm.department} onChange={e => handleEditFormChange("department", e.target.value)} disabled={editLoading} />
-                                  ) : (row["แผนก"] || "None")}
-                                </TableCell>
-                                <TableCell>
-                                  {isEditing ? (
-                                    <EditInput type="text" value={editForm.date} onChange={e => handleEditFormChange("date", e.target.value)} disabled={editLoading} />
-                                  ) : (row["วันที่แจ้ง"] || "None")}
-                                </TableCell>
-                                <StatusCell>
-                                  {isEditing ? (
-                                    <StatusSelect
-                                      value={editForm.status}
-                                      onChange={e => {
-                                        if (editForm.status !== e.target.value) {
-                                          handleStatusChangeWithNote(row["Ticket ID"], e.target.value);
-                                        }
-                                      }}
-                                      disabled={editLoading}
-                                    >
-                                      {STATUS_OPTIONS.map(opt => (
-                                        <option key={opt.value} value={opt.value}>
-                                          ${opt.icon ? opt.icon + ' ' : ''}${opt.label}
-                                        </option>
-                                      ))}
-                                    </StatusSelect>
-                                  ) : (
-                                    (() => {
-                                      const status = row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None";
-                                      const statusOption = STATUS_OPTIONS.find(opt => opt.value === status);
-                                      return (
-                                        <div
-                                          className="status-badge"
-                                          data-status={status}
-                                        >
-                                          {statusOption?.icon || '📌'} {status}
-                                        </div>
-                                      );
-                                    })()
-                                  )}
-                                </StatusCell>
-                                <TableCell $isEditing={isEditing}>
-                                  {isEditing ? (
-                                    <>
-                                      <EditInput
-                                        type="text"
-                                        value={editForm.appointment}
-                                        onChange={e => handleEditFormChange("appointment", e.target.value)}
-                                        disabled={editLoading}
-                                        placeholder="ข้อความนัดหมาย (เช่น 1 ก.ค. 2025 15:00-16:00)"
-                                      />
-                                      <EditInput
-                                        type="datetime-local"
-                                        value={editForm.appointment_datetime || ''}
-                                        onChange={e => handleEditFormChange("appointment_datetime", e.target.value)}
-                                        disabled={editLoading}
-                                        style={{ marginTop: 6 }}
-                                      />
-                                    </>
-                                  ) : (
-                                    <>
-                                      <span>{row["Appointment"] || "None"}</span>
-                                      {row["appointment_datetime"] && (
-                                        <div style={{ fontSize: '0.85em', color: '#64748b' }}>
-                                          ({new Date(row["appointment_datetime"]).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })})
-                                        </div>
-                                      )}
-                                    </>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {isEditing ? (
-                                    <select
-                                      value={editForm.type}
-                                      onChange={handleTypeChange}
-                                      disabled={editLoading}
-                                      style={{
-                                        padding: '6px 12px',
-                                        borderRadius: '8px',
-                                        border: '1px solid #e2e8f0',
-                                        fontSize: '0.85rem',
-                                        background: '#fff',
-                                        cursor: 'pointer',
-                                      }}
-                                    >
-                                      <option value="">-- Select Type --</option>
-                                      {Object.keys(TYPE_GROUP_SUBGROUP).map(t => (
-                                        <option key={t} value={t}>{t}</option>
-                                      ))}
-                                    </select>
-                                  ) : (row["Type"] || "None")}
-                                </TableCell>
-                                <TableCell>
-                                  {isEditing ? (
-                                    <select
-                                      value={editForm.group}
-                                      onChange={handleGroupChange}
-                                      disabled={editLoading || !editForm.type}
-                                      style={{
-                                        padding: '6px 12px',
-                                        borderRadius: '8px',
-                                        border: '1px solid #e2e8f0',
-                                        fontSize: '0.85rem',
-                                        background: editForm.type ? '#fff' : '#f1f5f9',
-                                        cursor: editForm.type ? 'pointer' : 'not-allowed',
-                                      }}
-                                    >
-                                      <option value="">-- Select Group --</option>
-                                      {availableGroups.map(g => (
-                                        <option key={g} value={g}>{g}</option>
-                                      ))}
-                                    </select>
-                                  ) : (
-                                    (() => {
-                                        const typeUpper = (row["Type"] || "").toString().toUpperCase();
-                                        const groupVal = typeUpper === "SERVICE" ? row["Requested"] : typeUpper === "HELPDESK" ? row["Report"] : "";
-                                        if (!groupVal || groupVal === "None" || groupVal === "null" || groupVal === "NULL") {
-                                          return "";
-                                        }
-                                        return groupVal;
-                                      })()
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {isEditing ? (
-                                    <select
-                                      value={editForm.subgroup}
-                                      onChange={handleSubgroupChange}
-                                      disabled={editLoading || !editForm.group}
-                                      style={{
-                                        padding: '6px 12px',
-                                        borderRadius: '8px',
-                                        border: '1px solid #e2e8f0',
-                                        fontSize: '0.85rem',
-                                        background: editForm.group ? '#fff' : '#f1f5f9',
-                                        cursor: editForm.group ? 'pointer' : 'not-allowed',
-                                      }}
-                                    >
-                                      <option value="">-- Select Subgroup --</option>
-                                      {availableSubgroups.map(sg => (
-                                        <option key={sg} value={sg}>{sg}</option>
-                                      ))}
-                                    </select>
-                                  ) : (row["Subgroup"] || "None")}
-                                </TableCell>
-                                <TableCell $isEditing={isEditing}>
-                                  {isEditing ? (
-                                    <ActionButtonGroup>
-                                      <SaveButton onClick={() => handleSaveEdit(row["Ticket ID"])} disabled={editLoading}>Save</SaveButton>
-                                      <CancelButton onClick={handleCancelEdit} disabled={editLoading}>Cancel</CancelButton>
-                                    </ActionButtonGroup>
-                                  ) : (
-                                    <ActionButtonGroup>
-                                      <EditButton onClick={() => handleEditTicket(row)}>Edit</EditButton>
-                                      <DeleteButton onClick={() => handleDeleteTicket(row["Ticket ID"])}>ลบ</DeleteButton>
-                                    </ActionButtonGroup>
-                                  )}
-                                </TableCell>
-                              </RowComponent>
-                            );
-                          })}
-                        </tbody>
-                      </StyledTable>
-                    </ScrollContainer>
-
-                    {/* Pagination UI */}
-                    {totalPages > 1 && (
-                      <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0', gap: '8px', alignItems: 'center' }}>
-                        <button 
-                          onClick={() => handlePageChange(currentPage - 1)} 
-                          disabled={currentPage === 1}
-                          style={{ 
-                            padding: '8px 16px', 
-                            background: currentPage === 1 ? '#e2e8f0' : '#64748b',
-                            color: currentPage === 1 ? '#94a3b8' : 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                            transition: 'all 0.2s ease'
-                          }}
-                        >
-                          ก่อนหน้า
-                        </button>
-                        {Array.from({ length: totalPages }, (_, idx) => (
-                          <button
-                            key={idx + 1}
-                            onClick={() => handlePageChange(idx + 1)}
-                            style={{
-                              padding: '8px 12px',
-                              background: currentPage === idx + 1 ? '#64748b' : 'white',
-                              color: currentPage === idx + 1 ? 'white' : '#64748b',
-                              border: '1px solid #e2e8f0',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              minWidth: '40px'
-                            }}
-                          >
-                            {idx + 1}
-                          </button>
-                        ))}
-                        <button 
-                          onClick={() => handlePageChange(currentPage + 1)} 
-                          disabled={currentPage === totalPages}
-                          style={{ 
-                            padding: '8px 16px', 
-                            background: currentPage === totalPages ? '#e2e8f0' : '#64748b',
-                            color: currentPage === totalPages ? '#94a3b8' : 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                            transition: 'all 0.2s ease'
-                          }}
-                        >
-                          ถัดไป
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Loading indicator */}
-                    {loading && (
-                      <div style={{ textAlign: 'center', margin: '16px', color: '#64748b', fontSize: '0.95rem' }}>
-                        กำลังโหลดข้อมูล...
-                      </div>
-                    )}
-                  </TableContainer>
-
-                  {/* Modal สำหรับเปลี่ยนสถานะ */}
-                  {showStatusChangeModal && (
-                    <StatusChangeModal>
-                      <ModalContent>
-                        <ModalTitle>เปลี่ยนสถานะเป็น: {tempNewStatus}</ModalTitle>
-                        
-                        <div>
-                          <Label>
-                            หมายเหตุ (แสดงในแจ้งเตือน):
-                            <SubLabel>ข้อความนี้จะแสดงในแจ้งเตือนให้ผู้ใช้ทราบ</SubLabel>
-                          </Label>
-                          <NoteTextarea
-                            value={statusChangeNote}
-                            onChange={(e) => setStatusChangeNote(e.target.value)}
-                            placeholder="ระบุรายละเอียดเกี่ยวกับการเปลี่ยนสถานะนี้ที่จะแสดงในแจ้งเตือน..."
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label>
-                            หมายเหตุเพิ่มเติม (สำหรับการวิเคราะห์):
-                            <SubLabel>ข้อความนี้จะไม่แสดงในแจ้งเตือน แต่จะเก็บไว้ในระบบ</SubLabel>
-                          </Label>
-                          <RemarksTextarea
-                            value={statusChangeRemarks}
-                            onChange={(e) => setStatusChangeRemarks(e.target.value)}
-                            placeholder="ระบุรายละเอียดเพิ่มเติมสำหรับการวิเคราะห์หรือติดตามผล..."
-                          />
-                        </div>
-
-                        <ModalButtonGroup>
-                          <CancelButton onClick={cancelStatusChange}>ยกเลิก</CancelButton>
-                          <ConfirmButton onClick={confirmStatusChange}>ยืนยันการเปลี่ยนสถานะ</ConfirmButton>
-                        </ModalButtonGroup>
-                      </ModalContent>
-                    </StatusChangeModal>
-                  )}
-                </div>
-                <div ref={chatRef}>
-                  <ChatContainer>
-                    <ChatHeader>
-                      <div
-                        style={{ display: "flex", alignItems: "center", gap: "12px" }}
-                      >
-                        <ChatTitle>Admin Chat</ChatTitle>
-                      </div>
-                      <ChatStatus>Online</ChatStatus>
-                    </ChatHeader>
-
-                    <UserSelectContainer>
-                      <UserSelect value={selectedChatUser || ""} onChange={handleUserSelect}>
-                        <option value="">-- Select User to Chat --</option>
-                        <option value="announcement">
-                          📢 Announcement to All Members
-                        </option>
-                        {chatUsers.map((chatUser) => (
-                          <option key={chatUser.user_id} value={chatUser.user_id}>
-                            {chatUser.name}
-                          </option>
-                        ))}
-                      </UserSelect>
-                    </UserSelectContainer>
-                    
-                    {selectedChatUser === "announcement" ? (
-                      // Announcement UI
-                      <div>
-                        <div style={{ padding: "20px", textAlign: "center", color: "#64748b" }}>
-                          <h3>📢 Send Announcement to All Members</h3>
-                          <p>This message will be sent to all registered users.</p>
-                        </div>
-                        <InputContainer>
-                          <InputWrapper>
-                            <ChatTextArea
-                              value={announcementMessage}
-                              onChange={(e) => setAnnouncementMessage(e.target.value)}
-                              placeholder="Type your announcement here..."
-                            />
-                            <SendButton onClick={sendAnnouncement}>
-                              Send Announcement
-                            </SendButton>
-                          </InputWrapper>
-                        </InputContainer>
-                      </div>
-                    ) : selectedChatUser ? (
-                      // Chat UI
-                      <>
-                        <MessagesContainer>
-                          {loadingChat && (
-                            <div style={{ textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
-                              Loading messages...
-                            </div>
-                          )}
-                          {chatMessages.length === 0 && !loadingChat && (
-                            <div style={{ textAlign: 'center', color: '#64748b' }}>
-                              No messages yet. Start the conversation!
-                            </div>
-                          )}
-                          {chatMessages.map((msg) => (
-                            <MessageBubble key={msg.id} $isAdmin={msg.sender_type === 'admin'}>
-                              <MessageSender $isAdmin={msg.sender_type === 'admin'}>
-                                {msg.sender_type === 'admin'
-                                  ? 'Admin'
-                                  : chatUsers.find(u => u.user_id === msg.user_id)?.name || 'User'}
-                              </MessageSender>
-                              <div>{msg.message}</div>
-                              <MessageTimeStyled $isAdmin={msg.sender_type === 'admin'}>
-                                {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
-                              </MessageTimeStyled>
-                            </MessageBubble>
-                          ))}
-                        </MessagesContainer>
-                        <InputContainer>
-                          <InputWrapper>
-                            <ChatTextArea
-                              value={newMessage}
-                              onChange={(e) => setNewMessage(e.target.value)}
-                              placeholder="Type your message here..."
-                              onKeyPress={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                  e.preventDefault();
-                                  sendChatMessage();
-                                }
-                              }}
-                            />
-                            <ClearButton onClick={clearChatHistory}>Clear History</ClearButton>
-                            <SendButton onClick={sendChatMessage} disabled={!newMessage.trim()}>
-                              Send
-                            </SendButton>
-                          </InputWrapper>
-                        </InputContainer>
-                      </>
-                    ) : (
-                      // No user selected
-                      <div style={{ 
-                        padding: "40px", 
-                        textAlign: "center", 
-                        color: "#64748b",
-                        fontSize: "1.1rem"
-                      }}>
-                        <div style={{ marginBottom: "16px" }}>
-                          💬 Select a user from the dropdown above to start chatting
-                        </div>
-                        <div style={{ fontSize: "0.9rem", opacity: 0.7 }}>
-                          Or choose "Announcement" to send a message to all members
-                        </div>
-                      </div>
-                    )}
-                  </ChatContainer>
-                </div>
-                <NotificationDropdown
-                  $visible={showNotifications}
-                  style={{
-                    transform: `translate(${notificationPosition.x}px, ${notificationPosition.y}px)`,
-                    cursor: isDragging ? "grabbing" : "grab",
-                  }}
-                  onMouseDown={handleMouseDown}
-                >
-                  <CloseButton onClick={() => setShowNotifications(false)}>
-                    &times;
-                  </CloseButton>
-                  <NotificationHeader>
-                    <NotificationTitle>การแจ้งเตือนล่าสุด</NotificationTitle>
-                    <div>
-                      <MarkAllRead onClick={() => markAsRead()}>
-                        อ่านทั้งหมด
-                      </MarkAllRead>
-                      <MarkAllRead
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              "คุณแน่ใจหรือไม่ว่าต้องการลบการแจ้งเตือนทั้งหมด?"
-                            )
-                          ) {
-                            notifications.forEach((n) => deleteNotification(n.id));
+                          let apptSoon = false, apptNow = false;
+                          if (row["appointment_datetime"]) {
+                            const now = new Date();
+                            const appt = new Date(row["appointment_datetime"]);
+                            const diff = appt - now;
+                            if (diff > 0 && diff < 60 * 60 * 1000) apptSoon = true; // ภายใน 1 ชม.
+                            if (Math.abs(diff) < 5 * 60 * 1000) apptNow = true; // ถึงแล้ว (±5นาที)
                           }
-                        }}
-                        style={{ marginLeft: "10px", color: "#ef4444" }}
-                      >
-                        ลบทั้งหมด
-                      </MarkAllRead>
-                    </div>
-                  </NotificationHeader>
+                          const RowComponent = apptNow ? BlinkingRow : TableRow;
+                          return (
+                            <RowComponent
+                              key={`${row["Ticket ID"]}-${row["สถานะ"]}-${row.last_updated || ''}`}
+                              $bgColor={apptSoon && !apptNow ? '#fef9c3' : rowColor}
+                              $isSelected={selectedTicket === row["Ticket ID"]}
+                            >
+                              <TableCell>{row["Ticket ID"] || "None"}</TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <EditInput type="text" value={editForm.email} onChange={e => handleEditFormChange("email", e.target.value)} disabled={editLoading} />
+                                ) : (row["อีเมล"] || "None")}
+                              </TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <EditInput type="text" value={editForm.name} onChange={e => handleEditFormChange("name", e.target.value)} disabled={editLoading} />
+                                ) : (row["ชื่อ"] || "None")}
+                              </TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <EditInput type="text" value={editForm.phone} onChange={e => handleEditFormChange("phone", e.target.value)} disabled={editLoading} />
+                                ) : (row["เบอร์ติดต่อ"] || "None")}
+                              </TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <EditInput type="text" value={editForm.department} onChange={e => handleEditFormChange("department", e.target.value)} disabled={editLoading} />
+                                ) : (row["แผนก"] || "None")}
+                              </TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <EditInput type="text" value={editForm.date} onChange={e => handleEditFormChange("date", e.target.value)} disabled={editLoading} />
+                                ) : (row["วันที่แจ้ง"] || "None")}
+                              </TableCell>
+                              <StatusCell>
+                                {isEditing ? (
+                                  <StatusSelect
+                                  value={editForm.status}
+                                  onChange={e => {
+                                    const newStatus = e.target.value;
+                                    // อัพเดท local state ทันที
+                                    setEditForm(prev => ({ ...prev, status: newStatus }));
+                                    // เปิด modal สำหรับกรอกหมายเหตุ
+                                    if (editForm.status !== newStatus) {
+                                      handleStatusChangeWithNote(row["Ticket ID"], newStatus);
+                                    }
+                                  }}
+                                  disabled={editLoading}
+                                >
+                                  {STATUS_OPTIONS.map(opt => (
+                                    <option key={opt.value} value={opt.value}>
+                                      {`${opt.icon ? opt.icon + ' ' : ''}${opt.label}`}
+                                    </option>
+                                  ))}
+                                </StatusSelect>
+                                ) : (
+                                  (() => {
+                                    const status = row["สถานะ"] === "Completed" || row["สถานะ"] === "Complete" ? "Closed" : row["สถานะ"] || "None";
+                                    const statusOption = STATUS_OPTIONS.find(opt => opt.value === status);
+                                    return (
+                                      <div
+                                         key={`status-${row["Ticket ID"]}-${row["สถานะ"]}`}
+                                         className="status-badge"
+                                         data-status={status}
+                                      >
+                                        {statusOption?.icon || '📌'} {status}
+                                      </div>
+                                    );
+                                  })()
+                                )}
+                              </StatusCell>
+                              <TableCell $isEditing={isEditing}>
+                                {isEditing ? (
+                                  <>
+                                    <EditInput
+                                      type="text"
+                                      value={editForm.appointment}
+                                      onChange={e => handleEditFormChange("appointment", e.target.value)}
+                                      disabled={editLoading}
+                                      placeholder="ข้อความนัดหมาย (เช่น 1 ก.ค. 2025 15:00-16:00)"
+                                    />
 
-                  {notifications.length > 0 ? (
-                    notifications.map((notification) => (
-                      <NotificationItem
-                        key={notification.id}
-                        $unread={!notification.read}
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>{row["Appointment"] || "None"}</span>
+                                    {row["appointment_datetime"] && (
+                                      <div style={{ fontSize: '0.85em', color: '#64748b' }}>
+                                        ({new Date(row["appointment_datetime"]).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })})
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <select
+                                    value={editForm.type}
+                                    onChange={handleTypeChange}
+                                    disabled={editLoading}
+                                    style={{
+                                      padding: '6px 12px',
+                                      borderRadius: '8px',
+                                      border: '1px solid #e2e8f0',
+                                      fontSize: '0.85rem',
+                                      background: '#fff',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    <option value="">-- Select Type --</option>
+                                    {Object.keys(TYPE_GROUP_SUBGROUP).map(t => (
+                                      <option key={t} value={t}>{t}</option>
+                                    ))}
+                                  </select>
+                                ) : (row["Type"] || "None")}
+                              </TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <select
+                                    value={editForm.group}
+                                    onChange={handleGroupChange}
+                                    disabled={editLoading || !editForm.type}
+                                    style={{
+                                      padding: '6px 12px',
+                                      borderRadius: '8px',
+                                      border: '1px solid #e2e8f0',
+                                      fontSize: '0.85rem',
+                                      background: editForm.type ? '#fff' : '#f1f5f9',
+                                      cursor: editForm.type ? 'pointer' : 'not-allowed',
+                                    }}
+                                  >
+                                    <option value="">-- Select Group --</option>
+                                    {availableGroups.map(g => (
+                                      <option key={g} value={g}>{g}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  (() => {
+                                      const typeUpper = (row["Type"] || "").toString().toUpperCase();
+                                      const groupVal = typeUpper === "SERVICE" ? row["Requested"] : typeUpper === "HELPDESK" ? row["Report"] : "";
+                                      if (!groupVal || groupVal === "None" || groupVal === "null" || groupVal === "NULL") {
+                                        return "";
+                                      }
+                                      return groupVal;
+                                    })()
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {isEditing ? (
+                                  <select
+                                    value={editForm.subgroup}
+                                    onChange={handleSubgroupChange}
+                                    disabled={editLoading || !editForm.group}
+                                    style={{
+                                      padding: '6px 12px',
+                                      borderRadius: '8px',
+                                      border: '1px solid #e2e8f0',
+                                      fontSize: '0.85rem',
+                                      background: editForm.group ? '#fff' : '#f1f5f9',
+                                      cursor: editForm.group ? 'pointer' : 'not-allowed',
+                                    }}
+                                  >
+                                    <option value="">-- Select Subgroup --</option>
+                                    {availableSubgroups.map(sg => (
+                                      <option key={sg} value={sg}>{sg}</option>
+                                    ))}
+                                  </select>
+                                ) : (row["Subgroup"] || "None")}
+                              </TableCell>
+                              <TableCell $isEditing={isEditing}>
+                                {isEditing ? (
+                                  <ActionButtonGroup>
+                                    <SaveButton onClick={() => handleSaveEdit(row["Ticket ID"])} disabled={editLoading}>Save</SaveButton>
+                                    <CancelButton onClick={handleCancelEdit} disabled={editLoading}>Cancel</CancelButton>
+                                  </ActionButtonGroup>
+                                ) : (
+                                  <ActionButtonGroup>
+                                    <EditButton onClick={() => handleEditTicket(row)}>Edit</EditButton>
+                                    <DeleteButton onClick={() => handleDeleteTicket(row["Ticket ID"])}>ลบ</DeleteButton>
+                                  </ActionButtonGroup>
+                                )}
+                              </TableCell>
+                            </RowComponent>
+                          );
+                        })}
+                      </tbody>
+                    </StyledTable>
+                  </ScrollContainer>
+
+                  {/* Pagination UI */}
+                  {totalPages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0', gap: '8px', alignItems: 'center' }}>
+                      <button 
+                        onClick={() => handlePageChange(currentPage - 1)} 
+                        disabled={currentPage === 1}
+                        style={{ 
+                          padding: '8px 16px', 
+                          background: currentPage === 1 ? '#e2e8f0' : '#64748b',
+                          color: currentPage === 1 ? '#94a3b8' : 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
                       >
-                        <NotificationContent>
-                          {notification.message &&
-                            typeof notification.message === "string" &&
-                            notification.message.includes("New message from") ? (
-                            <>
-                              <span style={{ fontWeight: "bold", marginBottom: "4px", display: "block" }}>
-                                New Message 📩 from{" "}
-                                {notification.message
-                                  .split(" from ")[1]
-                                  ?.split(" for ticket")[0] || "Unknown"}
-                              </span>
-                              <span style={{ background: "#f0f4f8", padding: "8px", borderRadius: "4px", display: "block" }}>
-                                {notification.message.split(": ").slice(1).join(": ")}
-                              </span>
-                            </>
-                          ) : (
-                            notification.message || "No message content"
-                          )}
-                        </NotificationContent>
-                        <div
+                        ก่อนหน้า
+                      </button>
+                      {Array.from({ length: totalPages }, (_, idx) => (
+                        <button
+                          key={idx + 1}
+                          onClick={() => handlePageChange(idx + 1)}
                           style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            marginTop: "8px",
+                            padding: '8px 12px',
+                            background: currentPage === idx + 1 ? '#64748b' : 'white',
+                            color: currentPage === idx + 1 ? 'white' : '#64748b',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            minWidth: '40px'
                           }}
                         >
-                          <NotificationTime>
-                            {new Date(notification.timestamp).toLocaleString()}
-                          </NotificationTime>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteNotification(notification.id);
-                            }}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              color: "#ef4444",
-                              cursor: "pointer",
-                              fontSize: "0.75rem",
-                            }}
-                          >
-                            ลบ
-                          </button>
-                        </div>
-                      </NotificationItem>
-                    ))
-                  ) : (
-                    <EmptyNotifications>ไม่มีการแจ้งเตือน</EmptyNotifications>
+                          {idx + 1}
+                        </button>
+                      ))}
+                      <button 
+                        onClick={() => handlePageChange(currentPage + 1)} 
+                        disabled={currentPage === totalPages}
+                        style={{ 
+                          padding: '8px 16px', 
+                          background: currentPage === totalPages ? '#e2e8f0' : '#64748b',
+                          color: currentPage === totalPages ? '#94a3b8' : 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        ถัดไป
+                      </button>
+                    </div>
                   )}
-                </NotificationDropdown>
-                {editError && (
-                  <div style={{ color: '#ef4444', textAlign: 'center', margin: '8px' }}>{editError}</div>
+
+                  {/* Loading indicator */}
+                  {loading && (
+                    <div style={{ textAlign: 'center', margin: '16px', color: '#64748b', fontSize: '0.95rem' }}>
+                      กำลังโหลดข้อมูล...
+                    </div>
+                  )}
+                </TableContainer>
+
+                {/* Modal สำหรับเปลี่ยนสถานะ */}
+                {showStatusChangeModal && (
+                  <StatusChangeModal>
+                    <ModalContent>
+                      <ModalTitle>เปลี่ยนสถานะเป็น: {tempNewStatus}</ModalTitle>
+                      
+                      <div>
+                        <Label>
+                          หมายเหตุ (แสดงในแจ้งเตือน):
+                          <SubLabel>ข้อความนี้จะแสดงในแจ้งเตือนให้ผู้ใช้ทราบ</SubLabel>
+                        </Label>
+                        <NoteTextarea
+                          value={statusChangeNote}
+                          onChange={(e) => setStatusChangeNote(e.target.value)}
+                          placeholder="ระบุรายละเอียดเกี่ยวกับการเปลี่ยนสถานะนี้ที่จะแสดงในแจ้งเตือน..."
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label>
+                          หมายเหตุเพิ่มเติม (สำหรับการวิเคราะห์):
+                          <SubLabel>ข้อความนี้จะไม่แสดงในแจ้งเตือน แต่จะเก็บไว้ในระบบ</SubLabel>
+                        </Label>
+                        <RemarksTextarea
+                          value={statusChangeRemarks}
+                          onChange={(e) => setStatusChangeRemarks(e.target.value)}
+                          placeholder="ระบุรายละเอียดเพิ่มเติมสำหรับการวิเคราะห์หรือติดตามผล..."
+                        />
+                      </div>
+
+                      <ModalButtonGroup>
+  <CancelButton 
+    onClick={cancelStatusChange}
+    disabled={isUpdatingStatus}
+  >
+    ยกเลิก
+  </CancelButton>
+  <ConfirmButton 
+    onClick={confirmStatusChange}
+    disabled={isUpdatingStatus}
+  >
+    {isUpdatingStatus ? 'กำลังอัปเดต...' : 'ยืนยันการเปลี่ยนสถานะ'}
+  </ConfirmButton>
+</ModalButtonGroup>
+                    </ModalContent>
+                  </StatusChangeModal>
                 )}
-                {editSuccess && (
-                  <div style={{ color: '#10b981', textAlign: 'center', margin: '8px' }}>{editSuccess}</div>
+              </div>
+              <div ref={chatRef}>
+                <ChatContainer>
+                  <ChatHeader>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: "12px" }}
+                    >
+                      <ChatTitle>Admin Chat</ChatTitle>
+                    </div>
+                    <ChatStatus>Online</ChatStatus>
+                  </ChatHeader>
+
+                  <UserSelectContainer>
+                    <UserSelect value={selectedChatUser || ""} onChange={handleUserSelect}>
+                      <option value="">-- Select User to Chat --</option>
+                      <option value="announcement">
+                        📢 Announcement to All Members
+                      </option>
+                      {chatUsers.map((chatUser) => (
+                        <option key={chatUser.user_id} value={chatUser.user_id}>
+                          {chatUser.name}
+                        </option>
+                      ))}
+                    </UserSelect>
+                  </UserSelectContainer>
+                  
+                  {selectedChatUser === "announcement" ? (
+                    // Announcement UI
+                    <div>
+                      <div style={{ padding: "20px", textAlign: "center", color: "#64748b" }}>
+                        <h3>📢 Send Announcement to All Members</h3>
+                        <p>This message will be sent to all registered users.</p>
+                      </div>
+                      <InputContainer>
+                        <InputWrapper>
+                          <ChatTextArea
+                            value={announcementMessage}
+                            onChange={(e) => setAnnouncementMessage(e.target.value)}
+                            placeholder="Type your announcement here..."
+                          />
+                          <SendButton onClick={sendAnnouncement}>
+                            Send Announcement
+                          </SendButton>
+                        </InputWrapper>
+                      </InputContainer>
+                    </div>
+                  ) : selectedChatUser ? (
+                    // Chat UI
+                    <>
+                      <MessagesContainer>
+                        {loadingChat && (
+                          <div style={{ textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+                            Loading messages...
+                          </div>
+                        )}
+                        {chatMessages.length === 0 && !loadingChat && (
+                          <div style={{ textAlign: 'center', color: '#64748b' }}>
+                            No messages yet. Start the conversation!
+                          </div>
+                        )}
+                        {chatMessages.map((msg) => (
+                          <MessageBubble key={msg.id} $isAdmin={msg.sender_type === 'admin'}>
+                            <MessageSender $isAdmin={msg.sender_type === 'admin'}>
+                              {msg.sender_type === 'admin'
+                                ? 'Admin'
+                                : chatUsers.find(u => u.user_id === msg.user_id)?.name || 'User'}
+                            </MessageSender>
+                            <div>{msg.message}</div>
+                            <MessageTimeStyled $isAdmin={msg.sender_type === 'admin'}>
+                              {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
+                            </MessageTimeStyled>
+                          </MessageBubble>
+                        ))}
+                      </MessagesContainer>
+                      <InputContainer>
+                        <InputWrapper>
+                          <ChatTextArea
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            placeholder="Type your message here..."
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                sendChatMessage();
+                              }
+                            }}
+                          />
+                          <ClearButton onClick={clearChatHistory}>Clear History</ClearButton>
+                          <SendButton onClick={sendChatMessage} disabled={!newMessage.trim()}>
+                            Send
+                          </SendButton>
+                        </InputWrapper>
+                      </InputContainer>
+                    </>
+                  ) : (
+                    // No user selected
+                    <div style={{ 
+                      padding: "40px", 
+                      textAlign: "center", 
+                      color: "#64748b",
+                      fontSize: "1.1rem"
+                    }}>
+                      <div style={{ marginBottom: "16px" }}>
+                        💬 Select a user from the dropdown above to start chatting
+                      </div>
+                      <div style={{ fontSize: "0.9rem", opacity: 0.7 }}>
+                        Or choose "Announcement" to send a message to all members
+                      </div>
+                    </div>
+                  )}
+                </ChatContainer>
+              </div>
+              <NotificationDropdown
+                $visible={showNotifications}
+                style={{
+                  transform: `translate(${notificationPosition.x}px, ${notificationPosition.y}px)`,
+                  cursor: isDragging ? "grabbing" : "grab",
+                }}
+                onMouseDown={handleMouseDown}
+              >
+                <CloseButton onClick={() => setShowNotifications(false)}>
+                  &times;
+                </CloseButton>
+                <NotificationHeader>
+                  <NotificationTitle>การแจ้งเตือนล่าสุด</NotificationTitle>
+                  <div>
+                    <MarkAllRead onClick={() => markAsRead()}>
+                      อ่านทั้งหมด
+                    </MarkAllRead>
+                    <MarkAllRead
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            "คุณแน่ใจหรือไม่ว่าต้องการลบการแจ้งเตือนทั้งหมด?"
+                          )
+                        ) {
+                          notifications.forEach((n) => deleteNotification(n.id));
+                        }
+                      }}
+                      style={{ marginLeft: "10px", color: "#ef4444" }}
+                    >
+                      ลบทั้งหมด
+                    </MarkAllRead>
+                  </div>
+                </NotificationHeader>
+
+                {notifications.length > 0 ? (
+                  notifications.map((notification) => (
+                    <NotificationItem
+                      key={notification.id}
+                      $unread={!notification.read}
+                    >
+                      <NotificationContent>
+                        {notification.message &&
+                          typeof notification.message === "string" &&
+                          notification.message.includes("New message from") ? (
+                          <>
+                            <span style={{ fontWeight: "bold", marginBottom: "4px", display: "block" }}>
+                              New Message 📩 from{" "}
+                              {notification.message
+                                .split(" from ")[1]
+                                ?.split(" for ticket")[0] || "Unknown"}
+                            </span>
+                            <span style={{ background: "#f0f4f8", padding: "8px", borderRadius: "4px", display: "block" }}>
+                              {notification.message.split(": ").slice(1).join(": ")}
+                            </span>
+                          </>
+                        ) : (
+                          notification.message || "No message content"
+                        )}
+                      </NotificationContent>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginTop: "8px",
+                        }}
+                      >
+                        <NotificationTime>
+                          {new Date(notification.timestamp).toLocaleString()}
+                        </NotificationTime>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteNotification(notification.id);
+                          }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#ef4444",
+                            cursor: "pointer",
+                            fontSize: "0.75rem",
+                          }}
+                        >
+                          ลบ
+                        </button>
+                      </div>
+                    </NotificationItem>
+                  ))
+                ) : (
+                  <EmptyNotifications>ไม่มีการแจ้งเตือน</EmptyNotifications>
                 )}
-          
-              </Container>
-            </MainContent>
-          </>
-        ) : <Navigate to="/login" />} />
-        <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
-        <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
-      </Routes>
-      <NewMessageNotification 
-        messages={newMsgNotifications} 
-      />
-      {showPopup && popupMessage && (
-        <NewMessageNotification
-          messages={[popupMessage]}
-        />
-      )}
-    </React.Fragment>
+              </NotificationDropdown>
+              {editError && (
+                <div style={{ color: '#ef4444', textAlign: 'center', margin: '8px' }}>{editError}</div>
+              )}
+              {editSuccess && (
+                <div style={{ color: '#10b981', textAlign: 'center', margin: '8px' }}>{editSuccess}</div>
+              )}
+        
+            <ToastContainer />
+            </Container>
+          </MainContent>
+        </>
+      ) : <Navigate to="/login" />} />
+      <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
+      <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
+    </Routes>
+
   );
 }
 

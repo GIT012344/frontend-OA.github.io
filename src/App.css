@@ -44,29 +44,121 @@
   margin-bottom: 32px;
 }
 
-/* Responsive table
+/* Responsive table */
 table, .StyledTable {
-  min-width: 900px;
-  font-size: 1rem;
+  width: 100%;
+  font-size: 0.9rem;
+  table-layout: auto;
+  border-collapse: collapse;
+}
+
+/* Reduce padding and margins */
+th, td {
+  padding: 6px 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 200px;
+  border: 1px solid #e2e8f0;
+}
+
+/* Header styles */
+th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: #334155;
+  text-align: left;
+}
+
+/* Hover effect */
+tr:hover {
+  background-color: #f8fafc;
+}
+
+/* Adjust specific columns */
+th:nth-child(1), td:nth-child(1) { width: 60px; }  /* Ticket ID */
+th:nth-child(2), td:nth-child(2) { width: 100px; } /* Date */
+th:nth-child(3), td:nth-child(3) { width: 150px; } /* Name */
+th:nth-child(4), td:nth-child(4) { width: 100px; } /* Type */
+th:nth-child(5), td:nth-child(5) { min-width: 200px; } /* Details */
+th:nth-child(6), td:nth-child(6) { width: 100px; } /* Status */
+th:nth-child(7), td:nth-child(7) { width: 100px; } /* Actions */
+
+/* Responsive adjustments */
+@media (max-width: 1600px) {
+  table, .StyledTable {
+    font-size: 0.85rem;
+  }
+  th, td {
+    padding: 4px 6px;
+  }
 }
 
 @media (max-width: 1200px) {
   table, .StyledTable {
-    min-width: 700px;
-    font-size: 0.95rem;
+    font-size: 0.8rem;
+  }
+  th, td {
+    padding: 3px 4px;
   }
 }
+
 @media (max-width: 900px) {
   table, .StyledTable {
-    min-width: 600px;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
+  }
+  th, td {
+    padding: 2px 3px;
   }
 }
-@media (max-width: 600px) {
+
+@media (max-width: 768px) {
   table, .StyledTable {
-    min-width: 400px;
-    font-size: 0.85rem;
+    width: 100%;
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
+  
+  /* Stack cells on mobile */
+  table, thead, tbody, th, td, tr { 
+    display: block; 
+  }
+  
+  /* Hide table headers on mobile */
+  thead tr { 
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+  
+  tr { border: 1px solid #ccc; margin-bottom: 1rem; }
+  
+  td { 
+    border: none;
+    border-bottom: 1px solid #eee; 
+    position: relative;
+    padding-left: 50%; 
+    min-height: 2em;
+  }
+  
+  td:before { 
+    position: absolute;
+    left: 6px;
+    width: 45%; 
+    padding-right: 10px; 
+    white-space: nowrap;
+    font-weight: bold;
+  }
+  
+  /* Label each cell */
+  td:nth-of-type(1):before { content: "Ticket ID:"; }
+  td:nth-of-type(2):before { content: "Date:"; }
+  td:nth-of-type(3):before { content: "Name:"; }
+  td:nth-of-type(4):before { content: "Type:"; }
+  td:nth-of-type(5):before { content: "Details:"; }
+  td:nth-of-type(6):before { content: "Status:"; }
+  td:nth-of-type(7):before { content: "Actions:"; }
 }
 
 /* ปุ่มลบ */

@@ -1,1 +1,5 @@
-/*    /index.html   200 
+/dashboard    /index.html  200
+/logs         /index.html  200
+/chat         /index.html  200
+/tickets      /index.html  200
+/*            /index.html  200 

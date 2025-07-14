@@ -211,11 +211,17 @@ export default function DashboardSection({ stats, daily, upcoming = [], overdue 
           </StatCard>
         </DashCol>
       </DashGrid>     
-
-      {/* ที่เหลือเหมือนเดิม... */}
-      <DashGrid>
-        {/* ...Bar & Donut chart... */}
-      </DashGrid>
+      
+      {(!upcoming || upcoming.length === 0) && (
+        <DashGrid>
+          <DashCol style={{ flex: "1 1 100%" }}>
+            <StatCard gradient="#fff" style={{ color: "#000", textAlign: "center" }}>
+              ไม่พบการนัดหมาย Service วันนี้
+            </StatCard>
+          </DashCol>
+        </DashGrid>
+      )}
+      
     </Wrapper>
   );
 }
