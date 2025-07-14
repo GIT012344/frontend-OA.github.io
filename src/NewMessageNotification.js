@@ -110,7 +110,7 @@ export default function NewMessageNotification({ alert, onClose, onReply }) {
   return (
     <div style={popupStyle}>
       <div style={headerStyle}>
-        <span>📩 ข้อความใหม่จาก {alert.sender_name}</span>
+        <span>📩 ข้อความใหม่จาก {alert.sender_name || alert.user}</span>
         <button onClick={onClose} style={{
           background: 'none', border: 'none', fontSize: 22, color: '#64748b', cursor: 'pointer'
         }}>&times;</button>
