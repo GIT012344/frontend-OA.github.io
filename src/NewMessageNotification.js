@@ -1,103 +1,70 @@
 import React, { useEffect } from 'react';
 import styled from 'styled-components';
 
-const NotificationContainer = styled.div`
+const PopupContainer = styled.div`
   position: fixed;
-  top: 24px;
-  right: 24px;
-  z-index: 2000;
+  right: 32px;
+  bottom: 32px;
+  z-index: 3000;
   min-width: 340px;
-  max-width: 400px;
-`;
-
-const NotificationItem = styled.div`
+  max-width: 420px;
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-  margin-bottom: 16px;
-  padding: 16px 20px 12px 20px;
-  cursor: pointer;
-  border-left: 4px solid #3b82f6;
-  transition: box-shadow 0.2s;
-  &:hover {
-    box-shadow: 0 8px 24px rgba(59,130,246,0.18);
-    background: #f8fafc;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  border-left: 8px solid #3b82f6;
+  overflow: hidden;
+  animation: slideInNotif 0.3s;
+  @media (max-width: 600px) {
+    right: 8px;
+    left: 8px;
+    min-width: unset;
+    max-width: 98vw;
+    bottom: 8px;
   }
 `;
-
-const NotificationHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-`;
-
-const SenderName = styled.span`
-  font-weight: 600;
+const PopupHeader = styled.div`
+  background: #f1f5f9;
+  padding: 18px 24px 10px 24px;
+  font-weight: 700;
+  font-size: 1.1rem;
   color: #1e293b;
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 `;
-
-const Timestamp = styled.span`
-  color: #64748b;
-  font-size: 0.85rem;
-`;
-
-const MessageContent = styled.div`
+const PopupBody = styled.div`
+  padding: 18px 24px 18px 24px;
+  font-size: 1.05rem;
   color: #334155;
-  font-size: 0.95rem;
-  margin-top: 2px;
-  word-break: break-word;
 `;
-
-const CloseButton = styled.button`
+const PopupTime = styled.div`
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-top: 8px;
+`;
+const PopupButton = styled.button`
+  margin-top: 16px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-weight: 600;
+  font-size: 1.05rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(59,130,246,0.10);
+  transition: background 0.2s;
+  &:hover { background: #2563eb; }
+`;
+const PopupClose = styled.button`
   background: none;
   border: none;
   color: #64748b;
-  font-size: 1.2rem;
+  font-size: 1.5rem;
   cursor: pointer;
   margin-left: 8px;
   &:hover { color: #ef4444; }
 `;
-
-const popupStyle = {
-  position: 'fixed',
-  bottom: 32,
-  right: 32,
-  minWidth: 340,
-  maxWidth: 420,
-  background: '#fff',
-  borderRadius: 16,
-  boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
-  zIndex: 2000,
-  padding: 0,
-  overflow: 'hidden',
-  animation: 'slideInNotif 0.3s',
-  borderLeft: '8px solid #3b82f6'
-};
-
-const headerStyle = {
-  background: '#f1f5f9',
-  padding: '16px 20px',
-  fontWeight: 700,
-  fontSize: '1.1rem',
-  color: '#1e293b',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between'
-};
-
-const bodyStyle = {
-  padding: '18px 20px',
-  fontSize: '1rem',
-  color: '#334155'
-};
-
-const timeStyle = {
-  fontSize: '0.85rem',
-  color: '#64748b',
-  marginTop: 8
-};
 
 export default function NewMessageNotification({ alert, onClose, onReply }) {
   useEffect(() => {
@@ -105,40 +72,21 @@ export default function NewMessageNotification({ alert, onClose, onReply }) {
     const timer = setTimeout(onClose, 7000); // แสดง 7 วินาที
     return () => clearTimeout(timer);
   }, [alert, onClose]);
-
   if (!alert) return null;
   return (
-    <div style={popupStyle}>
-      <div style={headerStyle}>
+    <PopupContainer>
+      <PopupHeader>
         <span>📩 ข้อความใหม่จาก {alert.sender_name || alert.user}</span>
-        <button onClick={onClose} style={{
-          background: 'none', border: 'none', fontSize: 22, color: '#64748b', cursor: 'pointer'
-        }}>&times;</button>
-      </div>
-      <div style={bodyStyle}>
-        <div style={{ marginBottom: 8 }}>{alert.message}</div>
-        <div style={timeStyle}>{new Date(alert.timestamp).toLocaleString('th-TH')}</div>
-        <button
-          onClick={() => { onReply(alert.user_id); onClose(); }}
-          style={{
-            marginTop: 12,
-            background: '#3b82f6',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 8,
-            padding: '8px 18px',
-            fontWeight: 600,
-            fontSize: '1rem',
-            cursor: 'pointer'
-          }}
-        >ไปที่แชท</button>
-      </div>
-      <style>
-        {`@keyframes slideInNotif {
-          from { transform: translateY(100%); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }`}
-      </style>
-    </div>
+        <PopupClose onClick={onClose} title="ปิดแจ้งเตือน">&times;</PopupClose>
+      </PopupHeader>
+      <PopupBody>
+        <div style={{ marginBottom: 8, fontWeight: 500 }}>{alert.message}</div>
+        <PopupTime>{new Date(alert.timestamp).toLocaleString('th-TH')}</PopupTime>
+        <PopupButton onClick={() => { onReply(alert.user_id); onClose(); }}>
+          ไปที่แชท
+        </PopupButton>
+      </PopupBody>
+      <style>{`@keyframes slideInNotif { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
+    </PopupContainer>
   );
 } 

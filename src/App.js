@@ -3478,15 +3478,15 @@ const handleSubgroupChange = (e) => {
         params: { last_checked: lastMessageCheck.toISOString() }
       });
       if (response.data.new_messages && response.data.new_messages.length > 0) {
-        // แสดงเฉพาะข้อความใหม่ล่าสุดจาก user คนล่าสุด
+        // แสดง popup สำหรับทุกข้อความใหม่จาก user (queue เฉพาะล่าสุด)
         const latestGroup = response.data.new_messages[0];
         const latestMsg = latestGroup.messages[latestGroup.messages.length - 1];
         setNewMessageAlert({
-          user: latestGroup.name, // ใช้ชื่อผู้ส่ง
+          user: latestGroup.name,
           message: latestMsg.message,
           timestamp: latestMsg.timestamp,
           user_id: latestGroup.user_id,
-          sender_name: latestGroup.name // เพิ่ม sender_name
+          sender_name: latestGroup.name
         });
         setLastMessageCheck(new Date(latestMsg.timestamp));
         // --- เรียก backend เพื่อบันทึก notification ลงฐานข้อมูล ---
@@ -3500,7 +3500,6 @@ const handleSubgroupChange = (e) => {
             sender_name: latestGroup.name
           }
         });
-        // ไม่ต้อง setNotifications ฝั่ง client โดยตรง ให้ fetch จาก backend เท่านั้น
         setHasUnread(true);
       }
     } catch (e) {
@@ -4588,11 +4587,10 @@ const handleSubgroupChange = (e) => {
 
                 {notifications.length > 0 ? (
                   notifications.map((notification) => {
-                    const isNewMsg = notification.metadata?.type === 'new_message';
-                    // --- ปรับ logic หา senderName ---
-                    let senderName = notification.sender_name || notification.metadata?.sender_name;
-                    if (!senderName && notification.metadata?.user_id) {
-                      senderName = userIdToNameMap[notification.metadata.user_id] || notification.metadata.user_id;
+                    const isNewMsg = notification.meta_data?.type === 'new_message';
+                    let senderName = notification.sender_name || notification.meta_data?.sender_name;
+                    if (!senderName && notification.meta_data?.user_id) {
+                      senderName = userIdToNameMap[notification.meta_data.user_id] || notification.meta_data.user_id;
                     }
                     senderName = senderName || '-';
                     return (
@@ -4601,10 +4599,10 @@ const handleSubgroupChange = (e) => {
                         $unread={!notification.read}
                         style={{ cursor: isNewMsg ? 'pointer' : 'default' }}
                         onClick={isNewMsg ? () => {
-                          setSelectedChatUser(notification.metadata.user_id);
+                          setSelectedChatUser(notification.meta_data.user_id);
                           setActiveTab('chat');
                           scrollToChat();
-                          loadChatMessages(notification.metadata.user_id);
+                          loadChatMessages(notification.meta_data.user_id);
                           setHighlightMsgId(null);
                           markAsRead(notification.id);
                         } : undefined}
