@@ -4072,11 +4072,13 @@ const handleSubgroupChange = (e) => {
                         onChange={(e) => setStatusFilter(e.target.value)}
                       >
                         <option value="all">ทั้งหมด</option>
-                        <option value="Pending">Pending</option>
-                        <option value="Scheduled">Scheduled</option>
+                        <option value="New">New</option>
                         <option value="In Progress">In Progress</option>
-                        <option value="Waiting">Waiting</option>
-                        <option value="Completed">Completed</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Closed">Closed</option>
+                        <option value="Cancelled">Canclled</option>
+                        <option value="Reject">Reject</option>
+                        
                       </FilterSelect>
                     </FilterGroup>
 
