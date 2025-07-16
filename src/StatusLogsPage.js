@@ -215,8 +215,6 @@ function StatusLogsPage() {
       const dataArr = Array.isArray(response.data) ? response.data : [];
       setLogs(dataArr);
       // build category list dynamically
-      const deriveCat = l => (l.category || '').trim();
-      const uniqueCats = [...new Set(dataArr.map(deriveCat).filter(Boolean))];
     } catch (err) {
       console.error('Error details:', {
         message: err.message,
