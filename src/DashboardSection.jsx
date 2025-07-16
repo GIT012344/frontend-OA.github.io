@@ -94,25 +94,6 @@ const StatLabel = styled.div`
   opacity: 0.9;
 `;
 
-const AppointmentList = styled.div`
-  margin-top: 16px;
-  div {
-    margin-bottom: 10px;
-  }
-  .row {
-    display: flex;
-    justify-content: space-between;
-  }
-  .meta {
-    color: #cbd5e1;
-    font-size: 0.75rem;
-    margin-top: 2px;
-  }
-  .meta-overdue {
-    color: #fecaca;
-  }
-`;
-
 // ---------- Meta Info ----------
 const statusMeta = {
   New: { color: "#3b82f6", gradient: "linear-gradient(135deg,#60a5fa,#2563eb)", icon: <FireIcon /> },
@@ -140,7 +121,6 @@ function buildBarData(dailyRaw) {
 // ---------- Main Component ----------
 export default function DashboardSection({ stats, daily, upcoming = [], overdue = [] }) {
   if (!stats) return null;
-  const overdueCount = overdue ? overdue.length : 0;
   const doughnutData = {
     labels: Object.keys(statusMeta),
     datasets: [

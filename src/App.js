@@ -2759,7 +2759,7 @@ const cancelStatusChange = () => {
       const ticketDate = new Date(ticket["วันที่แจ้ง"]).toISOString().split('T')[0];
       let status = ticket["สถานะ"];
       // Map statuses to match our STATUS_OPTIONS
-      if (status === "In Progress") status = "In Process";
+      if (status === "In Process") status = "In Process";
       if (status === "Rejected") status = "Reject";
       if (status === "Completed" || status === "Complete") status = "Closed";
       
@@ -2784,7 +2784,7 @@ const cancelStatusChange = () => {
     data.forEach((t) => {
       let s = t.status || t["สถานะ"];
       // Map old status names to new ones if needed
-      if (s === "In Progress") s = "In Process";
+      if (s === "In Process") s = "In Process";
       if (s === "Rejected") s = "Reject";
       if (s === "Completed" || s === "Complete") s = "Closed";
       if (base[s] !== undefined) base[s]++;
@@ -3760,7 +3760,7 @@ const handleSubgroupChange = (e) => {
                       >
                         <option value="all">ทั้งหมด</option>
                         <option value="New">New</option>
-                        <option value="In Progress">In Progress</option>
+                        <option value="In Process">In Process</option>
                         <option value="Pending">Pending</option>
                         <option value="Closed">Closed</option>
                         <option value="Cancelled">Canclled</option>
