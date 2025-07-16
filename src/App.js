@@ -1445,7 +1445,7 @@ const LogoutButton = styled.button`
     background: #d32f2f;
   }
 `;
-//Builas
+//Building
 
 // ExpandableCell component for handling long text
 function ExpandableCell({ text, maxLines = 4 }) {
