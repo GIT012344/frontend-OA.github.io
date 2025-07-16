@@ -257,7 +257,18 @@ function StatusLogsPage() {
       const ticket = ticketMap[log.ticket_id];
       categorySource = (ticket?.type || ticket?.type_main || ticket?.type_group || ticket?.group || '').trim();
     }
-    const categoryMatch = !categoryFilter || categorySource.toLowerCase() === categoryFilter.toLowerCase();
+    const filterVal = (categoryFilter || '').toLowerCase();
+    // --- แก้ตรงนี้ ---
+    let categoryMatch = true;
+    if (filterVal === "service" || filterVal === "helpdesk") {
+      // เช็ค type หลักจาก ticketMap
+      const ticket = ticketMap[log.ticket_id];
+      const mainType = (ticket?.type || ticket?.type_main || '').toLowerCase();
+      categoryMatch = mainType === filterVal;
+    } else {
+      const catVal = (categorySource || '').toLowerCase();
+      categoryMatch = !categoryFilter || catVal === filterVal;
+    }
 
     const dateMatch = startMatch && endMatch;
     
