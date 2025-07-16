@@ -61,15 +61,6 @@ export const TYPE_GROUP_SUBGROUP = {
   }
 };
 // Health check function
-export const checkBackendHealth = async () => {
-  try {
-    const response = await apiClient.get('/api/health');
-    return response.status === 200;
-  } catch (error) {
-    console.warn('⚠️ Backend health check failed:', error.message);
-    return false;
-  }
-};
 
 // Test connection function
 export const testConnection = async () => {
