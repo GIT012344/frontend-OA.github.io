@@ -10,7 +10,7 @@ import { useAuth } from './AuthContext';
 import './styles.css';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import Dashboard from "./Dashboard";
+import DashboardSection from "./DashboardSection";
 import StatusLogsPage from './StatusLogsPage';
 import NewMessageNotification from './NewMessageNotification';
 
@@ -160,6 +160,19 @@ const ExportButton = styled.button`
   )};
     background-size: contain;
     background-repeat: no-repeat;
+  }
+`;
+
+const Dashboard = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
+  position: relative;
+  z-index: 1;
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 `;
 
@@ -3634,7 +3647,12 @@ const handleSubgroupChange = (e) => {
             <Container>
               <div ref={dashboardRef}>
                 <Title>Ticket Management System</Title>
-                <Dashboard data={data} />
+                <DashboardSection
+                  stats={getBasicStats()}
+                  daily={getDailySummary()}
+                  upcoming={getUpcomingAppointments()}
+                  overdue={getOverdueAppointments()}
+                />
                 <SyncIndicator>{formatLastSync()}</SyncIndicator>
                 <BackendStatusIndicator $status={backendStatus}>
                   {getBackendStatusText()}
@@ -3853,19 +3871,18 @@ const handleSubgroupChange = (e) => {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
       const filtered = data.filter((ticket) => {
-        // ตรวจสอบประเภทและสถานะ
         if (ticket["Type"] !== "Service") return false;
         if (ticket["สถานะ"] !== "New" && ticket["สถานะ"] !== "Pending") return false;
-        
-        // ตรวจสอบการนัดหมาย
         if (!ticket["Appointment"]) return false;
 
         try {
-          // แปลงวันที่จาก "2025-07-03 15:00-16:00" เป็น Date object
-          const [dateStr, timeRange] = ticket["Appointment"].split(' ');
+          const [dateStr, timeRange] = (ticket["Appointment"] || "").split(' ');
+          if (!dateStr || !timeRange) return false;
           const [startTime] = timeRange.split('-');
+          if (!startTime) return false;
           const [hours, minutes] = startTime.split(':');
-          
+          if (!hours || !minutes) return false;
+
           const apptDate = new Date(dateStr);
           apptDate.setHours(parseInt(hours), parseInt(minutes));
 
@@ -3874,18 +3891,21 @@ const handleSubgroupChange = (e) => {
           const isToday = apptDate.toDateString() === today.toDateString();
           const isOverdue = apptDate < now;
 
+          // แก้ตรงนี้: ให้แสดงทั้งวันนี้และเลยเวลา (รวมถึงเลยวัน)
           return isToday || isOverdue;
         } catch (error) {
-          console.error("Error parsing date:", error);
           return false;
         }
       });
 
       const sorted = filtered.sort((a, b) => {
         const getDateTime = (str) => {
-          const [dateStr, timeRange] = str.split(' ');
+          const [dateStr, timeRange] = (str || "").split(' ');
+          if (!dateStr || !timeRange) return 0;
           const [startTime] = timeRange.split('-');
+          if (!startTime) return 0;
           const [hours, minutes] = startTime.split(':');
+          if (!hours || !minutes) return 0;
           const date = new Date(dateStr);
           date.setHours(parseInt(hours), parseInt(minutes));
           return date;
@@ -3908,11 +3928,11 @@ const handleSubgroupChange = (e) => {
       }
 
       return sorted.map((ticket) => {
-        const [dateStr, timeRange] = ticket["Appointment"].split(' ');
-        const [startTime] = timeRange.split('-');
-        const [hours, minutes] = startTime.split(':');
+        const [dateStr, timeRange] = (ticket["Appointment"] || "").split(' ');
+        const [startTime] = (timeRange || '').split('-');
+        const [hours, minutes] = (startTime || '').split(':');
         const apptDate = new Date(dateStr);
-        apptDate.setHours(parseInt(hours), parseInt(minutes));
+        if (hours && minutes) apptDate.setHours(parseInt(hours), parseInt(minutes));
 
         const isOverdue = apptDate < now;
         const isToday = apptDate.toDateString() === today.toDateString();
