@@ -9,7 +9,7 @@ const TicketDetail = ({ ticketId }) => {
     const fetchTicket = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`http://127.0.0.1:5001/api/ticket/${ticketId}`);
+        const response = await axios.get(`https://backend-oa-pqy2.onrender.com/api/ticket/${ticketId}`);
         setTicket(response.data);
       } catch (error) {
         console.error('Error fetching ticket:', error);
