@@ -243,6 +243,14 @@ function StatusLogsPage() {
     }
   };
 
+  // --- สร้าง typeList จาก ticketMap ---
+  const typeSet = new Set();
+  Object.values(ticketMap).forEach(ticket => {
+    const type = (ticket?.type || ticket?.type_main || '').trim();
+    if (type) typeSet.add(type);
+  });
+  const typeList = Array.from(typeSet);
+
   // ฟังก์ชันสำหรับกรองข้อมูล
   const filteredLogs = logs.filter(log => {
     if (!log) return false;
@@ -253,59 +261,18 @@ function StatusLogsPage() {
     const startMatch = !startDate || (log.changed_at && new Date(log.changed_at) >= new Date(startDate));
     const endMatch = !endDate || (log.changed_at && new Date(log.changed_at) <= new Date(endDate + "T23:59:59"));
     const statusMatch = !statusFilter || log.new_status === statusFilter;
-    let categorySource = (log.category || '').trim();
+    let typeVal = '';
     const ticket = ticketMap[log.ticket_id];
-    if(!categorySource && ticket){
-      categorySource = (ticket?.type || ticket?.type_main || ticket?.type_group || ticket?.group || '').trim();
+    if(ticket){
+      typeVal = (ticket.type || ticket.type_main || '').trim().toLowerCase();
     }
     const filterVal = (categoryFilter || '').toLowerCase();
-    let categoryMatch = true;
-    if (filterVal === "service" || filterVal === "helpdesk") {
-      if (ticket) {
-        // เดิม: robust type/group/subgroup
-        const allTypeFields = [
-          ticket?.type,
-          ticket?.type_main,
-          ticket?.type_group,
-          ticket?.group
-        ].map(x => (x || '').toLowerCase());
-        categoryMatch = allTypeFields.some(val => val === filterVal);
-        if (!categoryMatch) {
-          const group = (ticket.group || ticket.type_group || '').trim();
-          const subgroup = (ticket.subgroup || '').trim();
-          if (filterVal === "service") {
-            categoryMatch = Object.keys(TYPE_GROUP_SUBGROUP.Service).map(x=>x.toLowerCase()).includes(group.toLowerCase()) ||
-                            Object.values(TYPE_GROUP_SUBGROUP.Service).some(arr => arr.map(x=>x.toLowerCase()).includes(subgroup.toLowerCase()));
-          } else if (filterVal === "helpdesk") {
-            categoryMatch = Object.keys(TYPE_GROUP_SUBGROUP.Helpdesk).map(x=>x.toLowerCase()).includes(group.toLowerCase()) ||
-                            Object.values(TYPE_GROUP_SUBGROUP.Helpdesk).some(arr => arr.map(x=>x.toLowerCase()).includes(subgroup.toLowerCase()));
-          }
-        }
-      } else {
-        // Fallback: ticketMap ไม่มีข้อมูล ticketId นี้ ให้เช็ค log.category/group/subgroup โดยตรง
-        const group = (log.group || log.type_group || '').trim();
-        const subgroup = (log.subgroup || '').trim();
-        const cat = (log.category || '').trim().toLowerCase();
-        if (filterVal === "service") {
-          categoryMatch = cat === "service" ||
-            Object.keys(TYPE_GROUP_SUBGROUP.Service).map(x=>x.toLowerCase()).includes(group.toLowerCase()) ||
-            Object.values(TYPE_GROUP_SUBGROUP.Service).some(arr => arr.map(x=>x.toLowerCase()).includes(subgroup.toLowerCase()));
-        } else if (filterVal === "helpdesk") {
-          categoryMatch = cat === "helpdesk" ||
-            Object.keys(TYPE_GROUP_SUBGROUP.Helpdesk).map(x=>x.toLowerCase()).includes(group.toLowerCase()) ||
-            Object.values(TYPE_GROUP_SUBGROUP.Helpdesk).some(arr => arr.map(x=>x.toLowerCase()).includes(subgroup.toLowerCase()));
-        }
-        // debug log
-        if (!categoryMatch) {
-          console.log('[LOG] No ticketMap for', log.ticket_id, 'log fallback:', {cat, group, subgroup});
-        }
-      }
-    } else {
-      const catVal = (categorySource || '').toLowerCase();
-      categoryMatch = !categoryFilter || catVal === filterVal;
+    let typeMatch = true;
+    if (filterVal) {
+      typeMatch = typeVal === filterVal;
     }
     const dateMatch = startMatch && endMatch;
-    return ticketIdMatch && dateMatch && statusMatch && categoryMatch;
+    return ticketIdMatch && dateMatch && statusMatch && typeMatch;
   });
 
   // เรียงลำดับข้อมูลตามเวลาใหม่ไปเก่า
@@ -375,14 +342,14 @@ function StatusLogsPage() {
         </select>
         <select value={categoryFilter} onChange={e=>setCategoryFilter(e.target.value)} style={{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:'8px'}}>
           <option value="">ทุกประเภท</option>
-          {categories.length === 0 ? (
+          {typeList.length === 0 ? (
             <>
               <option value="Service">Service</option>
               <option value="Helpdesk">Helpdesk</option>
             </>
           ) : (
-            categories.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
+            typeList.map(type => (
+              <option key={type} value={type}>{type}</option>
             ))
           )}
         </select>
