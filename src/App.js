@@ -10,7 +10,7 @@ import { useAuth } from './AuthContext';
 import './styles.css';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import DashboardSection from "./DashboardSection";
+import Dashboard from "./Dashboard";
 import StatusLogsPage from './StatusLogsPage';
 import NewMessageNotification from './NewMessageNotification';
 
@@ -3647,12 +3647,7 @@ const handleSubgroupChange = (e) => {
             <Container>
               <div ref={dashboardRef}>
                 <Title>Ticket Management System</Title>
-                <DashboardSection
-                  stats={getBasicStats()}
-                  daily={getDailySummary()}
-                  upcoming={getUpcomingAppointments()}
-                  overdue={getOverdueAppointments()}
-                />
+                <Dashboard data={data} />
                 <SyncIndicator>{formatLastSync()}</SyncIndicator>
                 <BackendStatusIndicator $status={backendStatus}>
                   {getBackendStatusText()}
