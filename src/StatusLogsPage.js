@@ -254,42 +254,57 @@ function StatusLogsPage() {
     const endMatch = !endDate || (log.changed_at && new Date(log.changed_at) <= new Date(endDate + "T23:59:59"));
     const statusMatch = !statusFilter || log.new_status === statusFilter;
     let categorySource = (log.category || '').trim();
-    if(!categorySource){
-      const ticket = ticketMap[log.ticket_id];
+    const ticket = ticketMap[log.ticket_id];
+    if(!categorySource && ticket){
       categorySource = (ticket?.type || ticket?.type_main || ticket?.type_group || ticket?.group || '').trim();
     }
     const filterVal = (categoryFilter || '').toLowerCase();
-    // --- robust filter ---
     let categoryMatch = true;
     if (filterVal === "service" || filterVal === "helpdesk") {
-      const ticket = ticketMap[log.ticket_id];
-      // เช็คทุก field ที่เกี่ยวข้อง
-      const allTypeFields = [
-        ticket?.type,
-        ticket?.type_main,
-        ticket?.type_group,
-        ticket?.group
-      ].map(x => (x || '').toLowerCase());
-      categoryMatch = allTypeFields.some(val => val === filterVal);
-      // Fallback: ถ้าไม่เจอเลย ให้เช็ค group/subgroup ว่าอยู่ใน TYPE_GROUP_SUBGROUP[Service/Helpdesk] หรือไม่
-      if (!categoryMatch && ticket) {
-        const group = (ticket.group || ticket.type_group || '').trim();
-        const subgroup = (ticket.subgroup || '').trim();
+      if (ticket) {
+        // เดิม: robust type/group/subgroup
+        const allTypeFields = [
+          ticket?.type,
+          ticket?.type_main,
+          ticket?.type_group,
+          ticket?.group
+        ].map(x => (x || '').toLowerCase());
+        categoryMatch = allTypeFields.some(val => val === filterVal);
+        if (!categoryMatch) {
+          const group = (ticket.group || ticket.type_group || '').trim();
+          const subgroup = (ticket.subgroup || '').trim();
+          if (filterVal === "service") {
+            categoryMatch = Object.keys(TYPE_GROUP_SUBGROUP.Service).map(x=>x.toLowerCase()).includes(group.toLowerCase()) ||
+                            Object.values(TYPE_GROUP_SUBGROUP.Service).some(arr => arr.map(x=>x.toLowerCase()).includes(subgroup.toLowerCase()));
+          } else if (filterVal === "helpdesk") {
+            categoryMatch = Object.keys(TYPE_GROUP_SUBGROUP.Helpdesk).map(x=>x.toLowerCase()).includes(group.toLowerCase()) ||
+                            Object.values(TYPE_GROUP_SUBGROUP.Helpdesk).some(arr => arr.map(x=>x.toLowerCase()).includes(subgroup.toLowerCase()));
+          }
+        }
+      } else {
+        // Fallback: ticketMap ไม่มีข้อมูล ticketId นี้ ให้เช็ค log.category/group/subgroup โดยตรง
+        const group = (log.group || log.type_group || '').trim();
+        const subgroup = (log.subgroup || '').trim();
+        const cat = (log.category || '').trim().toLowerCase();
         if (filterVal === "service") {
-          categoryMatch = Object.keys(TYPE_GROUP_SUBGROUP.Service).map(x=>x.toLowerCase()).includes(group.toLowerCase()) ||
-                          Object.values(TYPE_GROUP_SUBGROUP.Service).some(arr => arr.map(x=>x.toLowerCase()).includes(subgroup.toLowerCase()));
+          categoryMatch = cat === "service" ||
+            Object.keys(TYPE_GROUP_SUBGROUP.Service).map(x=>x.toLowerCase()).includes(group.toLowerCase()) ||
+            Object.values(TYPE_GROUP_SUBGROUP.Service).some(arr => arr.map(x=>x.toLowerCase()).includes(subgroup.toLowerCase()));
         } else if (filterVal === "helpdesk") {
-          categoryMatch = Object.keys(TYPE_GROUP_SUBGROUP.Helpdesk).map(x=>x.toLowerCase()).includes(group.toLowerCase()) ||
-                          Object.values(TYPE_GROUP_SUBGROUP.Helpdesk).some(arr => arr.map(x=>x.toLowerCase()).includes(subgroup.toLowerCase()));
+          categoryMatch = cat === "helpdesk" ||
+            Object.keys(TYPE_GROUP_SUBGROUP.Helpdesk).map(x=>x.toLowerCase()).includes(group.toLowerCase()) ||
+            Object.values(TYPE_GROUP_SUBGROUP.Helpdesk).some(arr => arr.map(x=>x.toLowerCase()).includes(subgroup.toLowerCase()));
+        }
+        // debug log
+        if (!categoryMatch) {
+          console.log('[LOG] No ticketMap for', log.ticket_id, 'log fallback:', {cat, group, subgroup});
         }
       }
     } else {
       const catVal = (categorySource || '').toLowerCase();
       categoryMatch = !categoryFilter || catVal === filterVal;
     }
-
     const dateMatch = startMatch && endMatch;
-    
     return ticketIdMatch && dateMatch && statusMatch && categoryMatch;
   });
 
