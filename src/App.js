@@ -163,19 +163,6 @@ const ExportButton = styled.button`
   }
 `;
 
-const Dashboard = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
-  margin-bottom: 40px;
-  position: relative;
-  z-index: 1;
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-`;
-
 const StatCard = styled.div`
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(20px);
