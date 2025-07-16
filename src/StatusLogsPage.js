@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+import { TYPE_GROUP_SUBGROUP } from './api';
 
 // Styled Components
 const PageContainer = styled.div`
@@ -258,13 +259,30 @@ function StatusLogsPage() {
       categorySource = (ticket?.type || ticket?.type_main || ticket?.type_group || ticket?.group || '').trim();
     }
     const filterVal = (categoryFilter || '').toLowerCase();
-    // --- แก้ตรงนี้ ---
+    // --- robust filter ---
     let categoryMatch = true;
     if (filterVal === "service" || filterVal === "helpdesk") {
-      // เช็ค type หลักจาก ticketMap
       const ticket = ticketMap[log.ticket_id];
-      const mainType = (ticket?.type || ticket?.type_main || '').toLowerCase();
-      categoryMatch = mainType === filterVal;
+      // เช็คทุก field ที่เกี่ยวข้อง
+      const allTypeFields = [
+        ticket?.type,
+        ticket?.type_main,
+        ticket?.type_group,
+        ticket?.group
+      ].map(x => (x || '').toLowerCase());
+      categoryMatch = allTypeFields.some(val => val === filterVal);
+      // Fallback: ถ้าไม่เจอเลย ให้เช็ค group/subgroup ว่าอยู่ใน TYPE_GROUP_SUBGROUP[Service/Helpdesk] หรือไม่
+      if (!categoryMatch && ticket) {
+        const group = (ticket.group || ticket.type_group || '').trim();
+        const subgroup = (ticket.subgroup || '').trim();
+        if (filterVal === "service") {
+          categoryMatch = Object.keys(TYPE_GROUP_SUBGROUP.Service).map(x=>x.toLowerCase()).includes(group.toLowerCase()) ||
+                          Object.values(TYPE_GROUP_SUBGROUP.Service).some(arr => arr.map(x=>x.toLowerCase()).includes(subgroup.toLowerCase()));
+        } else if (filterVal === "helpdesk") {
+          categoryMatch = Object.keys(TYPE_GROUP_SUBGROUP.Helpdesk).map(x=>x.toLowerCase()).includes(group.toLowerCase()) ||
+                          Object.values(TYPE_GROUP_SUBGROUP.Helpdesk).some(arr => arr.map(x=>x.toLowerCase()).includes(subgroup.toLowerCase()));
+        }
+      }
     } else {
       const catVal = (categorySource || '').toLowerCase();
       categoryMatch = !categoryFilter || catVal === filterVal;
