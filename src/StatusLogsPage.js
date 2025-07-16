@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { TYPE_GROUP_SUBGROUP } from './api';
 
 // Styled Components
 const PageContainer = styled.div`
@@ -182,7 +181,8 @@ function StatusLogsPage() {
         const m = {};
         const catSet = new Set();
         res.data.forEach(t => {
-          m[t["Ticket ID"]] = t;
+          const key = (t["Ticket ID"] || '').toString().trim().toLowerCase();
+          m[key] = t;
           const cat = (t.type || t.type_main || t.type_group || t.group || '').trim();
           if (cat) catSet.add(cat);
         });
@@ -243,14 +243,6 @@ function StatusLogsPage() {
     }
   };
 
-  // --- สร้าง typeList จาก ticketMap ---
-  const typeSet = new Set();
-  Object.values(ticketMap).forEach(ticket => {
-    const type = (ticket?.type || ticket?.type_main || '').trim();
-    if (type) typeSet.add(type);
-  });
-  const typeList = Array.from(typeSet);
-
   // ฟังก์ชันสำหรับกรองข้อมูล
   const filteredLogs = logs.filter(log => {
     if (!log) return false;
@@ -261,18 +253,47 @@ function StatusLogsPage() {
     const startMatch = !startDate || (log.changed_at && new Date(log.changed_at) >= new Date(startDate));
     const endMatch = !endDate || (log.changed_at && new Date(log.changed_at) <= new Date(endDate + "T23:59:59"));
     const statusMatch = !statusFilter || log.new_status === statusFilter;
-    let typeVal = '';
-    const ticket = ticketMap[log.ticket_id];
-    if(ticket){
-      typeVal = (ticket.type || ticket.type_main || '').trim().toLowerCase();
+    let categorySource = (log.category || '').trim();
+    if(!categorySource){
+      const ticketIdKey = (log.ticket_id || '').toString().trim().toLowerCase();
+      const ticket = ticketMap[ticketIdKey];
+      categorySource = (ticket?.type || ticket?.type_main || ticket?.type_group || ticket?.group || '').trim();
     }
-    const filterVal = (categoryFilter || '').toLowerCase();
-    let typeMatch = true;
-    if (filterVal) {
-      typeMatch = typeVal === filterVal;
+    const ticketIdKey = (log.ticket_id || '').toString().trim().toLowerCase();
+    const filterVal = (categoryFilter || '').trim().toLowerCase();
+    let categoryMatch = true;
+    if (filterVal === "service" || filterVal === "helpdesk") {
+      const ticket = ticketMap[ticketIdKey];
+      const typeCandidates = [
+        ticket?.type,
+        ticket?.Type,
+        ticket?.type_main,
+        ticket?.Type_main,
+        ticket?.type_group,
+        ticket?.Type_group,
+        ticket?.group,
+        ticket?.Group
+      ].map(x => (x || '').trim().toLowerCase());
+      categoryMatch = typeCandidates.some(type => type === filterVal);
+      // DEBUG LOG เฉพาะ ticket นี้
+      if (ticketIdKey === 'ticket-20250716101907') {
+        console.log({
+          ticket_id: log.ticket_id,
+          ticketIdKey,
+          ticket,
+          typeCandidates,
+          filterVal,
+          categoryMatch
+        });
+      }
+    } else {
+      const catVal = (categorySource || '').trim().toLowerCase();
+      categoryMatch = !categoryFilter || catVal === filterVal;
     }
+
     const dateMatch = startMatch && endMatch;
-    return ticketIdMatch && dateMatch && statusMatch && typeMatch;
+    
+    return ticketIdMatch && dateMatch && statusMatch && categoryMatch;
   });
 
   // เรียงลำดับข้อมูลตามเวลาใหม่ไปเก่า
@@ -342,16 +363,8 @@ function StatusLogsPage() {
         </select>
         <select value={categoryFilter} onChange={e=>setCategoryFilter(e.target.value)} style={{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:'8px'}}>
           <option value="">ทุกประเภท</option>
-          {typeList.length === 0 ? (
-            <>
-              <option value="Service">Service</option>
-              <option value="Helpdesk">Helpdesk</option>
-            </>
-          ) : (
-            typeList.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))
-          )}
+          <option value="Service">Service</option>
+          <option value="Helpdesk">Helpdesk</option>
         </select>
         <button onClick={exportCsv} style={{padding:'8px 16px',background:'#475569',color:'#fff',border:'none',borderRadius:'8px',cursor:'pointer'}}>Export CSV</button>
       </FilterSection>
