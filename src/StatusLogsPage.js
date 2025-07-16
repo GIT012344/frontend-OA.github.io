@@ -257,16 +257,16 @@ function StatusLogsPage() {
       const ticket = ticketMap[log.ticket_id];
       categorySource = (ticket?.type || ticket?.type_main || ticket?.type_group || ticket?.group || '').trim();
     }
-    const filterVal = (categoryFilter || '').toLowerCase();
+    const filterVal = (categoryFilter || '')
     // --- แก้ตรงนี้ ---
     let categoryMatch = true;
     if (filterVal === "Service" || filterVal === "Helpdesk") {
       // เช็ค type หลักจาก ticketMap
       const ticket = ticketMap[log.ticket_id];
-      const mainType = (ticket?.type || ticket?.type_main || '').toLowerCase();
+      const mainType = (ticket?.type || ticket?.type_main || '')
       categoryMatch = mainType === filterVal;
     } else {
-      const catVal = (categorySource || '').toLowerCase();
+      const catVal = (categorySource || '')
       categoryMatch = !categoryFilter || catVal === filterVal;
     }
 
