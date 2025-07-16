@@ -3202,6 +3202,15 @@ const handleSubgroupChange = (e) => {
     }
   }, [highlightMsgId, chatMessages]);
 
+  // --- เพิ่มฟังก์ชันสำหรับคลิกนัดหมาย ---
+  const handleAppointmentClick = (ticketId) => {
+    setSearchTerm(ticketId?.toString() || "");
+    setActiveTab("list");
+    setTimeout(() => {
+      listRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
   return (
     <Routes>
       <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
@@ -3337,6 +3346,7 @@ const handleSubgroupChange = (e) => {
                   daily={getDailySummary()}
                   upcoming={getUpcomingAppointments()}
                   overdue={getOverdueAppointments()}
+                  onAppointmentClick={handleAppointmentClick}
                 />
                 <SyncIndicator>{formatLastSync()}</SyncIndicator>
                 <BackendStatusIndicator $status={backendStatus}>
