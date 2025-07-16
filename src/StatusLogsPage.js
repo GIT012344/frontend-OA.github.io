@@ -260,7 +260,7 @@ function StatusLogsPage() {
     const filterVal = (categoryFilter || '').toLowerCase();
     // --- แก้ตรงนี้ ---
     let categoryMatch = true;
-    if (filterVal === "service" || filterVal === "helpdesk") {
+    if (filterVal === "Service" || filterVal === "Helpdesk") {
       // เช็ค type หลักจาก ticketMap
       const ticket = ticketMap[log.ticket_id];
       const mainType = (ticket?.type || ticket?.type_main || '').toLowerCase();
