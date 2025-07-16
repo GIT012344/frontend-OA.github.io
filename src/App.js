@@ -1364,65 +1364,6 @@ const MainContent = styled.div`
   }
 `;
 
-const EmailRankingCard = styled(StatCard)`
-  grid-column: span 2;
-  min-height: 300px;
-`;
-
-const RankingList = styled.ul`
-  list-style: none;
-  padding: 0;
-  margin: 0;
-`;
-
-const RankingItem = styled.li`
-  display: flex;
-  justify-content: space-between;
-  padding: 12px 0;
-  border-bottom: 1px solid #e2e8f0;
-  align-items: center;
-`;
-
-const RankBadge = styled.span`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: ${(props) =>
-    props.$rank === 1
-      ? "#f59e0b"
-      : props.$rank === 2
-        ? "#94a3b8"
-        : props.$rank === 3
-          ? "#b45309"
-          : "#e2e8f0"};
-  color: ${(props) => (props.$rank <= 3 ? "white" : "#475569")};
-  font-weight: 600;
-  margin-right: 12px;
-`;
-
-const EmailInfo = styled.div`
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: pointer;
-  &:hover {
-    text-decoration: underline;
-  }
-`;
-
-const TicketCount = styled.span`
-  background: #f1f5f9;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #475569;
-`;
-
 const UserInfo = styled.div`
   display: flex;
   align-items: center;
@@ -1445,7 +1386,8 @@ const LogoutButton = styled.button`
     background: #d32f2f;
   }
 `;
-//Building
+
+// Building
 
 // ExpandableCell component for handling long text
 function ExpandableCell({ text, maxLines = 4 }) {
@@ -2173,46 +2115,9 @@ function App() {
       errorTimeoutRef.current = setTimeout(() => setEditError(""), 20000);
     }
   };
-  const LoadingIndicator = styled.div`
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: #3b82f6;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  z-index: 1000;
-  animation: slideIn 0.3s ease;
-
-  @keyframes slideIn {
-    from {
-      transform: translateY(-100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-`;
-
-// ใช้งานใน JSX
-{isUpdatingStatus && (
-  <LoadingIndicator>
-    <span className="loading-icon">⚡</span>
-    <span>กำลังอัพเดทสถานะ...</span>
-    <span className="ticket-info">
-      Ticket ID: {tempTicketId} • {tempNewStatus}
-    </span>
-  </LoadingIndicator>
-)}
-const cancelStatusChange = () => {
-  setShowStatusChangeModal(false);
-};
+  const cancelStatusChange = () => {
+    setShowStatusChangeModal(false);
+  };
 
   // Use offline data when backend is unavailable
   const displayData = isOfflineMode ? offlineData : data;
@@ -3236,277 +3141,274 @@ const getUpcomingAppointments = () => {
     return showAllRankings ? rankings : rankings.slice(0, 5);
   };
 
-
-
-
-// ฟังก์ชันเริ่มแก้ไข
-const handleEditTicket = (ticket) => {
-  setEditingTicketId(ticket["Ticket ID"]);
-  
-  // Determine type and map group/subgroup correctly
-  const rawType = ticket["Type"] || "";
-  const typeUpper = rawType.toUpperCase();
-  const type = typeUpper === "SERVICE" ? "Service" : typeUpper === "HELPDESK" ? "Helpdesk" : rawType;
-  let group = "";
-  let subgroup = ticket["subgroup"] || "";
-  
-  // Map group based on normalized type
-  if (type === "Service") {
-    group = ticket["Requeste"] || ticket["Requested"] || "";
-  } else if (type === "Helpdesk") {
-    group = ticket["Report"] || "";
-  }
-  
-  setEditForm({
-    email: ticket["อีเมล"] || "",
-    name: ticket["ชื่อ"] || "",
-    phone: ticket["เบอร์ติดต่อ"] || "",
-    department: ticket["แผนก"] || "",
-    date: ticket["วันที่แจ้ง"] || "",
-    appointment: ticket["Appointment"] || "",
-    appointment_datetime: ticket["appointment_datetime"] ? ticket["appointment_datetime"].slice(0,16) : "",
-    request: ticket["Requeste"] || ticket["Requested"] || "",
-    report: ticket["Report"] || "",
-    type: type,
-    group: group,
-    subgroup: subgroup,
-    status: ticket["สถานะ"] === "Completed" || ticket["สถานะ"] === "Complete" ? "Closed" : ticket["สถานะ"] || "New",
-  });
-  
-  // Update available groups and subgroups based on initial type (without clearing existing values)
-  updateGroupOptions(type, false);
-  if (type && group) {
-    updateSubgroupOptions(type, group, false);
-  }
-  
-  setEditError("");
-  setEditSuccess("");
-};
-
-// Update group options when type changes
-// Update group options when type changes
-const updateGroupOptions = (type, reset = true) => {
-  if (type && TYPE_GROUP_SUBGROUP[type]) {
-    setAvailableGroups(Object.keys(TYPE_GROUP_SUBGROUP[type]));
-  } else {
-    setAvailableGroups([]);
-  }
-  if (reset) {
-    setEditForm(prev => ({ ...prev, group: "", subgroup: "" }));
-  }
-};
-
-// Update subgroup options when group changes
-// Update subgroup options when group changes
-const updateSubgroupOptions = (type, group, reset = true) => {
-  if (type && group && TYPE_GROUP_SUBGROUP[type]?.[group]) {
-    setAvailableSubgroups(TYPE_GROUP_SUBGROUP[type][group]);
-  } else {
-    setAvailableSubgroups([]);
-  }
-  if (reset) {
-    setEditForm(prev => ({ ...prev, subgroup: "" }));
-  }
-};
-
-// Handle type change
-// Handle type change
-const handleTypeChange = (e) => {
-  const newType = e.target.value;
-  handleEditFormChange("type", newType);
-  updateGroupOptions(newType, true);
-};
-
-// Handle group change
-// Handle group change
-const handleGroupChange = (e) => {
-  const newGroup = e.target.value;
-  handleEditFormChange("group", newGroup);
-  updateSubgroupOptions(editForm.type, newGroup, true);
-};
-
-// Handle subgroup change
-const handleSubgroupChange = (e) => {
-  handleEditFormChange("subgroup", e.target.value);
-};
-
-  // Handle form field changes
-  const handleEditFormChange = (field, value) => {
-    setEditForm(prev => ({ ...prev, [field]: value }));
-  };
-
-  // ฟังก์ชันยกเลิกแก้ไข
-  const handleCancelEdit = () => {
-    setEditingTicketId(null);
+  // ฟังก์ชันเริ่มแก้ไข
+  const handleEditTicket = (ticket) => {
+    setEditingTicketId(ticket["Ticket ID"]);
+    
+    // Determine type and map group/subgroup correctly
+    const rawType = ticket["Type"] || "";
+    const typeUpper = rawType.toUpperCase();
+    const type = typeUpper === "SERVICE" ? "Service" : typeUpper === "HELPDESK" ? "Helpdesk" : rawType;
+    let group = "";
+    let subgroup = ticket["subgroup"] || "";
+    
+    // Map group based on normalized type
+    if (type === "Service") {
+      group = ticket["Requeste"] || ticket["Requested"] || "";
+    } else if (type === "Helpdesk") {
+      group = ticket["Report"] || "";
+    }
+    
     setEditForm({
-      type: "",
-      group: "",
-      subgroup: "",
-      email: "",
-      name: "",
-      phone: "",
-      department: "",
-      date: "",
-      appointment: "",
-      appointment_datetime: "",
-      request: "",
-      report: "",
-      status: "New"
+      email: ticket["อีเมล"] || "",
+      name: ticket["ชื่อ"] || "",
+      phone: ticket["เบอร์ติดต่อ"] || "",
+      department: ticket["แผนก"] || "",
+      date: ticket["วันที่แจ้ง"] || "",
+      appointment: ticket["Appointment"] || "",
+      appointment_datetime: ticket["appointment_datetime"] ? ticket["appointment_datetime"].slice(0,16) : "",
+      request: ticket["Requeste"] || ticket["Requested"] || "",
+      report: ticket["Report"] || "",
+      type: type,
+      group: group,
+      subgroup: subgroup,
+      status: ticket["สถานะ"] === "Completed" || ticket["สถานะ"] === "Complete" ? "Closed" : ticket["สถานะ"] || "New",
     });
+    
+    // Update available groups and subgroups based on initial type (without clearing existing values)
+    updateGroupOptions(type, false);
+    if (type && group) {
+      updateSubgroupOptions(type, group, false);
+    }
+    
     setEditError("");
     setEditSuccess("");
   };
 
-  // ฟังก์ชันบันทึกการแก้ไข
-  const handleSaveEdit = async (ticketId) => {
-    setEditLoading(true);
-    setEditError("");
-    setEditSuccess("");
-    
-    // Map request and report based on ticket type and selected group for backend compatibility
-    const requestField = editForm.type === "Service" ? (editForm.group || editForm.request) : editForm.request;
-    const reportField = editForm.type === "Helpdesk" ? (editForm.group || editForm.report) : editForm.report;
-    
-    try {
-      // Build the payload dynamically – include only meaningful, non-empty values
-      const isValid = (v) => v !== undefined && v !== null && v !== "" && v !== "None";
-
-      const payload = {
-        ticket_id: ticketId,
-        updated_by: authUser?.name || authUser?.pin || "admin",
-      };
-
-      // Basic optional fields
-      if (isValid(editForm.email)) payload.email = editForm.email;
-      if (isValid(editForm.name)) payload.name = editForm.name;
-      if (isValid(editForm.phone)) payload.phone = editForm.phone;
-      if (isValid(editForm.department)) payload.department = editForm.department;
-      if (isValid(editForm.date)) payload.date = editForm.date;
-      if (isValid(editForm.appointment)) payload.appointment = editForm.appointment;
-      if (isValid(editForm.appointment_datetime)) payload.appointment_datetime = editForm.appointment_datetime;
-
-      // Request / Report mapping (SERVICE / HELPDESK logic above)
-      if (isValid(requestField)) payload.request = requestField;
-      if (isValid(reportField)) payload.report = reportField;
-
-      // Type, Group, Subgroup, Status
-      if (isValid(editForm.type)) payload.type = editForm.type;
-      if (isValid(editForm.group)) payload.group = editForm.group;
-      if (isValid(editForm.subgroup)) payload.subgroup = editForm.subgroup;
-      if (isValid(editForm.status)) payload.status = editForm.status;
-  
-      const response = await axios.post(
-        "https://backend-oa-pqy2.onrender.com/update-ticket",
-        payload,
-        {
-          headers: {
-            "Content-Type": "application/json"
-          }
-        }
-      );
-  
-      if (response.data.success) {
-        // Update the local state with the edited ticket
-        setData(prevData =>
-          prevData.map(item =>
-            item["Ticket ID"] === ticketId
-              ? {
-                  ...item,
-                  "อีเมล": editForm.email,
-                  "ชื่อ": editForm.name,
-                  "เบอร์ติดต่อ": editForm.phone,
-                  "แผนก": editForm.department,
-                  "วันที่แจ้ง": editForm.date,
-                  "Appointment": editForm.appointment,
-                  "appointment_datetime": editForm.appointment_datetime,
-                  "Requeste": requestField,
-                  "Requested": requestField,
-                  "Report": reportField,
-                  "Type": editForm.type,
-                  "สถานะ": editForm.status,
-                  "group": editForm.group,
-                  "subgroup": editForm.subgroup
-                }
-              : item
-          )
-        );
-  
-        setEditSuccess("บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว");
-        setTimeout(() => {
-          setEditingTicketId(null);
-          setEditSuccess("");
-        }, 2000);
-      } else {
-        setEditError(response.data.error || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
-      }
-    } catch (error) {
-      console.error("Error updating ticket:", error);
-      setEditError(
-        error.response?.data?.error ||
-        error.response?.data?.message ||
-        "เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์"
-      );
-    } finally {
-      setEditLoading(false);
+  // Update group options when type changes
+  // Update group options when type changes
+  const updateGroupOptions = (type, reset = true) => {
+    if (type && TYPE_GROUP_SUBGROUP[type]) {
+      setAvailableGroups(Object.keys(TYPE_GROUP_SUBGROUP[type]));
+    } else {
+      setAvailableGroups([]);
+    }
+    if (reset) {
+      setEditForm(prev => ({ ...prev, group: "", subgroup: "" }));
     }
   };
 
-  // ตรวจจับขนาดหน้าจอ
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // ฟังก์ชันเปลี่ยน tab สำหรับ mobile
-  const handleMobileTabChange = (tab) => {
-    setMobileActiveTab(tab);
-    setActiveTab(tab);
-    if (tab === "dashboard") scrollToDashboard();
-    if (tab === "list") scrollToList();
-    if (tab === "chat") scrollToChat();
-    if (tab === "logs") navigate("/logs");
-    setSidebarMobileOpen(false);
+  // Update subgroup options when group changes
+  // Update subgroup options when group changes
+  const updateSubgroupOptions = (type, group, reset = true) => {
+    if (type && group && TYPE_GROUP_SUBGROUP[type]?.[group]) {
+      setAvailableSubgroups(TYPE_GROUP_SUBGROUP[type][group]);
+    } else {
+      setAvailableSubgroups([]);
+    }
+    if (reset) {
+      setEditForm(prev => ({ ...prev, subgroup: "" }));
+    }
   };
 
-  // --- ฟังก์ชันเช็คข้อความใหม่ ---
-  const checkForNewMessages = useCallback(async () => {
-    try {
-      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/check-new-messages", {
-        params: { last_checked: lastMessageCheck.toISOString() }
+  // Handle type change
+  // Handle type change
+  const handleTypeChange = (e) => {
+    const newType = e.target.value;
+    handleEditFormChange("type", newType);
+    updateGroupOptions(newType, true);
+  };
+
+  // Handle group change
+  // Handle group change
+  const handleGroupChange = (e) => {
+    const newGroup = e.target.value;
+    handleEditFormChange("group", newGroup);
+    updateSubgroupOptions(editForm.type, newGroup, true);
+  };
+
+  // Handle subgroup change
+  const handleSubgroupChange = (e) => {
+    handleEditFormChange("subgroup", e.target.value);
+  };
+
+    // Handle form field changes
+    const handleEditFormChange = (field, value) => {
+      setEditForm(prev => ({ ...prev, [field]: value }));
+    };
+
+    // ฟังก์ชันยกเลิกแก้ไข
+    const handleCancelEdit = () => {
+      setEditingTicketId(null);
+      setEditForm({
+        type: "",
+        group: "",
+        subgroup: "",
+        email: "",
+        name: "",
+        phone: "",
+        department: "",
+        date: "",
+        appointment: "",
+        appointment_datetime: "",
+        request: "",
+        report: "",
+        status: "New"
       });
-      if (response.data.new_messages && response.data.new_messages.length > 0) {
-        // แสดง popup สำหรับทุกข้อความใหม่จาก user (queue เฉพาะล่าสุด)
-        const latestGroup = response.data.new_messages[0];
-        const latestMsg = latestGroup.messages[latestGroup.messages.length - 1];
-        setNewMessageAlert({
-          user: latestGroup.name,
-          message: latestMsg.message,
-          timestamp: latestMsg.timestamp,
-          user_id: latestGroup.user_id,
-          sender_name: latestGroup.name
+      setEditError("");
+      setEditSuccess("");
+    };
+
+    // ฟังก์ชันบันทึกการแก้ไข
+    const handleSaveEdit = async (ticketId) => {
+      setEditLoading(true);
+      setEditError("");
+      setEditSuccess("");
+      
+      // Map request and report based on ticket type and selected group for backend compatibility
+      const requestField = editForm.type === "Service" ? (editForm.group || editForm.request) : editForm.request;
+      const reportField = editForm.type === "Helpdesk" ? (editForm.group || editForm.report) : editForm.report;
+      
+      try {
+        // Build the payload dynamically – include only meaningful, non-empty values
+        const isValid = (v) => v !== undefined && v !== null && v !== "" && v !== "None";
+
+        const payload = {
+          ticket_id: ticketId,
+          updated_by: authUser?.name || authUser?.pin || "admin",
+        };
+
+        // Basic optional fields
+        if (isValid(editForm.email)) payload.email = editForm.email;
+        if (isValid(editForm.name)) payload.name = editForm.name;
+        if (isValid(editForm.phone)) payload.phone = editForm.phone;
+        if (isValid(editForm.department)) payload.department = editForm.department;
+        if (isValid(editForm.date)) payload.date = editForm.date;
+        if (isValid(editForm.appointment)) payload.appointment = editForm.appointment;
+        if (isValid(editForm.appointment_datetime)) payload.appointment_datetime = editForm.appointment_datetime;
+
+        // Request / Report mapping (SERVICE / HELPDESK logic above)
+        if (isValid(requestField)) payload.request = requestField;
+        if (isValid(reportField)) payload.report = reportField;
+
+        // Type, Group, Subgroup, Status
+        if (isValid(editForm.type)) payload.type = editForm.type;
+        if (isValid(editForm.group)) payload.group = editForm.group;
+        if (isValid(editForm.subgroup)) payload.subgroup = editForm.subgroup;
+        if (isValid(editForm.status)) payload.status = editForm.status;
+    
+        const response = await axios.post(
+          "https://backend-oa-pqy2.onrender.com/update-ticket",
+          payload,
+          {
+            headers: {
+              "Content-Type": "application/json"
+            }
+          }
+        );
+    
+        if (response.data.success) {
+          // Update the local state with the edited ticket
+          setData(prevData =>
+            prevData.map(item =>
+              item["Ticket ID"] === ticketId
+                ? {
+                    ...item,
+                    "อีเมล": editForm.email,
+                    "ชื่อ": editForm.name,
+                    "เบอร์ติดต่อ": editForm.phone,
+                    "แผนก": editForm.department,
+                    "วันที่แจ้ง": editForm.date,
+                    "Appointment": editForm.appointment,
+                    "appointment_datetime": editForm.appointment_datetime,
+                    "Requeste": requestField,
+                    "Requested": requestField,
+                    "Report": reportField,
+                    "Type": editForm.type,
+                    "สถานะ": editForm.status,
+                    "group": editForm.group,
+                    "subgroup": editForm.subgroup
+                  }
+                : item
+            )
+          );
+    
+          setEditSuccess("บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว");
+          setTimeout(() => {
+            setEditingTicketId(null);
+            setEditSuccess("");
+          }, 2000);
+        } else {
+          setEditError(response.data.error || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+        }
+      } catch (error) {
+        console.error("Error updating ticket:", error);
+        setEditError(
+          error.response?.data?.error ||
+          error.response?.data?.message ||
+          "เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์"
+        );
+      } finally {
+        setEditLoading(false);
+      }
+    };
+
+    // ตรวจจับขนาดหน้าจอ
+    useEffect(() => {
+      const handleResize = () => {
+        setIsMobile(window.innerWidth <= 768);
+      };
+      handleResize();
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    // ฟังก์ชันเปลี่ยน tab สำหรับ mobile
+    const handleMobileTabChange = (tab) => {
+      setMobileActiveTab(tab);
+      setActiveTab(tab);
+      if (tab === "dashboard") scrollToDashboard();
+      if (tab === "list") scrollToList();
+      if (tab === "chat") scrollToChat();
+      if (tab === "logs") navigate("/logs");
+      setSidebarMobileOpen(false);
+    };
+
+    // --- ฟังก์ชันเช็คข้อความใหม่ ---
+    const checkForNewMessages = useCallback(async () => {
+      try {
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/check-new-messages", {
+          params: { last_checked: lastMessageCheck.toISOString() }
         });
-        setLastMessageCheck(new Date(latestMsg.timestamp));
-        // --- เรียก backend เพื่อบันทึก notification ลงฐานข้อมูล ---
-        await axios.post("https://backend-oa-pqy2.onrender.com/api/add-notification", {
-          message: latestMsg.message,
-          sender_name: latestGroup.name,
-          user_id: latestGroup.user_id,
-          meta_data: {
-            type: 'new_message',
+        if (response.data.new_messages && response.data.new_messages.length > 0) {
+          // แสดง popup สำหรับทุกข้อความใหม่จาก user (queue เฉพาะล่าสุด)
+          const latestGroup = response.data.new_messages[0];
+          const latestMsg = latestGroup.messages[latestGroup.messages.length - 1];
+          setNewMessageAlert({
+            user: latestGroup.name,
+            message: latestMsg.message,
+            timestamp: latestMsg.timestamp,
             user_id: latestGroup.user_id,
             sender_name: latestGroup.name
-          }
-        });
-        setHasUnread(true);
+          });
+          setLastMessageCheck(new Date(latestMsg.timestamp));
+          // --- เรียก backend เพื่อบันทึก notification ลงฐานข้อมูล ---
+          await axios.post("https://backend-oa-pqy2.onrender.com/api/add-notification", {
+            message: latestMsg.message,
+            sender_name: latestGroup.name,
+            user_id: latestGroup.user_id,
+            meta_data: {
+              type: 'new_message',
+              user_id: latestGroup.user_id,
+              sender_name: latestGroup.name
+            }
+          });
+          setHasUnread(true);
+        }
+      } catch (e) {
+        // ignore
       }
-    } catch (e) {
-      // ignore
-    }
-  }, [lastMessageCheck]);
+    }, [lastMessageCheck]);
   useEffect(() => {
     const interval = setInterval(checkForNewMessages, 7000);
     return () => clearInterval(interval);
