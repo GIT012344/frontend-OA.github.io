@@ -1745,7 +1745,7 @@ function App() {
   const [isOfflineMode, setIsOfflineMode] = useState(false);
 
   // เพิ่ม state สำหรับเก็บ ticket ที่ถูกเลือก
-  const [selectedTicket] = useState(null);
+  const [selectedTicket, setSelectedTicket] = useState(null);
 
   // เพิ่ม state สำหรับควบคุมการแสดงอันดับผู้ใช้
   const [showAllRankings, setShowAllRankings] = useState(false);
@@ -3206,6 +3206,7 @@ const handleSubgroupChange = (e) => {
   const handleAppointmentClick = (ticketId) => {
     setSearchTerm(ticketId?.toString() || "");
     setActiveTab("list");
+    setSelectedTicket(ticketId?.toString() || null);
     setTimeout(() => {
       listRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 100);
