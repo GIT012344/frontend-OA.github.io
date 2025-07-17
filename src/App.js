@@ -3654,7 +3654,9 @@ const handleSubgroupChange = (e) => {
               borderRadius: "8px",
               borderLeft: `4px solid ${colors.border}`,
               animation: isOverdue ? "blink 1s linear infinite" : "none",
+              cursor: 'pointer',
             }}
+            onClick={() => handleAppointmentClick(ticket["Ticket ID"])}
           >
             <div style={{ fontWeight: "600", display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
               <div>
