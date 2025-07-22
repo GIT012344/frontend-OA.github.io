@@ -2,7 +2,7 @@ import React from "react";
 
 // Re-use the same mapping constant that lives in App.js
 // If you later move this mapping to its own module, just import from there.
-import { TYPE_GROUP_SUBGROUP } from "./App";
+import { getTypeGroupSubgroup } from "./App";
 
 /**
  * Reusable cascading dropdown component.
@@ -40,7 +40,7 @@ export default function TypeDropdowns({
     return (
       <select value={type} onChange={onTypeChange} disabled={disabled} style={commonStyle}>
         <option value="">-- Select Type --</option>
-        {Object.keys(TYPE_GROUP_SUBGROUP).map((t) => (
+        {Object.keys(getTypeGroupSubgroup()).map((t) => (
           <option key={t} value={t}>
             {t}
           </option>

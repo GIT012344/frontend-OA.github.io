@@ -156,6 +156,7 @@ function StatusLogsPage() {
   const [endDate, setEndDate] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [categories, setCategories] = useState([]);
   const [ticketMap, setTicketMap] = useState({});
 
   // ดึง ticket_id จาก URL ถ้ามี
@@ -186,9 +187,10 @@ function StatusLogsPage() {
           if (cat) catSet.add(cat);
         });
         setTicketMap(m);
+        setCategories(prev => [...new Set([...prev, ...catSet])]);
       })
       .catch(err => console.error('Ticket metadata fetch error', err));
-  }, []);
+  }, );
 
 
   const fetchLogs = async () => {
@@ -215,6 +217,10 @@ function StatusLogsPage() {
       const dataArr = Array.isArray(response.data) ? response.data : [];
       setLogs(dataArr);
       // build category list dynamically
+      const deriveCat = l => (l.category || '').trim();
+      const uniqueCats = [...new Set(dataArr.map(deriveCat).filter(Boolean))];
+      setCategories(uniqueCats);
+      
     } catch (err) {
       console.error('Error details:', {
         message: err.message,

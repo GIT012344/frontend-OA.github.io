@@ -13,9 +13,12 @@ import 'react-toastify/dist/ReactToastify.css';
 import DashboardSection from "./DashboardSection";
 import StatusLogsPage from './StatusLogsPage';
 import NewMessageNotification from './NewMessageNotification';
+import AdminTypeGroupManager from './AdminTypeGroupManager';
 
-// Define the type-group-subgroup mapping
-const TYPE_GROUP_SUBGROUP = {
+// Define the type-group-subgroup mapping (default)
+const LOCAL_TYPE_GROUP_KEY = 'oa_type_group_subgroup';
+// Default fallback mapping – will be overridden by localStorage if present
+export const DEFAULT_TYPE_GROUP_SUBGROUP = {
   Service: {
     Hardware: [
       "ลงทะเบียน USB", "ติดตั้งอุปกรณ์", "ทดสอบอุปกรณ์", "ตรวจสอบอุปกรณ์"
@@ -42,6 +45,24 @@ const TYPE_GROUP_SUBGROUP = {
   }
 };
 
+// Helper to get latest mapping from localStorage (if edited in Admin page)
+export function getTypeGroupSubgroup() {
+  try {
+    const raw = localStorage.getItem(LOCAL_TYPE_GROUP_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to parse custom type/group mapping:', err);
+  }
+  return DEFAULT_TYPE_GROUP_SUBGROUP;
+}
+
+// Provide a ready constant for simple usage (will capture value on first import)
+export const TYPE_GROUP_SUBGROUP = getTypeGroupSubgroup();
 
 // Styled components with elegant, modern, and sophisticated design
 const Container = styled.div`
@@ -2539,7 +2560,7 @@ const cancelStatusChange = () => {
 
     const pollMessages = async () => {
       try {
-        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
+        const response = await axios.get("hhttps://backend-oa-pqy2.onrender.com/api/messages", {
           params: { user_id: selectedChatUser }
         });
         
@@ -2960,12 +2981,12 @@ const handleEditTicket = (ticket) => {
 };
 
 // Update group options when type changes
-// Update group options when type changes
 const updateGroupOptions = (type, reset = true) => {
-  if (type && TYPE_GROUP_SUBGROUP[type]) {
-    setAvailableGroups(Object.keys(TYPE_GROUP_SUBGROUP[type]));
+  const mapping = getTypeGroupSubgroup();
+  if (type && mapping[type]) {
+        setAvailableGroups(Object.keys(mapping[type]));
   } else {
-    setAvailableGroups([]);
+        setAvailableGroups([]);
   }
   if (reset) {
     setEditForm(prev => ({ ...prev, group: "", subgroup: "" }));
@@ -2973,12 +2994,12 @@ const updateGroupOptions = (type, reset = true) => {
 };
 
 // Update subgroup options when group changes
-// Update subgroup options when group changes
 const updateSubgroupOptions = (type, group, reset = true) => {
-  if (type && group && TYPE_GROUP_SUBGROUP[type]?.[group]) {
-    setAvailableSubgroups(TYPE_GROUP_SUBGROUP[type][group]);
+  const mapping = getTypeGroupSubgroup();
+  if (type && group && mapping[type]?.[group]) {
+        setAvailableSubgroups(mapping[type][group]);
   } else {
-    setAvailableSubgroups([]);
+        setAvailableSubgroups([]);
   }
   if (reset) {
     setEditForm(prev => ({ ...prev, subgroup: "" }));
@@ -3215,6 +3236,7 @@ const handleSubgroupChange = (e) => {
   return (
     <Routes>
       <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
+      <Route path="/admin-type-group" element={token ? <AdminTypeGroupManager /> : <Navigate to="/login" />} />
       <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <Login />} />
       <Route path="/dashboard" element={token ? (
         <>
@@ -3288,6 +3310,18 @@ const handleSubgroupChange = (e) => {
           >
             <span>Status Logs</span>
           </NavItem>
+          <NavItem
+              $icon="admin"
+              $active={activeTab === "admin-type-group" || location.pathname === "/admin-type-group"}
+              onClick={() => {
+                setActiveTab("admin-type-group");
+                navigate("/admin-type-group");
+              }}
+              $collapsed={!sidebarOpen}
+              data-tooltip="Admin Type/Group"
+            >
+              <span>จัดการ Type/Group</span>
+            </NavItem>
           </Sidebar>
           {/* Mobile Bottom Navigation */}
           {isMobile && (

@@ -119,7 +119,7 @@ function buildBarData(dailyRaw) {
 }
 // ลบ DashboardWrapper ออกเนื่องจากมี Sidebar อยู่แล้วใน App.js
 // ---------- Main Component ----------
-export default function DashboardSection({ stats, daily, upcoming = [], overdue = [], onAppointmentClick }) {
+export default function DashboardSection({ stats, daily, upcoming = [], overdue = [] }) {
   if (!stats) return null;
   const doughnutData = {
     labels: Object.keys(statusMeta),
