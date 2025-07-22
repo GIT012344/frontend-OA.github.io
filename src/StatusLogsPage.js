@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { fetchAllStatusLogs } from './api';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 
@@ -197,30 +198,12 @@ function StatusLogsPage() {
     try {
       setLoading(true);
       setError(null);
-  
-      const baseUrl = 'https://backend-oa-pqy2.onrender.com/api/log-status-change';
-      
-      // ลองเรียก API โดยไม่ใช้ parameter
-      const response = await axios.get(baseUrl, {
-        headers: { 
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000
-      });
-  
-      if (response.status !== 200) {
-        throw new Error(`API returned status ${response.status}`);
-      }
-  
-      console.log('Logs response:', response.data);
-      const dataArr = Array.isArray(response.data) ? response.data : [];
+      const data = await fetchAllStatusLogs();
+      const dataArr = Array.isArray(data) ? data : [];
       setLogs(dataArr);
-      // build category list dynamically
       const deriveCat = l => (l.category || '').trim();
       const uniqueCats = [...new Set(dataArr.map(deriveCat).filter(Boolean))];
       setCategories(uniqueCats);
-      
     } catch (err) {
       console.error('Error details:', {
         message: err.message,
@@ -245,6 +228,10 @@ function StatusLogsPage() {
 
   // ฟังก์ชันสำหรับกรองข้อมูล
   const filteredLogs = logs.filter(log => {
+    // ถ้าไม่ได้เลือกกรองสถานะ และสถานะของ log คือ Closed ให้ซ่อนไป
+    if (!statusFilter && log?.new_status === 'Closed') {
+      return false;
+    }
     if (!log) return false;
     
     const ticketIdMatch = !filterTicketId || 

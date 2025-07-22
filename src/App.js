@@ -2328,7 +2328,9 @@ const cancelStatusChange = () => {
 
       // Status filter
       const matchesStatus =
-        statusFilter === "all" || row["สถานะ"] === statusFilter;
+        statusFilter === "all"
+          ? row["สถานะ"] !== "Closed"
+          : row["สถานะ"] === statusFilter;
 
       // Type filter
       const matchesType = typeFilter === "all" || (row["Type"] || "").toUpperCase() === typeFilter;
@@ -2560,7 +2562,7 @@ const cancelStatusChange = () => {
 
     const pollMessages = async () => {
       try {
-        const response = await axios.get("hhttps://backend-oa-pqy2.onrender.com/api/messages", {
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
           params: { user_id: selectedChatUser }
         });
         

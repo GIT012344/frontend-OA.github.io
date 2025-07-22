@@ -124,6 +124,21 @@ export const logStatusChange = async ({ ticket_id, old_status, new_status, chang
   return response.data;
 };
 
+// Fetch ALL status change logs – tries base endpoint, falls back to /api/log-status-change/all
+export const fetchAllStatusLogs = async () => {
+  try {
+    const res = await apiClient.get('/api/log-status-change');
+    return res.data;
+  } catch (err) {
+    if (err.response?.status === 404) {
+      // Some backends expose a dedicated list route
+      const res2 = await apiClient.get('/api/log-status-change/all');
+      return res2.data;
+    }
+    throw err;
+  }
+};
+
 // Fetch status change history for a given ticket (GET /api/log-status-change)
 export const fetchStatusChangeHistory = async (ticketId) => {
   const response = await apiClient.get('/api/log-status-change', {
