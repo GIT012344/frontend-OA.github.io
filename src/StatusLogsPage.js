@@ -156,7 +156,7 @@ function StatusLogsPage() {
   const [endDate, setEndDate] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [categories, setCategories] = useState([]);
+  const [setCategories] = useState([]);
   const [ticketMap, setTicketMap] = useState({});
 
   // ดึง ticket_id จาก URL ถ้ามี
