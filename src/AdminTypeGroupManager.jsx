@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
 const LOCAL_KEY = 'oa_type_group_subgroup';
+// Backend API base (change if backend runs elsewhere)
+const API_BASE = process.env.REACT_APP_API_BASE || 'https://backend-oa-pqy2.onrender.com';
 
 function getInitialData() {
   const raw = localStorage.getItem(LOCAL_KEY);
@@ -109,7 +112,15 @@ export default function AdminTypeGroupManager() {
   const [selectedGroup, setSelectedGroup] = useState('');
   const [toast, setToast] = useState("");
 
-  useEffect(() => { localStorage.setItem(LOCAL_KEY, JSON.stringify(data)); }, [data]);
+  // Persist to localStorage (existing)
+useEffect(() => {
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+}, [data]);
+
+// Persist to backend
+useEffect(() => {
+  axios.post(`${API_BASE}/type-group-subgroup`, data).catch(err => console.warn('Failed to sync type/group data:', err));
+}, [data]);
   const showToast = msg => { setToast(msg); setTimeout(() => setToast(""), 2000); };
 
   // --- CRUD ---

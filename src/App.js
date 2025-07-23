@@ -3,8 +3,12 @@
 import React from "react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
+
 import styled from "styled-components";
+
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+
+
 import Login from './Login';
 import { useAuth } from './AuthContext';
 import './styles.css';
@@ -14,6 +18,9 @@ import DashboardSection from "./DashboardSection";
 import StatusLogsPage from './StatusLogsPage';
 import NewMessageNotification from './NewMessageNotification';
 import AdminTypeGroupManager from './AdminTypeGroupManager';
+
+// Backend API base (change if backend runs elsewhere)
+const API_BASE = process.env.REACT_APP_API_BASE || 'https://backend-oa-pqy2.onrender.com';
 
 // Define the type-group-subgroup mapping (default)
 const LOCAL_TYPE_GROUP_KEY = 'oa_type_group_subgroup';
@@ -63,6 +70,8 @@ export function getTypeGroupSubgroup() {
 
 // Provide a ready constant for simple usage (will capture value on first import)
 export const TYPE_GROUP_SUBGROUP = getTypeGroupSubgroup();
+
+
 
 // Styled components with elegant, modern, and sophisticated design
 const Container = styled.div`
@@ -2258,6 +2267,22 @@ const cancelStatusChange = () => {
     return () => clearInterval(interval);
   }, [backendStatus]);
 
+  // ---- Fetch latest Type/Group/Subgroup mapping on startup (inside component)
+  useEffect(() => {
+    axios.get(`${API_BASE}/type-group-subgroup`)
+      .then(res => {
+        if (res.data && typeof res.data === 'object') {
+          const backendStr = JSON.stringify(res.data);
+          const localStr = localStorage.getItem(LOCAL_TYPE_GROUP_KEY);
+          if (!localStr || localStr !== backendStr) {
+            localStorage.setItem(LOCAL_TYPE_GROUP_KEY, backendStr);
+            console.log('[App] Refreshed type/group mapping from backend');
+          }
+        }
+      })
+      .catch(err => console.warn('[App] Failed to fetch type/group mapping from backend', err));
+  }, []);
+
   const fetchDataByDate = () => {
     if (!startDate) return;
 
@@ -2562,7 +2587,7 @@ const cancelStatusChange = () => {
 
     const pollMessages = async () => {
       try {
-        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
+        const response = await axios.get("hhttps://backend-oa-pqy2.onrender.com/api/messages", {
           params: { user_id: selectedChatUser }
         });
         
