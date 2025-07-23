@@ -157,7 +157,7 @@ function StatusLogsPage() {
   const [endDate, setEndDate] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [setCategories] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [ticketMap, setTicketMap] = useState({});
 
   // ดึง ticket_id จาก URL ถ้ามี
@@ -348,10 +348,12 @@ function StatusLogsPage() {
           <option value="Cancelled">Cancelled</option>
           <option value="Reject">Reject</option>
         </select>
-        <select value={categoryFilter} onChange={e=>setCategoryFilter(e.target.value)} style={{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:'8px'}}>
+        <select value={categoryFilter} onChange={e=>setCategoryFilter(e.target.value)} style={{padding:'8px 12px',border:'1px solid #e2e8f0',borderRadius:'8px'}}> 
           <option value="">ทุกประเภท</option>
-          <option value="Service">Service</option>
-          <option value="Helpdesk">Helpdesk</option>
+          {categories.map(cat => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+          
         </select>
         <button onClick={exportCsv} style={{padding:'8px 16px',background:'#475569',color:'#fff',border:'none',borderRadius:'8px',cursor:'pointer'}}>Export CSV</button>
       </FilterSection>

@@ -1092,7 +1092,7 @@ const NotificationItem = styled.div`
   `}
 `;
 
-const NotificationContent = styled.p`
+const NotificationContent = styled.div`
   margin: 0;
   color: #334155;
   font-size: 0.875rem;
@@ -2459,7 +2459,7 @@ const cancelStatusChange = () => {
         sender_type: 'admin', // ต้องเป็น 'admin' (ตัวเล็ก)
         message: newMessage
       };
-      const response = await axios.post("https://backend-oa-pqy2.onrender.com/api/messages", payload);
+      const response = await axios.post("hhttps://backend-oa-pqy2.onrender.com/api/messages", payload);
 
       // Add new message to local state (ถ้า backend ส่งกลับ message ใหม่)
       setChatMessages(prev => [
