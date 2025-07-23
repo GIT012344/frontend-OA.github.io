@@ -1,35 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { getTypeGroupSubgroup } from "./App";
 
-// ----------------------- Mapping -----------------------
-export const TYPE_GROUP_SUBGROUP = {
-  Service: {
-    Hardware: [
-      "ลงทะเบียน USB", "ติดตั้งอุปกรณ์", "ทดสอบอุปกรณ์", "ตรวจสอบอุปกรณ์"
-    ],
-    Meeting: [
-      "ติดตั้งอุปกรณ์ประชุม", "ขอ Link ประชุม / Zoom", "เชื่อมต่อ TV", "ขอยืมอุปกรณ์"
-    ],
-    Service: [
-      "ขอยืมอุปกรณ์", "เชื่อมต่ออุปกรณ์", "ย้ายจุดติดตั้ง"
-    ],
-    Software: [
-      "ติดตั้งโปรแกรม", "ตั้งค่าโปรแกรม", "ตรวจสอบโปรแกรม", "เปิดสิทธิ์การใช้งาน"
-    ],
-    "บริการอื่นๆ": []
-  },
-  Helpdesk: {
-    "คอมพิวเตอร์": ["PC", "Notebook", "MAC"],
-    "ปริ้นเตอร์": ["เครื่องพิมพ์", "Barcode Printer", "Scanner"],
-    "อุปกรณ์ต่อพ่วง": ["เมาส์", "คีย์บอร์ด", "UPS", "จอคอมพิวเตอร์", "Projector"],
-    "โปรแกรม": [
-      "Windows", "User Login", "E-Mail / Outlook", "ERP/CRM/LMS", "MyHR", "ระบบผิดพลาด", "อื่นๆ"
-    ],
-    "เน็ตเวิร์ค": ["การเชื่อมต่อ", "ไม่มีสัญญาณ", "WIFI"],
-    "ข้อมูล": ["ข้อมูลหาย", "File Sharing/Map Drive"],
-    "ปัญหาอื่นๆ": []
-  }
-};
+// ----------------------- Component ---------------------
 
 // ----------------------- Component ---------------------
 export default function TicketEditForm({ initialTicket = {}, onSave, onCancel }) {
@@ -52,12 +25,12 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
         const rawType = initialTicket.type || "";
     const typeUpper = rawType.toUpperCase();
     const type = typeUpper === "Service" ? "Service" : typeUpper === "HELPDESK" ? "Helpdesk" : rawType;
-    const group = type === "Service" ? initialTicket.request : type === "Helpdesk" ? initialTicket.report : "";
+    const group = type === "Service" ? initialTicket.request : type === "Helpdesk" ? initialTicket.report : initialTicket.group || "";
     const subgroup = initialTicket.subgroup || "";
 
     setForm({ type, group, subgroup });
-    if (type) setGroupOptions(Object.keys(TYPE_GROUP_SUBGROUP[type]));
-    if (type && group) setSubgroupOptions(TYPE_GROUP_SUBGROUP[type][group] || []);
+    if (type) setGroupOptions(Object.keys(getTypeGroupSubgroup()[type] || {}));
+    if (type && group) setSubgroupOptions((getTypeGroupSubgroup()[type] || {})[group] || []);
   }, [initialTicket]);
 
   // --- Helpers -----------------------------------------------------------
@@ -67,7 +40,9 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
   const onTypeChange = e => {
     const newType = e.target.value;
     handleChange("type", newType);
-    setGroupOptions(newType ? Object.keys(TYPE_GROUP_SUBGROUP[newType]) : []);
+    const newMapping = getTypeGroupSubgroup();
+    console.log('[TicketEditForm] mapping for type', newType, newMapping[newType]);
+    setGroupOptions(newType ? Object.keys(newMapping[newType] || {}) : []);
     setSubgroupOptions([]);
     handleChange("group", "");
     handleChange("subgroup", "");
@@ -77,7 +52,7 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
   const onGroupChange = e => {
     const newGroup = e.target.value;
     handleChange("group", newGroup);
-    setSubgroupOptions(form.type && newGroup ? TYPE_GROUP_SUBGROUP[form.type][newGroup] : []);
+    setSubgroupOptions(form.type && newGroup ? (getTypeGroupSubgroup()[form.type] || {})[newGroup] || [] : []);
     handleChange("subgroup", "");
   };
 
@@ -90,13 +65,15 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
     setError("");
     try {
       setSaving(true);
-      const payload = {
-        type: form.type,
-        subgroup: form.subgroup,
-        ...(form.type === "Service"
-          ? { request: form.group }
-          : { report: form.group })
-      };
+      const payload = { type: form.type, subgroup: form.subgroup, group: form.group };
+      if (form.type === "Service") {
+        payload.request = form.group;
+      } else if (form.type === "Helpdesk") {
+        payload.report = form.group;
+      } else {
+        payload.requested = form.group;
+        payload.request = form.group; // legacy fallback
+      }
       await axios.post("https://backend-oa-pqy2.onrender.com/update-ticket", payload);
       setSaving(false);
       onSave?.();
@@ -105,7 +82,7 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
       setError(err?.response?.data?.message || "ไม่สามารถบันทึกข้อมูลได้");
     }
   };
-
+ 
   // --- UI ----------------------------------------------------------------
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: 420 }}>
@@ -113,8 +90,9 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
       <label>Type</label>
       <select value={form.type} onChange={onTypeChange} required style={{ width: "100%", marginBottom: 8 }}>
         <option value="">--เลือก Type--</option>
-        <option value="Service">Service</option>
-        <option value="Helpdesk">Helpdesk</option>
+        {Object.keys(getTypeGroupSubgroup()).map(t => (
+          <option key={t} value={t}>{t}</option>
+        ))}
       </select>
 
       {/* GROUP */}

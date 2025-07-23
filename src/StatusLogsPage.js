@@ -4,7 +4,24 @@ import { fetchAllStatusLogs } from './api';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 
-// Styled Components
+// --- Constants & Helper Functions ---
+const LOCAL_TYPE_GROUP_KEY = 'oa_type_group_subgroup';
+// Retrieve the latest type-group-subgroup mapping stored by the admin page
+const getTypeGroupSubgroup = () => {
+  try {
+    const raw = localStorage.getItem(LOCAL_TYPE_GROUP_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') return parsed;
+    }
+  } catch (err) {
+    console.warn('Failed to parse type/group mapping from localStorage', err);
+  }
+  return {}; // fallback empty object
+};
+
+
+
 const PageContainer = styled.div`
   padding: 40px;
   max-width: 1400px;
@@ -152,7 +169,7 @@ function StatusLogsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterTicketId, setFilterTicketId] = useState('');
-  // range filters
+  
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -160,7 +177,7 @@ function StatusLogsPage() {
   const [categories, setCategories] = useState([]);
   const [ticketMap, setTicketMap] = useState({});
 
-  // ดึง ticket_id จาก URL ถ้ามี
+ 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ticketIdFromUrl = params.get('ticket_id');
@@ -171,10 +188,10 @@ function StatusLogsPage() {
 
   useEffect(() => {
     fetchLogs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, []);
 
-  // ดึงข้อมูล Ticket ทั้งหมดเพื่อ map หมวดหมู่
+  
   useEffect(() => {
     axios.get('https://backend-oa-pqy2.onrender.com/api/data')
       .then(res => {
@@ -184,11 +201,17 @@ function StatusLogsPage() {
         res.data.forEach(t => {
           const key = (t["Ticket ID"] || '').toString().trim().toLowerCase();
           m[key] = t;
-          const cat = (t.type || t.type_main || t.type_group || t.group || '').trim();
-          if (cat) catSet.add(cat);
+          const typeVal = (t.type || '').trim();
+          if (typeVal) catSet.add(typeVal);
         });
+        // Also include type names defined in the admin mapping (keys of the object in localStorage)
+        const mapping = getTypeGroupSubgroup();
+        Object.keys(mapping).forEach(typeName => {
+          if (typeName) catSet.add(typeName);
+        });
+
         setTicketMap(m);
-        setCategories(prev => [...new Set([...prev, ...catSet])]);
+        setCategories([...catSet]);
       })
       .catch(err => console.error('Ticket metadata fetch error', err));
   }, );
@@ -201,9 +224,10 @@ function StatusLogsPage() {
       const data = await fetchAllStatusLogs();
       const dataArr = Array.isArray(data) ? data : [];
       setLogs(dataArr);
+      // Optionally derive categories from logs if they store type names
       const deriveCat = l => (l.category || '').trim();
       const uniqueCats = [...new Set(dataArr.map(deriveCat).filter(Boolean))];
-      setCategories(uniqueCats);
+      setCategories(prev => [...new Set([...prev, ...uniqueCats])]);
     } catch (err) {
       console.error('Error details:', {
         message: err.message,
@@ -226,9 +250,9 @@ function StatusLogsPage() {
     }
   };
 
-  // ฟังก์ชันสำหรับกรองข้อมูล
+  
   const filteredLogs = logs.filter(log => {
-    // ถ้าไม่ได้เลือกกรองสถานะ และสถานะของ log คือ Closed ให้ซ่อนไป
+    
     if (!statusFilter && log?.new_status === 'Closed') {
       return false;
     }
@@ -240,43 +264,21 @@ function StatusLogsPage() {
     const startMatch = !startDate || (log.changed_at && new Date(log.changed_at) >= new Date(startDate));
     const endMatch = !endDate || (log.changed_at && new Date(log.changed_at) <= new Date(endDate + "T23:59:59"));
     const statusMatch = !statusFilter || log.new_status === statusFilter;
-    let categorySource = (log.category || '').trim();
-    if(!categorySource){
-      const ticketIdKey = (log.ticket_id || '').toString().trim().toLowerCase();
-      const ticket = ticketMap[ticketIdKey];
-      categorySource = (ticket?.type || ticket?.type_main || ticket?.type_group || ticket?.group || '').trim();
-    }
     const ticketIdKey = (log.ticket_id || '').toString().trim().toLowerCase();
     const filterVal = (categoryFilter || '').trim().toLowerCase();
-    let categoryMatch = true;
-    if (filterVal === "service" || filterVal === "helpdesk") {
-      const ticket = ticketMap[ticketIdKey];
-      const typeCandidates = [
-        ticket?.type,
-        ticket?.Type,
-        ticket?.type_main,
-        ticket?.Type_main,
-        ticket?.type_group,
-        ticket?.Type_group,
-        ticket?.group,
-        ticket?.Group
-      ].map(x => (x || '').trim().toLowerCase());
-      categoryMatch = typeCandidates.some(type => type === filterVal);
-      // DEBUG LOG เฉพาะ ticket นี้
-      if (ticketIdKey === 'ticket-20250716101907') {
-        console.log({
-          ticket_id: log.ticket_id,
-          ticketIdKey,
-          ticket,
-          typeCandidates,
-          filterVal,
-          categoryMatch
-        });
-      }
-    } else {
-      const catVal = (categorySource || '').trim().toLowerCase();
-      categoryMatch = !categoryFilter || catVal === filterVal;
-    }
+    const ticket = ticketMap[ticketIdKey];
+    const typeCandidates = [
+      ticket?.type,
+      ticket?.Type,
+      ticket?.type_main,
+      ticket?.Type_main,
+      ticket?.type_group,
+      ticket?.Type_group,
+      ticket?.group,
+      ticket?.Group,
+      (log.category || '').trim()
+    ].map(x => (x || '').trim().toLowerCase());
+    const categoryMatch = !categoryFilter || typeCandidates.includes(filterVal);
 
     const dateMatch = startMatch && endMatch;
     

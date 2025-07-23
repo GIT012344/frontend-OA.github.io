@@ -2459,7 +2459,7 @@ const cancelStatusChange = () => {
         sender_type: 'admin', // ต้องเป็น 'admin' (ตัวเล็ก)
         message: newMessage
       };
-      const response = await axios.post("hhttps://backend-oa-pqy2.onrender.com/api/messages", payload);
+      const response = await axios.post("https://backend-oa-pqy2.onrender.com/api/messages", payload);
 
       // Add new message to local state (ถ้า backend ส่งกลับ message ใหม่)
       setChatMessages(prev => [
@@ -2954,6 +2954,8 @@ const handleEditTicket = (ticket) => {
     group = ticket["Requeste"] || ticket["Requested"] || "";
   } else if (type === "Helpdesk") {
     group = ticket["Report"] || "";
+  } else {
+    group = ticket["Group"] || ticket["group"] || "";
   }
   
   setEditForm({
@@ -3063,7 +3065,11 @@ const handleSubgroupChange = (e) => {
     setEditSuccess("");
     
     // Map request and report based on ticket type and selected group for backend compatibility
-    const requestField = editForm.type === "Service" ? (editForm.group || editForm.request) : editForm.request;
+    const requestField = editForm.type === "Service"
+      ? (editForm.group || editForm.request)
+      : editForm.type === "Helpdesk"
+        ? editForm.request // usually unused
+        : (editForm.group || editForm.request);
     const reportField = editForm.type === "Helpdesk" ? (editForm.group || editForm.report) : editForm.report;
     
     try {
@@ -3085,7 +3091,10 @@ const handleSubgroupChange = (e) => {
       if (isValid(editForm.appointment_datetime)) payload.appointment_datetime = editForm.appointment_datetime;
 
       // Request / Report mapping (SERVICE / HELPDESK logic above)
-      if (isValid(requestField)) payload.request = requestField;
+      if (isValid(requestField)) {
+        payload.requested = requestField; // new canonical column
+        payload.request   = requestField; // legacy fallback
+      }
       if (isValid(reportField)) payload.report = reportField;
 
       // Type, Group, Subgroup, Status
@@ -3119,10 +3128,12 @@ const handleSubgroupChange = (e) => {
                   "Appointment": editForm.appointment,
                   "appointment_datetime": editForm.appointment_datetime,
                   "Requeste": requestField,
+                  "requested": requestField,
                   "Requested": requestField,
                   "Report": reportField,
                   "Type": editForm.type,
                   "สถานะ": editForm.status,
+                  "Group": editForm.group,
                   "group": editForm.group,
                   "subgroup": editForm.subgroup
                 }
@@ -4013,7 +4024,11 @@ const handleSubgroupChange = (e) => {
                                 ) : (
                                   (() => {
                                       const typeUpper = (row["Type"] || "").toString().toUpperCase();
-                                      const groupVal = typeUpper === "SERVICE" ? row["Requested"] : typeUpper === "HELPDESK" ? row["Report"] : "";
+                                      const groupVal = typeUpper === "SERVICE"
+        ? (row["requested"] || row["Requested"] || row["Requeste"] || row["request"] || "")
+        : typeUpper === "HELPDESK"
+        ? (row["Report"] || "")
+        : (row["Group"] || row["group"] || row["requested"] || row["Requested"] || row["Report"] || row["request"] || row["Request"] || "");
                                       if (!groupVal || groupVal === "None" || groupVal === "null" || groupVal === "NULL") {
                                         return "";
                                       }
