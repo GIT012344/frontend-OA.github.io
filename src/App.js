@@ -24,7 +24,7 @@ import NewMessageNotification from './NewMessageNotification';
 import AdminTypeGroupManager from './AdminTypeGroupManager';
 
 // Base API URL configuration
-const API_BASE_URL = process.env.REACT_APP_API_BASE || "http://backend-oa-pqy2.onrender.com";
+const API_BASE_URL = process.env.REACT_APP_API_BASE || "https://backend-oa-pqy2.onrender.com";
 
 // Standardized date formatting functions
 const formatDate = {
@@ -1853,7 +1853,7 @@ function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [data, setData] = useState([]);
   // ข้อความแสดงเมื่อไม่พบข้อมูล
-  const [noDataMessage, setNoDataMessage] = useState("");
+  const [, setNoDataMessage] = useState("");
   const [lastSync, setLastSync] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -1867,7 +1867,7 @@ function App() {
   const [endTime, setEndTime] = useState("");
   const [isDateFilterActive, setIsDateFilterActive] = useState(false);
   const filteredDataRef = useRef(null); // Store filtered data to prevent overwriting
-  const [dateFilteredCount, setDateFilteredCount] = useState(0);
+  const [, setDateFilteredCount] = useState(0);
   const [notificationPosition, setNotificationPosition] = useState({
     x: 0,
     y: 0,
@@ -1906,7 +1906,7 @@ function App() {
   // Announcement System State (preserved)
   const [announcementMessage, setAnnouncementMessage] = useState("");
   
-  const { token, user, logout } = useAuth();
+  const { user, logout } = useAuth();
 
   const dashboardRef = useRef(null);
   const listRef = useRef(null);
@@ -2004,7 +2004,7 @@ function App() {
         localStorage.setItem('cachedTicketData', JSON.stringify(data));
       }
     }
-  }, [backendStatus, data]);
+  }, [backendStatus, data, isDateFilterActive]);
 
   // Optimistic status change with forced re-render
   const forceUpdate = useCallback(() => {
@@ -2085,7 +2085,7 @@ function App() {
     try {
       // 3. ส่งข้อมูลไป backend
       const response = await axios.post(
-        "http://backend-oa-pqy2.onrender.com/update-status",
+        "https://backend-oa-pqy2.onrender.com/update-status",
         {
           ticket_id: tempTicketId,
           status: tempNewStatus,
@@ -2235,7 +2235,7 @@ const cancelStatusChange = () => {
     
     setLoading(true);
     try {
-      const response = await axios.get("http://backend-oa-pqy2.onrender.com/api/data", {
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
         params: { ts: Date.now() },
         headers: { 'Cache-Control': 'no-cache' }
       });
@@ -2268,7 +2268,7 @@ const cancelStatusChange = () => {
   const controller = new AbortController();
   pollControllerRef.current = controller;
       try {
-        const response = await fetch(`http://backend-oa-pqy2.onrender.com/api/data?ts=${Date.now()}`, {
+        const response = await fetch(`https://backend-oa-pqy2.onrender.com/api/data?ts=${Date.now()}`, {
           signal: controller.signal,
           cache: "no-store",
           headers: {
@@ -2302,7 +2302,7 @@ const cancelStatusChange = () => {
       }
     }, 5000);
     return () => clearInterval(interval);
-  }, [isPollingPaused]);
+  }, [isPollingPaused, isDateFilterActive]);
 
   const handleMouseMove = useCallback(
     (e) => {
@@ -2391,7 +2391,7 @@ const cancelStatusChange = () => {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const response = await axios.get("http://backend-oa-pqy2.onrender.com/api/notifications", {
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/notifications", {
           timeout: 5000, // 5 second timeout for notifications
           headers: {
             'Content-Type': 'application/json',
@@ -2450,7 +2450,7 @@ const cancelStatusChange = () => {
     if (!startDate) return;
 
     axios
-      .get("http://backend-oa-pqy2.onrender.com/api/data-by-date", {
+      .get("https://backend-oa-pqy2.onrender.com/api/data-by-date", {
         params: { date: startDate },
       })
       .then((res) => {
@@ -2492,7 +2492,7 @@ const cancelStatusChange = () => {
 
     // Use the existing data API to get all data, then filter by date range
     axios
-      .get("http://backend-oa-pqy2.onrender.com/api/data", {
+      .get("https://backend-oa-pqy2.onrender.com/api/data", {
         params: { ts: Date.now() },
         headers: { 'Cache-Control': 'no-cache' }
       })
@@ -2597,7 +2597,7 @@ const cancelStatusChange = () => {
     setTypeFilter("all");
 
     axios
-      .get("http://backend-oa-pqy2.onrender.com/api/data")
+      .get("https://backend-oa-pqy2.onrender.com/api/data")
       .then((res) => setData(Array.isArray(res.data) ? res.data : []))
       .catch((err) => {
         console.error(err);
@@ -2609,7 +2609,7 @@ const cancelStatusChange = () => {
     if (id) {
       // Mark single notification as read
       axios
-        .post("http://backend-oa-pqy2.onrender.com/mark-notification-read", { id })
+        .post("https://backend-oa-pqy2.onrender.com/mark-notification-read", { id })
         .then(() => {
           setNotifications((prev) =>
             prev.map((n) => (n.id === id ? { ...n, read: true } : n))
@@ -2619,7 +2619,7 @@ const cancelStatusChange = () => {
     } else {
       // Mark all notifications as read
       axios
-        .post("http://backend-oa-pqy2.onrender.com/mark-all-notifications-read")
+        .post("https://backend-oa-pqy2.onrender.com/mark-all-notifications-read")
         .then(() => {
           setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
           setHasUnread(false);
@@ -2721,7 +2721,7 @@ const cancelStatusChange = () => {
 
   const deleteNotification = async (id) => {
     try {
-      await axios.post("http://backend-oa-pqy2.onrender.com/delete-notification", { id });
+      await axios.post("https://backend-oa-pqy2.onrender.com/delete-notification", { id });
       setNotifications(notifications.filter((n) => n.id !== id));
     } catch (err) {
       console.error("Error deleting notification:", err);
@@ -2735,7 +2735,7 @@ const cancelStatusChange = () => {
         const ticketToDelete = data.find(item => item["Ticket ID"] === ticketId);
         
         const response = await axios.post(
-          "http://backend-oa-pqy2.onrender.com/delete-ticket",
+          "https://backend-oa-pqy2.onrender.com/delete-ticket",
           { ticket_id: ticketId },
           {
             headers: {
@@ -2754,7 +2754,7 @@ const cancelStatusChange = () => {
             const deletedBy = currentUser.username || currentUser.display_name || 'Unknown User';
             
             await axios.post(
-              "http://backend-oa-pqy2.onrender.com/api/activity-log",
+              "https://backend-oa-pqy2.onrender.com/api/activity-log",
               {
                 action: 'delete_ticket',
                 details: {
@@ -2804,7 +2804,7 @@ const cancelStatusChange = () => {
     
     setLoadingChat(true);
     try {
-      const response = await axios.get("http://backend-oa-pqy2.onrender.com/api/messages", {
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
         params: { user_id: userId }
       });
       setChatMessages(response.data || []);
@@ -2826,7 +2826,7 @@ const cancelStatusChange = () => {
         sender_type: 'admin', // ต้องเป็น 'admin' (ตัวเล็ก)
         message: newMessage
       };
-      const response = await axios.post("http://backend-oa-pqy2.onrender.com/api/messages", payload);
+      const response = await axios.post("https://backend-oa-pqy2.onrender.com/api/messages", payload);
 
       // Add new message to local state (ถ้า backend ส่งกลับ message ใหม่)
       setChatMessages(prev => [
@@ -2858,7 +2858,7 @@ const cancelStatusChange = () => {
 
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบประวัติการสนทนาทั้งหมด?")) {
       try {
-        await axios.post("http://backend-oa-pqy2.onrender.com/api/messages/delete", {
+        await axios.post("https://backend-oa-pqy2.onrender.com/api/messages/delete", {
           user_id: selectedChatUser
         });
         setChatMessages([]);
@@ -2880,7 +2880,7 @@ const cancelStatusChange = () => {
 
     try {
       const response = await axios.post(
-        "http://backend-oa-pqy2.onrender.com/send-announcement",
+        "https://backend-oa-pqy2.onrender.com/send-announcement",
         { message: announcementMessage },
         { headers: { "Content-Type": "application/json" } }
       );
@@ -2912,7 +2912,7 @@ const cancelStatusChange = () => {
   useEffect(() => {
     const fetchChatUsers = async () => {
       try {
-        const response = await axios.get("http://backend-oa-pqy2.onrender.com/api/chat-users");
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/chat-users");
         // response.data should be an array of { user_id, name }
         setChatUsers(Array.isArray(response.data) ? response.data : []);
       } catch (error) {
@@ -2929,7 +2929,7 @@ const cancelStatusChange = () => {
 
     const pollMessages = async () => {
       try {
-        const response = await axios.get("http://backend-oa-pqy2.onrender.com/api/messages", {
+        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
           params: { user_id: selectedChatUser }
         });
         
@@ -2980,7 +2980,7 @@ const cancelStatusChange = () => {
     setRetryCount(prev => prev + 1);
     
     try {
-      const response = await axios.get("http://backend-oa-pqy2.onrender.com/api/data", {
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
         timeout: 15000, // 15 second timeout for manual retry
         headers: {
           'Content-Type': 'application/json',
@@ -3471,7 +3471,7 @@ const handleSubgroupChange = (e) => {
       if (isValid(editForm.status)) payload.status = editForm.status;
   
       const response = await axios.post(
-        "http://backend-oa-pqy2.onrender.com/update-ticket",
+        "https://backend-oa-pqy2.onrender.com/update-ticket",
         payload,
         {
           headers: {
@@ -3552,7 +3552,7 @@ const handleSubgroupChange = (e) => {
   // --- ฟังก์ชันเช็คข้อความใหม่ ---
   const checkForNewMessages = useCallback(async () => {
     try {
-      const response = await axios.get("http://backend-oa-pqy2.onrender.com/api/check-new-messages", {
+      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/check-new-messages", {
         params: { last_checked: lastMessageCheck.toISOString() }
       });
       if (response.data.new_messages && response.data.new_messages.length > 0) {
@@ -3568,7 +3568,7 @@ const handleSubgroupChange = (e) => {
         });
         setLastMessageCheck(new Date(latestMsg.timestamp));
         // --- เรียก backend เพื่อบันทึก notification ลงฐานข้อมูล ---
-        await axios.post("http://backend-oa-pqy2.onrender.com/api/add-notification", {
+        await axios.post("https://backend-oa-pqy2.onrender.com/api/add-notification", {
           message: latestMsg.message,
           sender_name: latestGroup.name,
           user_id: latestGroup.user_id,

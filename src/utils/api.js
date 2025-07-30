@@ -1,7 +1,7 @@
 import AuthManager from './auth';
 
 // API Base URL
-const API_BASE_URL = process.env.REACT_APP_API_BASE || 'http://backend-oa-pqy2.onrender.com';
+const API_BASE_URL = process.env.REACT_APP_API_BASE || 'https://backend-oa-pqy2.onrender.com';
 
 // API Utilities
 class ApiUtils {

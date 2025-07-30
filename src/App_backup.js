@@ -21,7 +21,7 @@ import NewMessageNotification from './NewMessageNotification';
 import AdminTypeGroupManager from './AdminTypeGroupManager';
 
 // Backend API base (change if backend runs elsewhere)
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://backend-oa-pqy2.onrender.com';
+const API_BASE = process.env.REACT_APP_API_BASE || 'https://backend-oa-pqy2.onrender.com';
 
 // Define the type-group-subgroup mapping (default)
 const LOCAL_TYPE_GROUP_KEY = 'oa_type_group_subgroup';

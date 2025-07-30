@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 const LOCAL_KEY = 'oa_type_group_subgroup';
 // Backend API base (change if backend runs elsewhere)
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://backend-oa-pqy2.onrender.com';
+const API_BASE = process.env.REACT_APP_API_BASE || 'https://backend-oa-pqy2.onrender.com';
 
 function getInitialData() {
   const raw = localStorage.getItem(LOCAL_KEY);
