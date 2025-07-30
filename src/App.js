@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import axios from "axios";
 
 import styled from "styled-components";
@@ -10,6 +10,10 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 
 
 import Login from './Login';
+import Register from './components/Register';
+import PinVerification from './components/PinVerification';
+import ActivityLogs from './components/ActivityLogs';
+import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './AuthContext';
 import './styles.css';
 import { ToastContainer, toast } from 'react-toastify';
@@ -19,8 +23,85 @@ import StatusLogsPage from './StatusLogsPage';
 import NewMessageNotification from './NewMessageNotification';
 import AdminTypeGroupManager from './AdminTypeGroupManager';
 
-// Backend API base (change if backend runs elsewhere)
-const API_BASE = process.env.REACT_APP_API_BASE || 'https://backend-oa-pqy2.onrender.com';
+// Base API URL configuration
+const API_BASE_URL = process.env.REACT_APP_API_BASE || "http://backend-oa-pqy2.onrender.com";
+
+// Standardized date formatting functions
+const formatDate = {
+  // Standard Thai date format: "31/12/2567"
+  thai: (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  },
+  
+  // Standard Thai date and time format: "31/12/2567, 14:30"
+  thaiDateTime: (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleString('th-TH', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  },
+  
+  // Short Thai date and time format: "31/12/67, 14:30"
+  thaiDateTimeShort: (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleString('th-TH', {
+      year: '2-digit',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  },
+  
+  // Time only format: "14:30"
+  timeOnly: (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('th-TH', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  },
+  
+  // Relative time format: "2 ชั่วโมงที่แล้ว", "3 วันที่แล้ว"
+  relative: (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    
+    const now = new Date();
+    const diffMs = now - d;
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffMinutes < 1) return 'เมื่อสักครู่';
+    if (diffMinutes < 60) return `${diffMinutes} นาทีที่แล้ว`;
+    if (diffHours < 24) return `${diffHours} ชั่วโมงที่แล้ว`;
+    if (diffDays < 7) return `${diffDays} วันที่แล้ว`;
+    
+    return formatDate.thai(date);
+  }
+};
 
 // Define the type-group-subgroup mapping (default)
 const LOCAL_TYPE_GROUP_KEY = 'oa_type_group_subgroup';
@@ -392,37 +473,37 @@ const StatusCell = styled(TableCell)`
     color: #475569;
     border: 1px solid #cbd5e1;
     
-    /* Status specific styles */
+    /* Updated status specific styles for meaningful colors */
     &[data-status="New"] {
-      background-color: #e0f2fe;
-      color: #0369a1;
-      border-color: #bae6fd;
+      background-color: #dbeafe; /* Blue background */
+      color: #1d4ed8;
+      border-color: #93c5fd;
     }
     &[data-status="In Process"] {
-      background-color: #e0e7ff;
-      color: #4338ca;
-      border-color: #c7d2fe;
+      background-color: #fef3c7; /* Yellow/Orange background */
+      color: #d97706;
+      border-color: #fbbf24;
     }
     &[data-status="Pending"] {
-      background-color: #fffbeb;
-      color: #b45309;
-      border-color: #fde68a;
+      background-color: #fed7aa; /* Dark Orange/Red-Orange background */
+      color: #c2410c;
+      border-color: #fb923c;
     }
     &[data-status="Closed"] {
-      background-color: #ecfdf5;
-      color: #047857;
-      border-color: #a7f3d0;
+      background-color: #d1fae5; /* Green background */
+      color: #059669;
+      border-color: #6ee7b7;
     }
     &[data-status="Cancelled"] {
-      background-color: #f9fafb;
-      color: #4b5563;
-      border-color: #e5e7eb;
+      background-color: #fee2e2; /* Red background */
+      color: #dc2626;
+      border-color: #fca5a5;
       text-decoration: line-through;
     }
     &[data-status="Reject"] {
-      background-color: #fef2f2;
+      background-color: #fecaca; /* Dark Red background */
       color: #b91c1c;
-      border-color: #fecaca;
+      border-color: #f87171;
     }
   }
 `;
@@ -1125,24 +1206,78 @@ const DateFilterContainer = styled.div`
   gap: 12px;
   align-items: center;
   background: rgba(255, 255, 255, 0.7);
-  padding: 8px 12px;
+  padding: 12px 16px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+`;
+
+const DateTimeGroup = styled.div`
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 6px;
+  }
+`;
+
+const DateTimeLabel = styled.label`
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #475569;
+  white-space: nowrap;
 `;
 
 const DateInput = styled.input`
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   font-size: 0.875rem;
   background: rgba(255, 255, 255, 0.9);
   transition: all 0.2s ease;
+  min-width: 140px;
 
   &:focus {
     outline: none;
     border-color: #64748b;
     box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.1);
     background: white;
+  }
+  
+  @media (max-width: 768px) {
+    min-width: 120px;
+    font-size: 0.8rem;
+  }
+`;
+
+const TimeInput = styled.input`
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.9);
+  transition: all 0.2s ease;
+  min-width: 100px;
+
+  &:focus {
+    outline: none;
+    border-color: #64748b;
+    box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.1);
+    background: white;
+  }
+  
+  @media (max-width: 768px) {
+    min-width: 90px;
+    font-size: 0.8rem;
   }
 `;
 
@@ -1717,6 +1852,8 @@ function App() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [data, setData] = useState([]);
+  // ข้อความแสดงเมื่อไม่พบข้อมูล
+  const [noDataMessage, setNoDataMessage] = useState("");
   const [lastSync, setLastSync] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -1725,7 +1862,12 @@ function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
   const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [isDateFilterActive, setIsDateFilterActive] = useState(false);
+  const filteredDataRef = useRef(null); // Store filtered data to prevent overwriting
+  const [dateFilteredCount, setDateFilteredCount] = useState(0);
   const [notificationPosition, setNotificationPosition] = useState({
     x: 0,
     y: 0,
@@ -1829,8 +1971,18 @@ function App() {
   }, [data]);
 
   // Load cached data from localStorage when backend is offline
+  // BUT NOT when date filtering is active to prevent overriding filtered data
   useEffect(() => {
-    if (backendStatus === 'offline' || backendStatus === 'error') {
+    // Check if date filtering is currently in progress (immediate check)
+    const isCurrentlyFiltering = window.isDateFilteringInProgress || isDateFilterActive;
+    console.log('🔍 Offline data effect check:', {
+      backendStatus,
+      isDateFilterActive,
+      isFilteringInProgress: window.isDateFilteringInProgress,
+      isCurrentlyFiltering,
+      willLoadCachedData: (backendStatus === 'offline' || backendStatus === 'error') && !isCurrentlyFiltering
+    });
+    if ((backendStatus === 'offline' || backendStatus === 'error') && !isCurrentlyFiltering) {
       const cachedData = localStorage.getItem('cachedTicketData');
       if (cachedData) {
         try {
@@ -1933,7 +2085,7 @@ function App() {
     try {
       // 3. ส่งข้อมูลไป backend
       const response = await axios.post(
-        "https://backend-oa-pqy2.onrender.com/update-status",
+        "http://backend-oa-pqy2.onrender.com/update-status",
         {
           ticket_id: tempTicketId,
           status: tempNewStatus,
@@ -2073,11 +2225,17 @@ const cancelStatusChange = () => {
 
   // Health check function to test backend connectivity
   
-  // Updated fetchData function with loading state
+  // Updated fetchData function with loading state and date filter protection
   const fetchData = useCallback(async () => {
+    // Don't fetch if date filtering is active to avoid overwriting filtered data
+    if (isDateFilterActive) {
+      console.log('🚫 Skipping fetchData - date filtering is active');
+      return;
+    }
+    
     setLoading(true);
     try {
-      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
+      const response = await axios.get("http://backend-oa-pqy2.onrender.com/api/data", {
         params: { ts: Date.now() },
         headers: { 'Cache-Control': 'no-cache' }
       });
@@ -2088,11 +2246,14 @@ const cancelStatusChange = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isDateFilterActive]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    // Only fetch data on initial load if no date filter is active
+    if (!isDateFilterActive) {
+      fetchData();
+    }
+  }, [fetchData, isDateFilterActive]);
 
   // --- Polling แทน Socket.IO ---
   useEffect(() => {
@@ -2100,12 +2261,14 @@ const cancelStatusChange = () => {
     const pollData = async () => {
   // do not poll while paused
   if (isPollingPaused) return;
+  // do not poll when date filtering is active to avoid overwriting filtered data
+  if (isDateFilterActive) return;
   // cancel any previous unfinished fetch just in case
   if (pollControllerRef.current) pollControllerRef.current.abort();
   const controller = new AbortController();
   pollControllerRef.current = controller;
       try {
-        const response = await fetch(`https://backend-oa-pqy2.onrender.com/api/data?ts=${Date.now()}`, {
+        const response = await fetch(`http://backend-oa-pqy2.onrender.com/api/data?ts=${Date.now()}`, {
           signal: controller.signal,
           cache: "no-store",
           headers: {
@@ -2228,7 +2391,7 @@ const cancelStatusChange = () => {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/notifications", {
+        const response = await axios.get("http://backend-oa-pqy2.onrender.com/api/notifications", {
           timeout: 5000, // 5 second timeout for notifications
           headers: {
             'Content-Type': 'application/json',
@@ -2269,7 +2432,7 @@ const cancelStatusChange = () => {
 
   // ---- Fetch latest Type/Group/Subgroup mapping on startup (inside component)
   useEffect(() => {
-    axios.get(`${API_BASE}/type-group-subgroup`)
+    axios.get(`${API_BASE_URL}/type-group-subgroup`)
       .then(res => {
         if (res.data && typeof res.data === 'object') {
           const backendStr = JSON.stringify(res.data);
@@ -2287,7 +2450,7 @@ const cancelStatusChange = () => {
     if (!startDate) return;
 
     axios
-      .get("https://backend-oa-pqy2.onrender.com/api/data-by-date", {
+      .get("http://backend-oa-pqy2.onrender.com/api/data-by-date", {
         params: { date: startDate },
       })
       .then((res) => {
@@ -2300,15 +2463,141 @@ const cancelStatusChange = () => {
       });
   };
 
+
+
+  const fetchDataByDateRange = () => {
+    // --- Frontend Validation ---
+    if (!startDate || !endDate) {
+      toast.error("กรุณาระบุวันที่เริ่มต้นและสิ้นสุด");
+      return;
+    }
+    if (startDate > endDate) {
+      toast.error("วันที่เริ่มต้องไม่มากกว่าวันสิ้นสุด");
+      return;
+    }
+
+    console.log('📅 Starting date filter process:', { startDate, endDate });
+    
+    // CRITICAL: Set date filter active FIRST and stop all polling immediately
+    setIsDateFilterActive(true);
+    
+    // Set immediate global flag to prevent race condition with offline data
+    window.isDateFilteringInProgress = true;
+    
+    // Cancel any ongoing polling
+    if (pollControllerRef.current) {
+      pollControllerRef.current.abort();
+      console.log('🛑 Cancelled ongoing polling for date filter');
+    }
+
+    // Use the existing data API to get all data, then filter by date range
+    axios
+      .get("http://backend-oa-pqy2.onrender.com/api/data", {
+        params: { ts: Date.now() },
+        headers: { 'Cache-Control': 'no-cache' }
+      })
+      .then((res) => {
+        // Double-check filter is still active (in case of race condition)
+        console.log('🔍 Checking if date filter is still active:', isDateFilterActive);
+        
+        const rawData = Array.isArray(res.data) ? res.data : [];
+        console.log('📊 Raw data from backend:', rawData.length, 'items');
+
+        // Filter by created_at (วันที่แจ้ง) instead of appointment
+        const filteredData = rawData.filter((item) => {
+          const createdAtField = item['วันที่แจ้ง'] || item.created_at;
+          if (!createdAtField) {
+            console.log('⚠️ No created_at field for:', item['Ticket ID']);
+            return false;
+          }
+          
+          const createdDate = new Date(createdAtField);
+          if (isNaN(createdDate.getTime())) {
+            console.log('⚠️ Invalid date for:', item['Ticket ID'], createdAtField);
+            return false;
+          }
+          
+          // Create start and end datetime for comparison
+          const startDateTime = new Date(`${startDate}${startTime ? `T${startTime}:00` : 'T00:00:00'}`);
+          const endDateTime = new Date(`${endDate}${endTime ? `T${endTime}:59` : 'T23:59:59'}`);
+          
+          // Check if created date is within the datetime range
+          const inRange = createdDate >= startDateTime && createdDate <= endDateTime;
+          
+          const createdDateStr = createdDate.toISOString().split('T')[0];
+          const createdTimeStr = createdDate.toTimeString().split(' ')[0].substring(0, 5);
+          
+          if (inRange) {
+            console.log('✅ Including:', item['Ticket ID'], `${createdDateStr} ${createdTimeStr}`);
+          } else {
+            console.log('❌ Excluding:', item['Ticket ID'], `${createdDateStr} ${createdTimeStr}`, 'outside range');
+          }
+          
+          return inRange;
+        });
+        
+        console.log('🎯 Final filtered data:', filteredData.length, 'items in date range');
+        console.log('📋 Filtered tickets:', filteredData.map(item => ({ 
+          id: item['Ticket ID'], 
+          date: item['วันที่แจ้ง'] || item.created_at 
+        })));
+        
+        // Set the filtered data and count
+        console.log('💾 setData in fetchDataByDateRange:', {
+          from: 'fetchDataByDateRange',
+          newLength: filteredData.length,
+          currentLength: data.length,
+          isDateFilterActive
+        });
+        // Store filtered data in ref to prevent overwriting
+        filteredDataRef.current = filteredData;
+        setData(filteredData);
+        setDateFilteredCount(filteredData.length);
+        setNoDataMessage(filteredData.length === 0 ? 
+          `ไม่พบข้อมูลในช่วงวันที่แจ้ง ${startDate} ถึง ${endDate}` : "");
+        
+        // Clear global flag after filtering is complete
+        window.isDateFilteringInProgress = false;
+        
+        // Force re-render and confirm filter status
+        setTimeout(() => {
+          console.log('🔒 Date filter confirmed active, polling blocked');
+          setIsDateFilterActive(true); // Ensure it stays active
+        }, 100);
+      })
+      .catch((err) => {
+        console.error("Error fetching data by date range:", err);
+        // Reset filter state on error
+        setIsDateFilterActive(false);
+        
+        // Fallback to regular data fetch if date range API doesn't exist
+        if (err.response?.status === 404) {
+          console.warn("Date range API not available, using single date filter");
+          toast.warn("ไม่พบ API ช่วงวันที่ ใช้การกรองแบบวันเดียวแทน");
+          if (startDate) {
+            fetchDataByDate();
+          }
+        } else {
+          setData([]); // Reset to empty array on error
+          setNoDataMessage("เกิดข้อผิดพลาดในการโหลดข้อมูล");
+          toast.error("เกิดข้อผิดพลาดในการโหลดข้อมูล");
+        }
+      });
+  };
+
   const resetDateFilter = () => {
     setStartDate("");
+    setEndDate("");
+    setStartTime("");
+    setEndTime("");
     setIsDateFilterActive(false);
+    setDateFilteredCount(0);
     setSearchTerm("");
     setStatusFilter("all");
     setTypeFilter("all");
 
     axios
-      .get("https://backend-oa-pqy2.onrender.com/api/data")
+      .get("http://backend-oa-pqy2.onrender.com/api/data")
       .then((res) => setData(Array.isArray(res.data) ? res.data : []))
       .catch((err) => {
         console.error(err);
@@ -2320,7 +2609,7 @@ const cancelStatusChange = () => {
     if (id) {
       // Mark single notification as read
       axios
-        .post("https://backend-oa-pqy2.onrender.com/mark-notification-read", { id })
+        .post("http://backend-oa-pqy2.onrender.com/mark-notification-read", { id })
         .then(() => {
           setNotifications((prev) =>
             prev.map((n) => (n.id === id ? { ...n, read: true } : n))
@@ -2330,7 +2619,7 @@ const cancelStatusChange = () => {
     } else {
       // Mark all notifications as read
       axios
-        .post("https://backend-oa-pqy2.onrender.com/mark-all-notifications-read")
+        .post("http://backend-oa-pqy2.onrender.com/mark-all-notifications-read")
         .then(() => {
           setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
           setHasUnread(false);
@@ -2338,8 +2627,13 @@ const cancelStatusChange = () => {
     }
   };
   // Filter data based on search and filters
-  const filteredData = Array.isArray(displayData)
-    ? displayData.filter((row) => {
+  // Use data directly which contains the filtered results from fetchDataByDateRange
+  // Wrap with useMemo to prevent unnecessary recalculations
+  const filteredData = useMemo(() => {
+    // Use filtered data from ref when date filtering is active to prevent jumping
+    const sourceData = isDateFilterActive && filteredDataRef.current ? filteredDataRef.current : data;
+    return Array.isArray(sourceData)
+      ? sourceData.filter((row) => {
       // Search filter
       const matchesSearch =
         searchTerm === "" ||
@@ -2351,7 +2645,10 @@ const cancelStatusChange = () => {
         row["แผนก"]?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         row["Ticket ID"]?.toString().includes(searchTerm);
 
-      // Status filter
+      // Status filter logic:
+      // - "all" always excludes Closed tickets (both with and without date filter)
+      // - "Closed" shows only Closed tickets
+      // - Other statuses show only that specific status
       const matchesStatus =
         statusFilter === "all"
           ? row["สถานะ"] !== "Closed"
@@ -2365,9 +2662,18 @@ const cancelStatusChange = () => {
       const shouldShowInformation = typeFilter === "INFORMATION";
       const typeFiltering = shouldShowInformation || !isInformationType;
 
-      return matchesSearch && matchesStatus && matchesType && typeFiltering;
-    })
-    : [];
+        return matchesSearch && matchesStatus && matchesType && typeFiltering;
+      })
+      : [];
+  }, [data, searchTerm, statusFilter, typeFilter, isDateFilterActive]);
+
+  // Debug logging for filteredData changes
+  console.log('🔄 filteredData updated:', {
+    total: filteredData.length,
+    isDateFilterActive,
+    statusFilter,
+    dataLength: data.length
+  });
 
   // Pagination logic
   const sortedFilteredData = [...filteredData].sort((a, b) => {
@@ -2415,7 +2721,7 @@ const cancelStatusChange = () => {
 
   const deleteNotification = async (id) => {
     try {
-      await axios.post("https://backend-oa-pqy2.onrender.com/delete-notification", { id });
+      await axios.post("http://backend-oa-pqy2.onrender.com/delete-notification", { id });
       setNotifications(notifications.filter((n) => n.id !== id));
     } catch (err) {
       console.error("Error deleting notification:", err);
@@ -2425,8 +2731,11 @@ const cancelStatusChange = () => {
   const handleDeleteTicket = async (ticketId) => {
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?")) {
       try {
+        // Get ticket details before deletion for logging
+        const ticketToDelete = data.find(item => item["Ticket ID"] === ticketId);
+        
         const response = await axios.post(
-          "https://backend-oa-pqy2.onrender.com/delete-ticket",
+          "http://backend-oa-pqy2.onrender.com/delete-ticket",
           { ticket_id: ticketId },
           {
             headers: {
@@ -2437,6 +2746,39 @@ const cancelStatusChange = () => {
 
         if (response.data.success) {
           console.log("✅ Ticket deleted");
+          
+          // Log the ticket deletion activity with user info
+          try {
+            // Get current user info for logging
+            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+            const deletedBy = currentUser.username || currentUser.display_name || 'Unknown User';
+            
+            await axios.post(
+              "http://backend-oa-pqy2.onrender.com/api/activity-log",
+              {
+                action: 'delete_ticket',
+                details: {
+                  ticket_id: ticketId,
+                  ticket_name: ticketToDelete?.["Name"] || 'Unknown',
+                  ticket_department: ticketToDelete?.["Department"] || 'Unknown',
+                  ticket_status: ticketToDelete?.["Status"] || 'Unknown',
+                  deleted_by: deletedBy,
+                  deleted_by_user_id: currentUser.user_id || null,
+                  deleted_at: new Date().toISOString(),
+                  action_description: `Ticket #${ticketId} ถูกลบโดย ${deletedBy}`
+                }
+              },
+              {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+              }
+            );
+          } catch (logError) {
+            console.warn('Failed to log ticket deletion:', logError);
+          }
+          
           // อัปเดต state เพื่อลบ ticket ออกจาก UI
           setData((prevData) =>
             prevData.filter((item) => item["Ticket ID"] !== ticketId)
@@ -2462,7 +2804,7 @@ const cancelStatusChange = () => {
     
     setLoadingChat(true);
     try {
-      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
+      const response = await axios.get("http://backend-oa-pqy2.onrender.com/api/messages", {
         params: { user_id: userId }
       });
       setChatMessages(response.data || []);
@@ -2484,7 +2826,7 @@ const cancelStatusChange = () => {
         sender_type: 'admin', // ต้องเป็น 'admin' (ตัวเล็ก)
         message: newMessage
       };
-      const response = await axios.post("https://backend-oa-pqy2.onrender.com/api/messages", payload);
+      const response = await axios.post("http://backend-oa-pqy2.onrender.com/api/messages", payload);
 
       // Add new message to local state (ถ้า backend ส่งกลับ message ใหม่)
       setChatMessages(prev => [
@@ -2516,7 +2858,7 @@ const cancelStatusChange = () => {
 
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบประวัติการสนทนาทั้งหมด?")) {
       try {
-        await axios.post("https://backend-oa-pqy2.onrender.com/api/messages/delete", {
+        await axios.post("http://backend-oa-pqy2.onrender.com/api/messages/delete", {
           user_id: selectedChatUser
         });
         setChatMessages([]);
@@ -2538,7 +2880,7 @@ const cancelStatusChange = () => {
 
     try {
       const response = await axios.post(
-        "https://backend-oa-pqy2.onrender.com/send-announcement",
+        "http://backend-oa-pqy2.onrender.com/send-announcement",
         { message: announcementMessage },
         { headers: { "Content-Type": "application/json" } }
       );
@@ -2570,7 +2912,7 @@ const cancelStatusChange = () => {
   useEffect(() => {
     const fetchChatUsers = async () => {
       try {
-        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/chat-users");
+        const response = await axios.get("http://backend-oa-pqy2.onrender.com/api/chat-users");
         // response.data should be an array of { user_id, name }
         setChatUsers(Array.isArray(response.data) ? response.data : []);
       } catch (error) {
@@ -2587,7 +2929,7 @@ const cancelStatusChange = () => {
 
     const pollMessages = async () => {
       try {
-        const response = await axios.get("hhttps://backend-oa-pqy2.onrender.com/api/messages", {
+        const response = await axios.get("http://backend-oa-pqy2.onrender.com/api/messages", {
           params: { user_id: selectedChatUser }
         });
         
@@ -2638,7 +2980,7 @@ const cancelStatusChange = () => {
     setRetryCount(prev => prev + 1);
     
     try {
-      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
+      const response = await axios.get("http://backend-oa-pqy2.onrender.com/api/data", {
         timeout: 15000, // 15 second timeout for manual retry
         headers: {
           'Content-Type': 'application/json',
@@ -2719,7 +3061,7 @@ const cancelStatusChange = () => {
           `"${row["วันที่แจ้ง"] || ""}"`,
           `"${row["สถานะ"] || ""}"`,
           `"${row["Appointment"] || ""}"`,
-          `"${row["Requeste"] || ""}"`,
+          `"${row["Request"] || ""}"`,
           `"${row["Report"] || ""}"`,
           `"${row["Type"] || "None"}"`,
         ].join(",")
@@ -2751,7 +3093,7 @@ const cancelStatusChange = () => {
       วันที่แจ้ง: row["วันที่แจ้ง"],
       สถานะ: row["สถานะ"],
       Appointment: row["Appointment"],
-      Request: row["Requeste"],
+      Request: row["Request"],
       Report: row["Report"],
       Type: row["Type"] || "None",
     }));
@@ -2885,10 +3227,10 @@ const cancelStatusChange = () => {
           apptDate = new Date(dateStr);
           apptDate.setHours(parseInt(hours), parseInt(minutes));
         } else { // รูปแบบอื่นๆ
-          apptDate = new Date(apptRaw);
+          apptDate = parseAppointmentText(apptRaw);
         }
 
-        if (isNaN(apptDate.getTime())) return false;
+        if (!apptDate) return false;
 
         // ตรวจสอบว่าอยู่ในวันนี้หรือเลยกำหนด
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -3129,7 +3471,7 @@ const handleSubgroupChange = (e) => {
       if (isValid(editForm.status)) payload.status = editForm.status;
   
       const response = await axios.post(
-        "https://backend-oa-pqy2.onrender.com/update-ticket",
+        "http://backend-oa-pqy2.onrender.com/update-ticket",
         payload,
         {
           headers: {
@@ -3210,7 +3552,7 @@ const handleSubgroupChange = (e) => {
   // --- ฟังก์ชันเช็คข้อความใหม่ ---
   const checkForNewMessages = useCallback(async () => {
     try {
-      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/check-new-messages", {
+      const response = await axios.get("http://backend-oa-pqy2.onrender.com/api/check-new-messages", {
         params: { last_checked: lastMessageCheck.toISOString() }
       });
       if (response.data.new_messages && response.data.new_messages.length > 0) {
@@ -3226,7 +3568,7 @@ const handleSubgroupChange = (e) => {
         });
         setLastMessageCheck(new Date(latestMsg.timestamp));
         // --- เรียก backend เพื่อบันทึก notification ลงฐานข้อมูล ---
-        await axios.post("https://backend-oa-pqy2.onrender.com/api/add-notification", {
+        await axios.post("http://backend-oa-pqy2.onrender.com/api/add-notification", {
           message: latestMsg.message,
           sender_name: latestGroup.name,
           user_id: latestGroup.user_id,
@@ -3273,10 +3615,29 @@ const handleSubgroupChange = (e) => {
 
   return (
     <Routes>
-      <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
-      <Route path="/admin-type-group" element={token ? <AdminTypeGroupManager /> : <Navigate to="/login" />} />
-      <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <Login />} />
-      <Route path="/dashboard" element={token ? (
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/pin-verification" element={<PinVerification />} />
+      
+      <Route path="/admin-type-group" element={
+        <ProtectedRoute requirePinVerification={true}>
+          <AdminTypeGroupManager />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/logs" element={
+        <ProtectedRoute requirePinVerification={true}>
+          <StatusLogsPage />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/activity-logs" element={
+        <ProtectedRoute requirePinVerification={true} adminOnly={true}>
+          <ActivityLogs />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard" element={
+        <ProtectedRoute requirePinVerification={true}>
         <>
           {/* TopNav สำหรับ mobile */}
           {isMobile && (
@@ -3310,7 +3671,7 @@ const handleSubgroupChange = (e) => {
               $collapsed={!sidebarOpen}
               data-tooltip="Dashboard"
             >
-              <span>Dashboard</span>
+              <span>📊 Dashboard</span>
             </NavItem>
             <NavItem
               $icon="list"
@@ -3322,7 +3683,7 @@ const handleSubgroupChange = (e) => {
               $collapsed={!sidebarOpen}
               data-tooltip="List"
             >
-              <span>Ticket List</span>
+              <span>🎟️ Ticket List</span>
             </NavItem>
             <NavItem
               $icon="chat"
@@ -3334,7 +3695,7 @@ const handleSubgroupChange = (e) => {
               $collapsed={!sidebarOpen}
               data-tooltip="Chat"
             >
-              <span>Chat</span>
+              <span>💬 Chat</span>
             </NavItem>
             <NavItem
             $icon="history"
@@ -3346,7 +3707,7 @@ const handleSubgroupChange = (e) => {
             $collapsed={!sidebarOpen}
             data-tooltip="Status Logs"
           >
-            <span>Status Logs</span>
+            <span>📈 Status Logs</span>
           </NavItem>
           <NavItem
               $icon="admin"
@@ -3358,7 +3719,7 @@ const handleSubgroupChange = (e) => {
               $collapsed={!sidebarOpen}
               data-tooltip="Admin Type/Group"
             >
-              <span>จัดการ Type/Group</span>
+              <span>⚙️ จัดการ Type/Group</span>
             </NavItem>
           </Sidebar>
           {/* Mobile Bottom Navigation */}
@@ -3806,35 +4167,55 @@ const handleSubgroupChange = (e) => {
                   <SearchAndFilterContainer>
                     <SearchInput
                       type="text"
-                      placeholder="ค้นหา Ticket..."
+                      placeholder="ค้นหาID/mail/name/แผนก/เบอร์"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
 
-                    {/* Date Filter - Moved here */}
+                    {/* Enhanced Date and Time Range Filter */}
                     <DateFilterContainer>
-                      <FilterLabel>วันที่:</FilterLabel>
-                      <DateInput
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                      />
-                      <FilterButton onClick={fetchDataByDate} disabled={!startDate}>
-                        กรอง
-                      </FilterButton>
-                      <ResetButton onClick={resetDateFilter}>รีเซ็ต</ResetButton>
-                      {isDateFilterActive && (
-                        <div
-                          style={{
-                            marginTop: "8px",
-                            color: "#475569",
-                            fontSize: "0.875rem",
-                          }}
-                        >
-                          กำลังแสดงข้อมูลวันที่:{" "}
-                          {new Date(startDate).toLocaleDateString("th-TH")}
-                        </div>
-                      )}
+                      <DateTimeGroup>
+                        <DateTimeLabel>วันที่เริ่มต้น:</DateTimeLabel>
+                        <DateInput
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                          placeholder="วันที่เริ่มต้น"
+                        />
+                        <TimeInput
+                          type="time"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          placeholder="เวลาเริ่มต้น"
+                        />
+                      </DateTimeGroup>
+                      
+                      <DateTimeGroup>
+                        <DateTimeLabel>วันที่สิ้นสุด:</DateTimeLabel>
+                        <DateInput
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                          placeholder="วันที่สิ้นสุด"
+                        />
+                        <TimeInput
+                          type="time"
+                          value={endTime}
+                          onChange={(e) => setEndTime(e.target.value)}
+                          placeholder="เวลาสิ้นสุด"
+                        />
+                      </DateTimeGroup>
+                      
+                      <DateTimeGroup>
+                        <FilterButton onClick={fetchDataByDateRange} disabled={!startDate && !endDate}>
+                          🔍 กรองข้อมูล
+                        </FilterButton>
+                        <ResetButton onClick={resetDateFilter}>🔄 รีเซ็ต</ResetButton>
+                      </DateTimeGroup>
+                      
+                      
+                       
+                      
                     </DateFilterContainer>
 
                     <FilterGroup>
@@ -3870,6 +4251,51 @@ const handleSubgroupChange = (e) => {
                       </FilterSelect>
                     </FilterGroup>
                   </SearchAndFilterContainer>
+
+                  {/* Date Filter Status Display */}
+                  {isDateFilterActive && startDate && endDate && (
+                    <div style={{
+                      background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                      color: 'white',
+                      padding: '12px 20px',
+                      borderRadius: '12px',
+                      margin: '16px 0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>📅</span>
+                        <span style={{ fontWeight: '500' }}>
+                          กำลังแสดงข้อมูล: จาก {new Date(startDate).toLocaleDateString('th-TH')} ถึง {new Date(endDate).toLocaleDateString('th-TH')}
+                        </span>
+                        <span style={{ 
+                          background: 'rgba(255,255,255,0.2)', 
+                          padding: '4px 8px', 
+                          borderRadius: '6px',
+                          fontSize: '0.875rem'
+                        }}>
+                          {filteredData.length} รายการ
+                        </span>
+                      </div>
+                      <button
+                        onClick={resetDateFilter}
+                        style={{
+                          background: 'rgba(255,255,255,0.2)',
+                          border: 'none',
+                          color: 'white',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          fontWeight: '500'
+                        }}
+                      >
+                        ✕ ยกเลิกการกรอง
+                      </button>
+                    </div>
+                  )}
 
                   <ScrollContainer>
                     <StyledTable>
@@ -3995,10 +4421,29 @@ const handleSubgroupChange = (e) => {
                                   </>
                                 ) : (
                                   <>
-                                    <span>{row["Appointment"] || "None"}</span>
+                                     {/* Simple Appointment field display - show exact backend data */}
+                                     {(() => {
+                                       const appointmentValue = row["Appointment"];
+                                       const appointmentText = row["appointment text"] || row["appointment_text"];
+                                       const appointmentDateTime = row["appointment_datetime"];
+                                       
+                                       // Priority order: appointment_text > Appointment > appointment_datetime
+                                       let displayValue = null;
+                                       
+                                       if (appointmentText && appointmentText !== "None" && appointmentText !== "null" && appointmentText.trim() !== "") {
+                                         displayValue = appointmentText;
+                                       } else if (appointmentValue && appointmentValue !== "None" && appointmentValue !== "null" && appointmentValue.trim() !== "") {
+                                         displayValue = appointmentValue;
+                                       } else if (appointmentDateTime && appointmentDateTime !== "None" && appointmentDateTime !== "null" && appointmentDateTime.trim() !== "") {
+                                         displayValue = appointmentDateTime;
+                                       }
+                                       
+                                       // Show the value as-is from backend, or empty if no value
+                                       return displayValue || "";
+                                     })()} 
                                     {row["appointment_datetime"] && (
                                       <div style={{ fontSize: '0.85em', color: '#64748b' }}>
-                                        ({new Date(row["appointment_datetime"]).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" })})
+                                        ({formatDate.thaiDateTimeShort(row["appointment_datetime"])})
                                       </div>
                                     )}
                                   </>
@@ -4103,57 +4548,161 @@ const handleSubgroupChange = (e) => {
                     </StyledTable>
                   </ScrollContainer>
 
-                  {/* Pagination UI */}
+                  {/* Enhanced Pagination UI with Page Count */}
                   {totalPages > 1 && (
-                    <div style={{ display: 'flex', justifyContent: 'center', margin: '16px 0', gap: '8px', alignItems: 'center' }}>
-                      <button 
-                        onClick={() => handlePageChange(currentPage - 1)} 
-                        disabled={currentPage === 1}
-                        style={{ 
-                          padding: '8px 16px', 
-                          background: currentPage === 1 ? '#e2e8f0' : '#64748b',
-                          color: currentPage === 1 ? '#94a3b8' : 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        ก่อนหน้า
-                      </button>
-                      {Array.from({ length: totalPages }, (_, idx) => (
-                        <button
-                          key={idx + 1}
-                          onClick={() => handlePageChange(idx + 1)}
-                          style={{
-                            padding: '8px 12px',
-                            background: currentPage === idx + 1 ? '#64748b' : 'white',
-                            color: currentPage === idx + 1 ? 'white' : '#64748b',
-                            border: '1px solid #e2e8f0',
+                    <div style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      margin: '16px 0', 
+                      gap: '12px'
+                    }}>
+                      {/* Page Count Info */}
+                      <div style={{
+                        fontSize: '0.875rem',
+                        color: '#64748b',
+                        fontWeight: '500',
+                        background: 'rgba(100, 116, 139, 0.1)',
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        border: '1px solid rgba(100, 116, 139, 0.2)'
+                      }}>
+                        📄 หน้า {currentPage} จาก {totalPages} หน้า
+                      </div>
+                      
+                      {/* Pagination Controls */}
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button 
+                          onClick={() => handlePageChange(currentPage - 1)} 
+                          disabled={currentPage === 1}
+                          style={{ 
+                            padding: '8px 16px', 
+                            background: currentPage === 1 ? '#e2e8f0' : '#64748b',
+                            color: currentPage === 1 ? '#94a3b8' : 'white',
+                            border: 'none',
                             borderRadius: '6px',
-                            cursor: 'pointer',
+                            cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
                             transition: 'all 0.2s ease',
-                            minWidth: '40px'
+                            fontSize: '0.875rem',
+                            fontWeight: '500'
                           }}
                         >
-                          {idx + 1}
+                          ← ก่อนหน้า
                         </button>
-                      ))}
-                      <button 
-                        onClick={() => handlePageChange(currentPage + 1)} 
-                        disabled={currentPage === totalPages}
-                        style={{ 
-                          padding: '8px 16px', 
-                          background: currentPage === totalPages ? '#e2e8f0' : '#64748b',
-                          color: currentPage === totalPages ? '#94a3b8' : 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        ถัดไป
-                      </button>
+                        
+                        {/* Smart pagination - show limited page numbers for better UX */}
+                        {(() => {
+                          const maxVisiblePages = 5;
+                          let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                          let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                          
+                          if (endPage - startPage + 1 < maxVisiblePages) {
+                            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                          }
+                          
+                          const pages = [];
+                          
+                          // First page
+                          if (startPage > 1) {
+                            pages.push(
+                              <button
+                                key={1}
+                                onClick={() => handlePageChange(1)}
+                                style={{
+                                  padding: '8px 12px',
+                                  background: 'white',
+                                  color: '#64748b',
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease',
+                                  minWidth: '40px',
+                                  fontSize: '0.875rem'
+                                }}
+                              >
+                                1
+                              </button>
+                            );
+                            if (startPage > 2) {
+                              pages.push(
+                                <span key="ellipsis1" style={{ color: '#94a3b8', padding: '0 4px' }}>...</span>
+                              );
+                            }
+                          }
+                          
+                          // Visible pages
+                          for (let i = startPage; i <= endPage; i++) {
+                            pages.push(
+                              <button
+                                key={i}
+                                onClick={() => handlePageChange(i)}
+                                style={{
+                                  padding: '8px 12px',
+                                  background: currentPage === i ? '#64748b' : 'white',
+                                  color: currentPage === i ? 'white' : '#64748b',
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease',
+                                  minWidth: '40px',
+                                  fontSize: '0.875rem',
+                                  fontWeight: currentPage === i ? '600' : '500'
+                                }}
+                              >
+                                {i}
+                              </button>
+                            );
+                          }
+                          
+                          // Last page
+                          if (endPage < totalPages) {
+                            if (endPage < totalPages - 1) {
+                              pages.push(
+                                <span key="ellipsis2" style={{ color: '#94a3b8', padding: '0 4px' }}>...</span>
+                              );
+                            }
+                            pages.push(
+                              <button
+                                key={totalPages}
+                                onClick={() => handlePageChange(totalPages)}
+                                style={{
+                                  padding: '8px 12px',
+                                  background: 'white',
+                                  color: '#64748b',
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease',
+                                  minWidth: '40px',
+                                  fontSize: '0.875rem'
+                                }}
+                              >
+                                {totalPages}
+                              </button>
+                            );
+                          }
+                          
+                          return pages;
+                        })()}
+                        
+                        <button 
+                          onClick={() => handlePageChange(currentPage + 1)} 
+                          disabled={currentPage === totalPages}
+                          style={{ 
+                            padding: '8px 16px', 
+                            background: currentPage === totalPages ? '#e2e8f0' : '#64748b',
+                            color: currentPage === totalPages ? '#94a3b8' : 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                            transition: 'all 0.2s ease',
+                            fontSize: '0.875rem',
+                            fontWeight: '500'
+                          }}
+                        >
+                          ถัดไป →
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -4285,7 +4834,7 @@ const handleSubgroupChange = (e) => {
                             </MessageSender>
                             <div>{msg.message}</div>
                             <MessageTimeStyled $isAdmin={msg.sender_type === 'admin'}>
-                              {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
+                              {msg.timestamp ? formatDate.timeOnly(msg.timestamp) : ''}
                             </MessageTimeStyled>
                           </MessageBubble>
                         ))}
@@ -4389,7 +4938,7 @@ const handleSubgroupChange = (e) => {
                             <>
                               <div><b>ผู้ส่ง:</b> {senderName}</div>
                               <div><b>เนื้อหา:</b> {notification.message}</div>
-                              <div><b>เวลา:</b> {new Date(notification.timestamp).toLocaleString('th-TH')}</div>
+                              <div><b>เวลา:</b> {formatDate.thaiDateTime(notification.timestamp)}</div>
                             </>
                           ) : (
                             notification.message
@@ -4404,7 +4953,7 @@ const handleSubgroupChange = (e) => {
                           }}
                         >
                           <NotificationTime>
-                            {new Date(notification.timestamp).toLocaleString()}
+                            {formatDate.thaiDateTime(notification.timestamp)}
                           </NotificationTime>
                           <button
                             onClick={e => {
@@ -4452,9 +5001,10 @@ const handleSubgroupChange = (e) => {
             </Container>
           </MainContent>
         </>
-      ) : <Navigate to="/login" />} />
-      <Route path="/logs" element={token ? <StatusLogsPage /> : <Navigate to="/login" />} />
-      <Route path="/" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/" element={<Navigate to="/dashboard" />} />
     </Routes>
 
   );

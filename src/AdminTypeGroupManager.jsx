@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const LOCAL_KEY = 'oa_type_group_subgroup';
 // Backend API base (change if backend runs elsewhere)
-const API_BASE = process.env.REACT_APP_API_BASE || 'https://backend-oa-pqy2.onrender.com';
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://backend-oa-pqy2.onrender.com';
 
 function getInitialData() {
   const raw = localStorage.getItem(LOCAL_KEY);
@@ -104,6 +105,7 @@ const empty = {
 };
 
 export default function AdminTypeGroupManager() {
+  const navigate = useNavigate();
   const [data, setData] = useState(getInitialData());
   const [typeInput, setTypeInput] = useState('');
   const [groupInput, setGroupInput] = useState('');
@@ -165,9 +167,42 @@ useEffect(() => {
   return (
     <div style={{ maxWidth: 1100, margin: '40px auto', padding: 36, background: 'linear-gradient(135deg, #e0e7ff 0%, #f0f9ff 100%)', borderRadius: 32, boxShadow: '0 12px 48px #6366f122', minHeight: 600 }}>
       <Toast message={toast} onClose={() => setToast("")} />
-      <h2 style={{ textAlign: 'center', color: '#6366f1', marginBottom: 40, fontWeight: 900, fontSize: '2.2rem', letterSpacing: '-1.5px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-        <span style={{fontSize:32}}>🛠️</span> Admin: <span style={{color:'#2563eb'}}>จัดการ Type / Group / Subgroup</span>
-      </h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
+        <button 
+          onClick={() => navigate('/dashboard')}
+          style={{
+            background: 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
+            color: 'white',
+            border: 'none',
+            padding: '12px 24px',
+            borderRadius: '12px',
+            fontSize: '1rem',
+            fontWeight: '600',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.2s',
+            boxShadow: '0 4px 12px rgba(100, 116, 139, 0.3)'
+          }}
+          onMouseOver={(e) => {
+            e.target.style.transform = 'translateY(-2px)';
+            e.target.style.boxShadow = '0 6px 20px rgba(100, 116, 139, 0.4)';
+          }}
+          onMouseOut={(e) => {
+            e.target.style.transform = 'translateY(0)';
+            e.target.style.boxShadow = '0 4px 12px rgba(100, 116, 139, 0.3)';
+          }}
+        >
+          <span style={{fontSize: '18px'}}>🏠</span> กลับหน้าหลัก
+        </button>
+        
+        <h2 style={{ textAlign: 'center', color: '#6366f1', fontWeight: 900, fontSize: '2.2rem', letterSpacing: '-1.5px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, margin: 0 }}>
+          <span style={{fontSize:32}}>🛠️</span> Admin: <span style={{color:'#2563eb'}}>จัดการ Type / Group / Subgroup</span>
+        </h2>
+        
+        <div style={{ width: '140px' }}></div> {/* Spacer for centering */}
+      </div>
       <div style={{ display: 'flex', gap: 36, flexWrap: 'wrap', justifyContent: 'center' }}>
         {/* Type Card */}
         <div style={{ ...glass, flex: 1, minWidth: 260, maxWidth: 340 }}>

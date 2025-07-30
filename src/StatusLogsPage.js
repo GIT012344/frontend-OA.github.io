@@ -251,6 +251,12 @@ function StatusLogsPage() {
   };
 
   
+  // ----- Pre-compute date boundaries -----
+  const startBoundary = startDate ? new Date(startDate) : null;
+  if (startBoundary) startBoundary.setHours(0, 0, 0, 0);
+  const endBoundary = endDate ? new Date(endDate) : null;
+  if (endBoundary) endBoundary.setHours(23, 59, 59, 999);
+
   const filteredLogs = logs.filter(log => {
     
     if (!statusFilter && log?.new_status === 'Closed') {
@@ -261,8 +267,12 @@ function StatusLogsPage() {
     const ticketIdMatch = !filterTicketId || 
       (log.ticket_id && String(log.ticket_id).includes(filterTicketId));
     
-    const startMatch = !startDate || (log.changed_at && new Date(log.changed_at) >= new Date(startDate));
-    const endMatch = !endDate || (log.changed_at && new Date(log.changed_at) <= new Date(endDate + "T23:59:59"));
+    // Build date-only objects for reliable comparison
+    const logDateObj = log.changed_at ? new Date(log.changed_at) : null;
+    const logMidnight = logDateObj ? new Date(logDateObj.getFullYear(), logDateObj.getMonth(), logDateObj.getDate()) : null;
+
+    const startMatch = !startBoundary || (logMidnight && logMidnight >= startBoundary);
+    const endMatch = !endBoundary || (logMidnight && logMidnight <= endBoundary);
     const statusMatch = !statusFilter || log.new_status === statusFilter;
     const ticketIdKey = (log.ticket_id || '').toString().trim().toLowerCase();
     const filterVal = (categoryFilter || '').trim().toLowerCase();
@@ -290,28 +300,70 @@ function StatusLogsPage() {
     return new Date(b.changed_at) - new Date(a.changed_at);
   });
 
-  // ---------- Export CSV ---------- //
+  // ---------- Export CSV with Thai Language Support ---------- //
   function exportCsv() {
-    if (sortedLogs.length === 0) return;
-    const headers = ['Ticket ID','Old Status','New Status','Changed By','Changed At','Note','Remarks'];
-    const rows = sortedLogs.map(l=>[
-      l.ticket_id,
-      l.old_status,
-      l.new_status,
-      l.changed_by,
-      l.changed_at,
-      (l.note||'').replace(/\n/g,' ').replace(/,/g,';'),
-      (l.remarks||'').replace(/\n/g,' ').replace(/,/g,';')
+    if (sortedLogs.length === 0) {
+      alert('ไม่มีข้อมูลสำหรับ Export');
+      return;
+    }
+    
+    // Use Thai headers for better readability
+    const headers = ['รหัส Ticket', 'สถานะเดิม', 'สถานะใหม่', 'ผู้เปลี่ยน', 'วันที่เปลี่ยน', 'หมายเหตุ', 'รายละเอียดเพิ่มเติม'];
+    
+    const rows = sortedLogs.map(l => [
+      l.ticket_id || '',
+      l.old_status || '',
+      l.new_status || '',
+      l.changed_by || '',
+      l.changed_at ? new Date(l.changed_at).toLocaleString('th-TH', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }) : '',
+      (l.note || '').replace(/\n/g, ' ').replace(/,/g, ';'),
+      (l.remarks || '').replace(/\n/g, ' ').replace(/,/g, ';')
     ]);
-    const csvContent = [headers,...rows].map(r=>r.map(v=>`"${v??''}"`).join(',')).join('\n');
-    const blob = new Blob([csvContent],{type:'text/csv;charset=utf-8;'});
+    
+    // Create CSV content with proper escaping
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(value => {
+        // Properly escape quotes and wrap in quotes
+        const escaped = String(value).replace(/"/g, '""');
+        return `"${escaped}"`;
+      }).join(','))
+      .join('\r\n'); // Use Windows line endings for better Excel compatibility
+    
+    // Add BOM (Byte Order Mark) for proper Thai character display in Excel
+    const BOM = '\uFEFF';
+    const csvWithBOM = BOM + csvContent;
+    
+    // Create blob with proper MIME type and encoding
+    const blob = new Blob([csvWithBOM], {
+      type: 'text/csv;charset=utf-8;'
+    });
+    
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download',`status_logs_${Date.now()}.csv`);
+    
+    // Generate filename with Thai-friendly timestamp
+    const now = new Date();
+    const timestamp = now.toISOString().split('T')[0].replace(/-/g, '');
+    link.setAttribute('download', `ประวัติการเปลี่ยนสถานะ_${timestamp}.csv`);
+    
+    // Trigger download
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    // Clean up
+    URL.revokeObjectURL(url);
+    
+    // Show success message
+    alert('Export CSV สำเร็จ! ไฟล์จะแสดงภาษาไทยได้ถูกต้องใน Excel');
   }
 
   return (
@@ -398,10 +450,11 @@ function StatusLogsPage() {
                   {log.changed_at ? 
                     new Date(log.changed_at).toLocaleString('th-TH', {
                       year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
                       hour: '2-digit',
-                      minute: '2-digit'
+                      minute: '2-digit',
+                      hour12: false
                     }) : 
                     '-'}
                 </Td>

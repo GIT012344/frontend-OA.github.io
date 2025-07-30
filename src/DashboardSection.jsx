@@ -9,6 +9,7 @@ import {
   Legend,
   ArcElement,
 } from "chart.js";
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { Bar, Doughnut } from "react-chartjs-2";
 import {
   CheckCircleIcon,
@@ -24,7 +25,8 @@ ChartJS.register(
   LinearScale,
   Tooltip,
   Legend,
-  ArcElement
+  ArcElement,
+  ChartDataLabels
 );
 
 // ---------- Styled Components ----------
@@ -95,19 +97,23 @@ const StatLabel = styled.div`
 `;
 
 // ---------- Meta Info ----------
+// Updated status colors for better meaning and consistency
 const statusMeta = {
-  New: { color: "#3b82f6", gradient: "linear-gradient(135deg,#60a5fa,#2563eb)", icon: <FireIcon /> },
-  "In Process": { color: "#8b5cf6", gradient: "linear-gradient(135deg,#c084fc,#8b5cf6)", icon: <ClockIcon /> },
-  Pending: { color: "#f59e0b", gradient: "linear-gradient(135deg,#fcd34d,#f59e0b)", icon: <CalendarDaysIcon /> },
-  Closed: { color: "#10b981", gradient: "linear-gradient(135deg,#6ee7b7,#10b981)", icon: <CheckCircleIcon /> },
-  Cancelled: { color: "#64748b", gradient: "linear-gradient(135deg,#cbd5e1,#64748b)", icon: <XCircleIcon /> },
-  Reject: { color: "#ef4444", gradient: "linear-gradient(135deg,#fca5a5,#ef4444)", icon: <XCircleIcon /> },
+  New: { color: "#3b82f6", gradient: "linear-gradient(135deg,#60a5fa,#2563eb)", icon: <FireIcon /> }, // Blue
+  "In Process": { color: "#f59e0b", gradient: "linear-gradient(135deg,#fbbf24,#f59e0b)", icon: <ClockIcon /> }, // Yellow/Orange
+  Pending: { color: "#ea580c", gradient: "linear-gradient(135deg,#fb923c,#ea580c)", icon: <CalendarDaysIcon /> }, // Dark Orange/Red-Orange
+  Closed: { color: "#10b981", gradient: "linear-gradient(135deg,#6ee7b7,#10b981)", icon: <CheckCircleIcon /> }, // Green
+  Cancelled: { color: "#ef4444", gradient: "linear-gradient(135deg,#fca5a5,#ef4444)", icon: <XCircleIcon /> }, // Red
+  Reject: { color: "#dc2626", gradient: "linear-gradient(135deg,#f87171,#dc2626)", icon: <XCircleIcon /> }, // Dark Red
 };
 
 // ---------- Helper ----------
 function buildBarData(dailyRaw) {
   const daily = [...dailyRaw].sort((a,b)=> a.date - b.date);
-  const labels = daily.map((d) => d.date.toLocaleDateString());
+  const labels = daily.map((d) => d.date.toLocaleDateString('th-TH', {
+    month: '2-digit',
+    day: '2-digit'
+  }));
   const datasets = Object.keys(statusMeta).map((status) => ({
     label: status,
     backgroundColor: statusMeta[status].color + "AA",
@@ -157,9 +163,48 @@ export default function DashboardSection({ stats, daily, upcoming = [], overdue 
               data={buildBarData(daily)}
               options={{
                 responsive: true,
-                plugins: { legend: { position: "bottom" } },
+                layout: { padding: { top: 24 } },
+                plugins: { 
+                  legend: { position: "bottom" },
+                  datalabels: {
+                    display: function(context) {
+                      // Safe check for context and parsed data
+                      return context && context.parsed && context.parsed.y > 0;
+                    },
+                    anchor: 'end',
+                    align: 'top',
+                    offset: 6,
+                    color: '#1e293b',
+                    font: {
+                      weight: 'bold',
+                      size: 12,
+                      family: 'system-ui, -apple-system, sans-serif'
+                    },
+                    formatter: function(value, context) {
+                      // Safe check for value
+                      if (!value || value <= 0) return '';
+                      return value;
+                    },
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: 'rgba(100, 116, 139, 0.2)',
+                    borderRadius: 4,
+                    borderWidth: 1,
+                    padding: {
+                      top: 3,
+                      bottom: 3,
+                      left: 6,
+                      right: 6
+                    }
+                  }
+                },
                 interaction: { mode: "index", intersect: false },
-                scales: { x: { stacked: true }, y: { stacked: true } },
+                scales: { 
+                  x: { stacked: true }, 
+                  y: { 
+                    stacked: true,
+                    beginAtZero: true
+                  } 
+                },
                 maintainAspectRatio: false,
               }}
             />
@@ -184,7 +229,81 @@ export default function DashboardSection({ stats, daily, upcoming = [], overdue 
                 options={{
                   maintainAspectRatio: false,
                   cutout: "50%",
-                  plugins: { legend: { position: "bottom" } }
+                  plugins: { 
+                    legend: { 
+                      position: "bottom",
+                      labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        padding: 20,
+                        font: {
+                          size: 12,
+                          weight: '500'
+                        },
+                        generateLabels: function(chart) {
+                          const data = chart.data;
+                          if (data.labels.length && data.datasets.length) {
+                            const dataset = data.datasets[0];
+                            const total = dataset.data.reduce((sum, value) => sum + value, 0);
+                            
+                            return data.labels.map((label, index) => {
+                              const value = dataset.data[index];
+                              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                              
+                              return {
+                                text: `${label}: ${value} (${percentage}%)`,
+                                fillStyle: dataset.backgroundColor[index],
+                                strokeStyle: dataset.backgroundColor[index],
+                                lineWidth: 0,
+                                pointStyle: 'circle',
+                                hidden: false,
+                                index: index
+                              };
+                            });
+                          }
+                          return [];
+                        }
+                      }
+                    },
+                    datalabels: {
+                     clip: false,
+                      display: function(context) {
+                        // Safe check for context and data
+                        if (!context || !context.dataset || !context.dataset.data || typeof context.parsed !== 'number') {
+                          return false;
+                        }
+                        const value = context.parsed;
+                        const total = context.dataset.data.reduce((sum, val) => sum + (val || 0), 0);
+                        const percentage = total > 0 ? ((value / total) * 100) : 0;
+                        return percentage > 5; // Only show labels for segments > 5%
+                      },
+                      color: '#fff',
+                      font: {
+                        weight: 'bold',
+                        size: 12
+                      },
+                      formatter: function(value, context) {
+                        // Safe check for context and data
+                        if (!context || !context.dataset || !context.dataset.data || typeof value !== 'number') {
+                          return '';
+                        }
+                        const total = context.dataset.data.reduce((sum, val) => sum + (val || 0), 0);
+                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                        return `${percentage}%`;
+                      },
+                      textAlign: 'center'
+                    }
+                  },
+                  responsive: true,
+                  interaction: {
+                    intersect: false
+                  },
+                  elements: {
+                    arc: {
+                      borderWidth: 2,
+                      borderColor: '#fff'
+                    }
+                  }
                 }}
               />
             </div>

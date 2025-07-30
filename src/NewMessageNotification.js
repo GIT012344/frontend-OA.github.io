@@ -81,7 +81,14 @@ export default function NewMessageNotification({ alert, onClose, onReply }) {
       </PopupHeader>
       <PopupBody>
         <div style={{ marginBottom: 8, fontWeight: 500 }}>{alert.message}</div>
-        <PopupTime>{new Date(alert.timestamp).toLocaleString('th-TH')}</PopupTime>
+        <PopupTime>{new Date(alert.timestamp).toLocaleString('th-TH', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        })}</PopupTime>
         <PopupButton onClick={() => { onReply(alert.user_id); onClose(); }}>
           ไปที่แชท
         </PopupButton>

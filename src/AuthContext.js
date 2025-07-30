@@ -1,130 +1,198 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authAPI } from './utils/api';
+import AuthManager from './utils/auth';
 
 const AuthContext = createContext();
 
-// Mock PIN codes สำหรับทดสอบ
-const MOCK_PIN_CODES = {
-  '000000': {
-    username: 'admin',
-    name: 'ผู้ดูแลระบบ',
-    role: 'admin',
-    email: 'admin@example.com'
-  },
-};
-
-// Helper function to safely encode strings with non-Latin1 characters
-const safeBtoa = (str) => {
-  return btoa(unescape(encodeURIComponent(str)));
-};
-
-// Helper function to safely decode strings
-const safeAtob = (str) => {
-  return decodeURIComponent(escape(atob(str)));
-};
-
+// Enhanced AuthProvider with new authentication flow
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(localStorage.getItem('token'));
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isPinVerified, setIsPinVerified] = useState(false);
+  const [requiresPinVerification, setRequiresPinVerification] = useState(false);
 
   useEffect(() => {
-    if (token) {
-      try {
-        // ถ้าเป็น mock token ให้ decode จาก localStorage
-        const userData = localStorage.getItem('userData');
-        if (userData) {
-          setUser(JSON.parse(userData));
-        } else {
-          // ถ้าไม่มี userData ให้ลบ token
-          localStorage.removeItem('token');
-          setToken(null);
-          setUser(null);
-        }
-      } catch (error) {
-        console.error('Error loading user data:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('userData');
-        setToken(null);
-        setUser(null);
-      }
-    } else {
-      setUser(null);
-    }
-    setLoading(false);
-  }, [token]);
+    initializeAuth();
+  }, []);
 
-  const login = async (pinCode) => {
+  const initializeAuth = () => {
     try {
-      // ตรวจสอบ PIN code ใน mock data
-      if (MOCK_PIN_CODES[pinCode]) {
-        const userData = MOCK_PIN_CODES[pinCode];
-        
-        // สร้าง mock token ด้วย safe encoding
-        const tokenData = {
-          ...userData,
-          exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 ชั่วโมง
-          iat: Math.floor(Date.now() / 1000)
-        };
-        
-        const mockToken = safeBtoa(JSON.stringify(tokenData));
-        
-        // บันทึก token และ user data
-        setToken(mockToken);
-        setUser(userData);
-        localStorage.setItem('token', mockToken);
-        localStorage.setItem('userData', JSON.stringify(userData));
-        
-        console.log('✅ Mock login successful:', userData);
-        return true;
-      } else {
-        // ถ้า PIN ไม่ถูกต้อง ให้ลองเรียก Backend API
-        try {
-          const response = await axios.post('https://backend-oa-pqy2.onrender.com/api/login', {
-            pin_code: pinCode
-          }, {
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          });
+      const loggedIn = AuthManager.isLoggedIn();
+      const pinVerified = AuthManager.isPinVerified();
+      const needsPinVerification = AuthManager.requiresPinVerification();
+      const userData = AuthManager.getCurrentUser();
 
-          if (response.data.access_token) {
-            const newToken = response.data.access_token;
-            setToken(newToken);
-            localStorage.setItem('token', newToken);
-            
-            // Decode และ set user data
-            try {
-              const decoded = JSON.parse(safeAtob(newToken.split('.')[1]));
-              setUser(decoded);
-            } catch (error) {
-              console.error('Error decoding token:', error);
-            }
-            
-            return true;
-          } else {
-            throw new Error('No access token received');
-          }
-        } catch (backendError) {
-          console.error('Backend login failed:', backendError);
-          throw new Error('PIN code ไม่ถูกต้อง');
-        }
-      }
-    } catch (err) {
-      console.error('Login error:', err);
-      throw err;
+      setIsLoggedIn(loggedIn);
+      setIsPinVerified(pinVerified);
+      setRequiresPinVerification(needsPinVerification);
+      setUser(userData);
+
+      console.log('Auth state initialized:', {
+        loggedIn,
+        pinVerified,
+        needsPinVerification,
+        user: userData
+      });
+    } catch (error) {
+      console.error('Error initializing auth:', error);
+      // Clear any corrupted auth data
+      AuthManager.clearAuth();
+      setIsLoggedIn(false);
+      setIsPinVerified(false);
+      setRequiresPinVerification(false);
+      setUser(null);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('userData');
+  // Login with username/password
+  const login = async (username, password) => {
+    try {
+      const result = await authAPI.login(username, password);
+      
+      if (result.success) {
+        setIsLoggedIn(true);
+        setUser(result.user);
+        setRequiresPinVerification(true); // Always require PIN verification
+        setIsPinVerified(false);
+        
+        return {
+          success: true,
+          requiresPin: true,
+          user: result.user
+        };
+      } else {
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      return {
+        success: false,
+        error: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ'
+      };
+    }
+  };
+
+  // Verify PIN
+  const verifyPIN = async (pin) => {
+    try {
+      const result = await authAPI.verifyPin({ pin });
+      
+      if (result.success) {
+        setIsPinVerified(true);
+        setRequiresPinVerification(false);
+        
+        // Update user data if provided
+        if (result.user) {
+          setUser(result.user);
+        }
+        
+        return {
+          success: true,
+          user: result.user
+        };
+      } else {
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+    } catch (error) {
+      console.error('PIN verification error:', error);
+      return {
+        success: false,
+        error: 'เกิดข้อผิดพลาดในการยืนยัน PIN'
+      };
+    }
+  };
+
+  // Verify PIN
+  const verifyPin = async (pin) => {
+    try {
+      const result = await authAPI.verifyPin({ pin });
+      
+      if (result.success) {
+        // Mark PIN as verified in AuthManager
+        AuthManager.markPinVerified();
+        
+        // Update AuthContext state
+        setIsPinVerified(true);
+        setRequiresPinVerification(false);
+        
+        return {
+          success: true
+        };
+      } else {
+        return {
+          success: false,
+          error: result.error || 'PIN ไม่ถูกต้อง'
+        };
+      }
+    } catch (error) {
+      console.error('PIN verification error:', error);
+      return {
+        success: false,
+        error: 'เกิดข้อผิดพลาดในการยืนยัน PIN'
+      };
+    }
+  };
+
+  // Logout
+  const logout = async () => {
+    try {
+      await authAPI.logout();
+    } catch (error) {
+      console.error('Logout API error:', error);
+      // Continue with local logout even if API fails
+    } finally {
+      // Clear all auth state
+      AuthManager.clearAuth();
+      setIsLoggedIn(false);
+      setIsPinVerified(false);
+      setRequiresPinVerification(false);
+      setUser(null);
+    }
+  };
+
+
+
+  // Check if user is fully authenticated (logged in + PIN verified)
+  const isFullyAuthenticated = () => {
+    return isLoggedIn && (!requiresPinVerification || isPinVerified);
+  };
+
+  // Get authentication headers for API calls
+  const getAuthHeaders = () => {
+    return AuthManager.getAuthHeaders();
+  };
+
+  const contextValue = {
+    // State
+    user,
+    loading,
+    isLoggedIn,
+    isPinVerified,
+    requiresPinVerification,
+    
+    // Methods
+    login,
+    verifyPin,
+    verifyPIN,
+    logout,
+    
+    // Utilities
+    isFullyAuthenticated,
+    getAuthHeaders,
+    initializeAuth
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout, loading }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
