@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { activityAPI } from '../utils/api';
 import AuthManager from '../utils/auth';
@@ -294,18 +294,7 @@ const ActivityLogs = () => {
     username: ''
   });
 
-  useEffect(() => {
-    // Check if user has admin access
-    const user = AuthManager.getCurrentUser();
-    if (!user || user.role !== 'admin') {
-      setError('คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
-      return;
-    }
-
-    loadActivityLogs();
-  }, [currentPage]);
-
-  const loadActivityLogs = async () => {
+  const loadActivityLogs = useCallback(async () => {
     setLoading(true);
     setError('');
 
@@ -324,7 +313,18 @@ const ActivityLogs = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, filters]);
+
+  useEffect(() => {
+    // Check if user has admin access
+    const user = AuthManager.getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      setError('คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
+      return;
+    }
+
+    loadActivityLogs();
+  }, [loadActivityLogs]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
