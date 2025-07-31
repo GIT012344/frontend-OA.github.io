@@ -113,10 +113,20 @@ export default function AdminTypeGroupManager() {
   const [selectedType, setSelectedType] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('');
   const [toast, setToast] = useState("");
+  const [editingType, setEditingType] = useState('');
+  const [editTypeInput, setEditTypeInput] = useState('');
+  const [editingGroup, setEditingGroup] = useState('');
+  const [editGroupInput, setEditGroupInput] = useState('');
 
-  // Persist to localStorage (existing)
+  // Persist to localStorage and notify other components
 useEffect(() => {
   localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+  
+  // Use setTimeout to ensure localStorage is written before dispatching event
+  setTimeout(() => {
+    console.log('[AdminTypeGroupManager] Dispatching typeGroupDataUpdated event with data:', data);
+    window.dispatchEvent(new CustomEvent('typeGroupDataUpdated', { detail: data }));
+  }, 0);
 }, [data]);
 
 // Persist to backend
@@ -138,6 +148,86 @@ useEffect(() => {
     setData(newData);
     if (selectedType === type) setSelectedType('');
     showToast('ลบ Type สำเร็จ!');
+  };
+  
+  const startEditType = (type) => {
+    setEditingType(type);
+    setEditTypeInput(type);
+  };
+  
+  const saveEditType = () => {
+    if (!editTypeInput.trim() || editTypeInput === editingType) {
+      setEditingType('');
+      setEditTypeInput('');
+      return;
+    }
+    
+    if (data[editTypeInput]) {
+      showToast('ชื่อ Type นี้มีอยู่แล้ว!');
+      return;
+    }
+    
+    const newData = { ...data };
+    // Copy all groups/subgroups to new type name
+    newData[editTypeInput] = newData[editingType];
+    // Delete old type
+    delete newData[editingType];
+    
+    setData(newData);
+    
+    // Update selected type if it was the one being edited
+    if (selectedType === editingType) {
+      setSelectedType(editTypeInput);
+    }
+    
+    setEditingType('');
+    setEditTypeInput('');
+    showToast(`เปลี่ยนชื่อ Type เป็น "${editTypeInput}" สำเร็จ!`);
+  };
+  
+  const cancelEditType = () => {
+    setEditingType('');
+    setEditTypeInput('');
+  };
+  
+  const startEditGroup = (group) => {
+    setEditingGroup(group);
+    setEditGroupInput(group);
+  };
+  
+  const saveEditGroup = () => {
+    if (!editGroupInput.trim() || editGroupInput === editingGroup) {
+      setEditingGroup('');
+      setEditGroupInput('');
+      return;
+    }
+    
+    if (data[selectedType][editGroupInput]) {
+      showToast('ชื่อ Group นี้มีอยู่แล้ว!');
+      return;
+    }
+    
+    const newData = { ...data };
+    // Copy all subgroups to new group name
+    newData[selectedType][editGroupInput] = newData[selectedType][editingGroup];
+    // Delete old group
+    delete newData[selectedType][editingGroup];
+    
+    setData(newData);
+    
+    // Update selected group if it was the one being edited
+    if (selectedGroup === editingGroup) {
+      setSelectedGroup(editGroupInput);
+    }
+    
+    setEditingGroup('');
+    setEditGroupInput('');
+    showToast(`เปลี่ยนชื่อ Group เป็น "${editGroupInput}" สำเร็จ!`);
+  };
+  
+  const cancelEditGroup = () => {
+    setEditingGroup('');
+    setEditGroupInput('');
   };
   const addGroup = () => {
     if (!selectedType || !groupInput.trim() || data[selectedType][groupInput]) return;
@@ -216,8 +306,65 @@ useEffect(() => {
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {Object.keys(data).map(type => (
                 <li key={type} style={{ ...listItem, ...(selectedType === type ? selected : {}) }}>
-                  <span style={{ fontWeight: 700, color: '#2563eb', cursor: 'pointer', flex: 1 }} onClick={() => { setSelectedType(type); setSelectedGroup(''); }}>{type}</span>
-                  <button onClick={() => deleteType(type)} style={delBtn}>ลบ</button>
+                  {editingType === type ? (
+                    <div style={{ display: 'flex', alignItems: 'center', flex: 1, gap: 8 }}>
+                      <input 
+                        value={editTypeInput} 
+                        onChange={e => setEditTypeInput(e.target.value)}
+                        style={{
+                          ...input,
+                          margin: 0,
+                          flex: 1,
+                          fontSize: '0.95rem',
+                          padding: '8px 12px'
+                        }}
+                        autoFocus
+                        onKeyPress={e => e.key === 'Enter' && saveEditType()}
+                        onKeyDown={e => e.key === 'Escape' && cancelEditType()}
+                      />
+                      <button 
+                        onClick={saveEditType}
+                        style={{
+                          ...addBtn,
+                          padding: '6px 12px',
+                          fontSize: '0.9rem',
+                          margin: 0,
+                          background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)'
+                        }}
+                      >
+                        ✓
+                      </button>
+                      <button 
+                        onClick={cancelEditType}
+                        style={{
+                          ...delBtn,
+                          padding: '6px 12px',
+                          fontSize: '0.9rem',
+                          margin: 0
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <span style={{ fontWeight: 700, color: '#2563eb', cursor: 'pointer', flex: 1 }} onClick={() => { setSelectedType(type); setSelectedGroup(''); }}>{type}</span>
+                      <button 
+                        onClick={() => startEditType(type)}
+                        style={{
+                          ...addBtn,
+                          background: 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)',
+                          padding: '8px 14px',
+                          fontSize: '0.9rem',
+                          marginRight: 8,
+                          marginBottom: 0
+                        }}
+                      >
+                        ✏️ แก้ไข
+                      </button>
+                      <button onClick={() => deleteType(type)} style={delBtn}>ลบ</button>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
@@ -237,8 +384,65 @@ useEffect(() => {
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                   {Object.keys(data[selectedType] || {}).map(group => (
                     <li key={group} style={{ ...listItem, ...(selectedGroup === group ? selected : {}) }}>
-                      <span style={{ fontWeight: 700, color: '#0ea5e9', cursor: 'pointer', flex: 1 }} onClick={() => setSelectedGroup(group)}>{group}</span>
-                      <button onClick={() => deleteGroup(selectedType, group)} style={delBtn}>ลบ</button>
+                      {editingGroup === group ? (
+                        <div style={{ display: 'flex', alignItems: 'center', flex: 1, gap: 8 }}>
+                          <input 
+                            value={editGroupInput} 
+                            onChange={e => setEditGroupInput(e.target.value)}
+                            style={{
+                              ...input,
+                              margin: 0,
+                              flex: 1,
+                              fontSize: '0.95rem',
+                              padding: '8px 12px'
+                            }}
+                            autoFocus
+                            onKeyPress={e => e.key === 'Enter' && saveEditGroup()}
+                            onKeyDown={e => e.key === 'Escape' && cancelEditGroup()}
+                          />
+                          <button 
+                            onClick={saveEditGroup}
+                            style={{
+                              ...addBtn,
+                              padding: '6px 12px',
+                              fontSize: '0.9rem',
+                              margin: 0,
+                              background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)'
+                            }}
+                          >
+                            ✓
+                          </button>
+                          <button 
+                            onClick={cancelEditGroup}
+                            style={{
+                              ...delBtn,
+                              padding: '6px 12px',
+                              fontSize: '0.9rem',
+                              margin: 0
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <span style={{ fontWeight: 700, color: '#0ea5e9', cursor: 'pointer', flex: 1 }} onClick={() => setSelectedGroup(group)}>{group}</span>
+                          <button 
+                            onClick={() => startEditGroup(group)}
+                            style={{
+                              ...addBtn,
+                              background: 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)',
+                              padding: '8px 14px',
+                              fontSize: '0.9rem',
+                              marginRight: 8,
+                              marginBottom: 0
+                            }}
+                          >
+                            ✏️ แก้ไข
+                          </button>
+                          <button onClick={() => deleteGroup(selectedType, group)} style={delBtn}>ลบ</button>
+                        </>
+                      )}
                     </li>
                   ))}
                 </ul>

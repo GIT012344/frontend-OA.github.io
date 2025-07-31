@@ -17,6 +17,42 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
   const [subgroupOptions, setSubgroupOptions] = useState([]);
   const [saving, setSaving]                   = useState(false);
   const [error, setError]                     = useState("");
+  const [typeGroupMapping, setTypeGroupMapping] = useState(getTypeGroupSubgroup());
+
+  // --- Listen for type/group data updates from AdminTypeGroupManager -----
+  useEffect(() => {
+    const handleTypeGroupUpdate = (event) => {
+      console.log('[TicketEditForm] Type/Group data updated, refreshing...', event.detail);
+      const newMapping = getTypeGroupSubgroup(); // Re-read from localStorage
+      setTypeGroupMapping(newMapping);
+      
+      // Update dropdowns if current selections are still valid
+      const currentType = form.type;
+      const currentGroup = form.group;
+      
+      if (currentType) {
+        const newGroupOptions = Object.keys(newMapping[currentType] || {});
+        setGroupOptions(newGroupOptions);
+        
+        // If current group is no longer valid, reset it
+        if (currentGroup && !newGroupOptions.includes(currentGroup)) {
+          setForm(prev => ({ ...prev, group: '', subgroup: '' }));
+          setSubgroupOptions([]);
+        } else if (currentGroup) {
+          const newSubgroupOptions = (newMapping[currentType] || {})[currentGroup] || [];
+          setSubgroupOptions(newSubgroupOptions);
+          
+          // If current subgroup is no longer valid, reset it
+          if (form.subgroup && !newSubgroupOptions.includes(form.subgroup)) {
+            setForm(prev => ({ ...prev, subgroup: '' }));
+          }
+        }
+      }
+    };
+    
+    window.addEventListener('typeGroupDataUpdated', handleTypeGroupUpdate);
+    return () => window.removeEventListener('typeGroupDataUpdated', handleTypeGroupUpdate);
+  }, [form.type, form.group, form.subgroup]);
 
   // --- Pre-fill when editing existing ticket -----------------------------
   useEffect(() => {
@@ -29,9 +65,9 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
     const subgroup = initialTicket.subgroup || "";
 
     setForm({ type, group, subgroup });
-    if (type) setGroupOptions(Object.keys(getTypeGroupSubgroup()[type] || {}));
-    if (type && group) setSubgroupOptions((getTypeGroupSubgroup()[type] || {})[group] || []);
-  }, [initialTicket]);
+    if (type) setGroupOptions(Object.keys(typeGroupMapping[type] || {}));
+    if (type && group) setSubgroupOptions((typeGroupMapping[type] || {})[group] || []);
+  }, [initialTicket, typeGroupMapping]);
 
   // --- Helpers -----------------------------------------------------------
   const handleChange = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
@@ -40,9 +76,8 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
   const onTypeChange = e => {
     const newType = e.target.value;
     handleChange("type", newType);
-    const newMapping = getTypeGroupSubgroup();
-    console.log('[TicketEditForm] mapping for type', newType, newMapping[newType]);
-    setGroupOptions(newType ? Object.keys(newMapping[newType] || {}) : []);
+    console.log('[TicketEditForm] mapping for type', newType, typeGroupMapping[newType]);
+    setGroupOptions(newType ? Object.keys(typeGroupMapping[newType] || {}) : []);
     setSubgroupOptions([]);
     handleChange("group", "");
     handleChange("subgroup", "");
@@ -52,7 +87,7 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
   const onGroupChange = e => {
     const newGroup = e.target.value;
     handleChange("group", newGroup);
-    setSubgroupOptions(form.type && newGroup ? (getTypeGroupSubgroup()[form.type] || {})[newGroup] || [] : []);
+    setSubgroupOptions(form.type && newGroup ? (typeGroupMapping[form.type] || {})[newGroup] || [] : []);
     handleChange("subgroup", "");
   };
 

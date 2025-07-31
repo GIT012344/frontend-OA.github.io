@@ -176,6 +176,7 @@ function StatusLogsPage() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [categories, setCategories] = useState([]);
   const [ticketMap, setTicketMap] = useState({});
+  const [typeGroupMapping, setTypeGroupMapping] = useState(getTypeGroupSubgroup());
 
  
   useEffect(() => {
@@ -191,9 +192,30 @@ function StatusLogsPage() {
     
   }, []);
 
+  // --- Listen for type/group data updates from AdminTypeGroupManager -----
+  useEffect(() => {
+    const handleTypeGroupUpdate = (event) => {
+      console.log('[StatusLogsPage] Type/Group data updated, refreshing categories...', event.detail);
+      const newMapping = getTypeGroupSubgroup(); // Re-read from localStorage
+      setTypeGroupMapping(newMapping);
+      
+      // Update categories to include new type names
+      setCategories(prevCategories => {
+        const catSet = new Set(prevCategories);
+        Object.keys(newMapping).forEach(typeName => {
+          if (typeName) catSet.add(typeName);
+        });
+        return [...catSet];
+      });
+    };
+    
+    window.addEventListener('typeGroupDataUpdated', handleTypeGroupUpdate);
+    return () => window.removeEventListener('typeGroupDataUpdated', handleTypeGroupUpdate);
+  }, []);
+
   
   useEffect(() => {
-    axios.get('https://backend-oa-pqy2.onrender.com/api/data')
+    axios.get('https://backend-oa-pqy2.onrender.com/create-ticket')
       .then(res => {
         if (!Array.isArray(res.data)) return;
         const m = {};
@@ -205,8 +227,7 @@ function StatusLogsPage() {
           if (typeVal) catSet.add(typeVal);
         });
         // Also include type names defined in the admin mapping (keys of the object in localStorage)
-        const mapping = getTypeGroupSubgroup();
-        Object.keys(mapping).forEach(typeName => {
+        Object.keys(typeGroupMapping).forEach(typeName => {
           if (typeName) catSet.add(typeName);
         });
 

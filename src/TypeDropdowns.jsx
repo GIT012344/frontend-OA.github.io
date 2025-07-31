@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 // Re-use the same mapping constant that lives in App.js
 // If you later move this mapping to its own module, just import from there.
@@ -26,6 +26,19 @@ export default function TypeDropdowns({
   availableSubgroups = [],
   disabled = false,
 }) {
+  const [typeGroupMapping, setTypeGroupMapping] = useState(getTypeGroupSubgroup());
+
+  // --- Listen for type/group data updates from AdminTypeGroupManager -----
+  useEffect(() => {
+    const handleTypeGroupUpdate = (event) => {
+      console.log('[TypeDropdowns] Type/Group data updated, refreshing...', event.detail);
+      const newMapping = getTypeGroupSubgroup(); // Re-read from localStorage
+      setTypeGroupMapping(newMapping);
+    };
+    
+    window.addEventListener('typeGroupDataUpdated', handleTypeGroupUpdate);
+    return () => window.removeEventListener('typeGroupDataUpdated', handleTypeGroupUpdate);
+  }, []);
   const commonStyle = {
     padding: "6px 12px",
     borderRadius: "8px",
@@ -40,7 +53,7 @@ export default function TypeDropdowns({
     return (
       <select value={type} onChange={onTypeChange} disabled={disabled} style={commonStyle}>
         <option value="">-- Select Type --</option>
-        {Object.keys(getTypeGroupSubgroup()).map((t) => (
+        {Object.keys(typeGroupMapping).map((t) => (
           <option key={t} value={t}>
             {t}
           </option>

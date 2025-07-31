@@ -22,6 +22,12 @@ import DashboardSection from "./DashboardSection";
 import StatusLogsPage from './StatusLogsPage';
 import NewMessageNotification from './NewMessageNotification';
 import AdminTypeGroupManager from './AdminTypeGroupManager';
+import EmailAlertHistory from './components/EmailAlertHistory';
+import EmailTemplateManager from './components/EmailTemplateManager';
+import AlertSettings from './components/AlertSettings';
+import UserManagement from './components/UserManagement';
+
+import PermissionProvider from './contexts/PermissionContext';
 
 // Base API URL configuration
 const API_BASE_URL = process.env.REACT_APP_API_BASE || "https://backend-oa-pqy2.onrender.com";
@@ -1922,6 +1928,8 @@ function App() {
   // เพิ่ม state สำหรับควบคุมการแสดงอันดับผู้ใช้
   const [showAllRankings, setShowAllRankings] = useState(false);
 
+
+
   // เพิ่ม state สำหรับแก้ไข ticket
   const [editingTicketId, setEditingTicketId] = useState(null);
   const [editForm, setEditForm] = useState({
@@ -1946,6 +1954,11 @@ function App() {
   // New state for cascade dropdown
   const [availableGroups, setAvailableGroups] = useState([]);
   const [availableSubgroups, setAvailableSubgroups] = useState([]);
+  const [typeGroupMapping, setTypeGroupMapping] = useState(() => {
+    const mapping = getTypeGroupSubgroup();
+    console.log('[App] 🏗️ Initial typeGroupMapping:', Object.keys(mapping));
+    return mapping;
+  });
 
   // เพิ่ม state สำหรับ mobile responsive
   const [isMobile, setIsMobile] = useState(false);
@@ -2439,12 +2452,64 @@ const cancelStatusChange = () => {
           const localStr = localStorage.getItem(LOCAL_TYPE_GROUP_KEY);
           if (!localStr || localStr !== backendStr) {
             localStorage.setItem(LOCAL_TYPE_GROUP_KEY, backendStr);
+            setTypeGroupMapping(res.data);
             console.log('[App] Refreshed type/group mapping from backend');
           }
         }
       })
       .catch(err => console.warn('[App] Failed to fetch type/group mapping from backend', err));
   }, []);
+
+  // --- Listen for type/group data updates from AdminTypeGroupManager -----
+  useEffect(() => {
+    const handleTypeGroupUpdate = (event) => {
+      console.log('[App] 🔄 Type/Group data updated event received!', event.detail);
+      const oldMapping = typeGroupMapping;
+      const newMapping = getTypeGroupSubgroup(); // Re-read from localStorage
+      console.log('[App] 📊 Old mapping:', Object.keys(oldMapping));
+      console.log('[App] 📊 New mapping:', Object.keys(newMapping));
+      console.log('[App] 📊 localStorage content:', localStorage.getItem('oa_type_group_subgroup'));
+      
+      // Force re-render by creating new object reference
+      setTypeGroupMapping({ ...newMapping });
+      console.log('[App] ✅ typeGroupMapping state updated with force re-render');
+      
+      // Force component re-render
+      setCurrentPage(prev => prev); // This will trigger a re-render
+      
+      // Update current dropdown options if editing a ticket
+      if (editingTicketId && editForm.type) {
+        console.log('[App] 🎯 Updating dropdown options for editing ticket:', editingTicketId, 'type:', editForm.type);
+        const newGroupOptions = Object.keys(newMapping[editForm.type] || {});
+        setAvailableGroups(newGroupOptions);
+        
+        // If current group is no longer valid, reset it
+        if (editForm.group && !newGroupOptions.includes(editForm.group)) {
+          console.log('[App] ⚠️ Current group no longer valid, resetting:', editForm.group);
+          setEditForm(prev => ({ ...prev, group: '', subgroup: '' }));
+          setAvailableSubgroups([]);
+        } else if (editForm.group) {
+          const newSubgroupOptions = (newMapping[editForm.type] || {})[editForm.group] || [];
+          setAvailableSubgroups(newSubgroupOptions);
+          
+          // If current subgroup is no longer valid, reset it
+          if (editForm.subgroup && !newSubgroupOptions.includes(editForm.subgroup)) {
+            console.log('[App] ⚠️ Current subgroup no longer valid, resetting:', editForm.subgroup);
+            setEditForm(prev => ({ ...prev, subgroup: '' }));
+          }
+        }
+      } else {
+        console.log('[App] 💡 No ticket being edited, skipping dropdown update');
+      }
+    };
+    
+    console.log('[App] 🎧 Adding event listener for typeGroupDataUpdated');
+    window.addEventListener('typeGroupDataUpdated', handleTypeGroupUpdate);
+    return () => {
+      console.log('[App] 🔇 Removing event listener for typeGroupDataUpdated');
+      window.removeEventListener('typeGroupDataUpdated', handleTypeGroupUpdate);
+    };
+  }, [editingTicketId, editForm.type, editForm.group, editForm.subgroup, typeGroupMapping]);
 
   const fetchDataByDate = () => {
     if (!startDate) return;
@@ -3288,11 +3353,32 @@ const cancelStatusChange = () => {
   const getUserRankings = () => {
     const userMap = {};
     data.forEach(ticket => {
+      // Skip tickets of type "Information"
+      const ticketType = ticket["Type"] || "";
+      if (ticketType.toLowerCase() === "information") {
+        return; // Skip this ticket
+      }
+      
       const email = ticket["อีเมล"] || "ไม่ระบุอีเมล";
-      userMap[email] = (userMap[email] || 0) + 1;
+      const name = ticket["ชื่อ"] || "ไม่ระบุชื่อ";
+      const userKey = email; // Use email as the unique key
+      
+      if (!userMap[userKey]) {
+        userMap[userKey] = {
+          email: email,
+          name: name,
+          count: 0
+        };
+      }
+      userMap[userKey].count += 1;
+      
+      // Update name if we find a more complete one (not "ไม่ระบุชื่อ")
+      if (name !== "ไม่ระบุชื่อ" && userMap[userKey].name === "ไม่ระบุชื่อ") {
+        userMap[userKey].name = name;
+      }
     });
-    const rankings = Object.entries(userMap)
-      .map(([email, count]) => ({ email, count }))
+    
+    const rankings = Object.values(userMap)
       .sort((a, b) => b.count - a.count);
     return rankings;
   };
@@ -3314,7 +3400,15 @@ const handleEditTicket = (ticket) => {
   const typeUpper = rawType.toUpperCase();
   const type = typeUpper === "SERVICE" ? "Service" : typeUpper === "HELPDESK" ? "Helpdesk" : rawType;
   let group = "";
-  let subgroup = ticket["subgroup"] || "";
+  
+  // Try multiple possible subgroup field names
+  let subgroup = ticket["subgroup"] || ticket["Subgroup"] || ticket["SubGroup"] || ticket["sub_group"] || "";
+  
+  console.log('[App] Raw ticket data for subgroup extraction:');
+  console.log('- ticket["subgroup"]:', ticket["subgroup"]);
+  console.log('- ticket["Subgroup"]:', ticket["Subgroup"]);
+  console.log('- ticket["SubGroup"]:', ticket["SubGroup"]);
+  console.log('- Final subgroup value:', subgroup);
   
   // Map group based on normalized type
   if (type === "Service") {
@@ -3325,6 +3419,7 @@ const handleEditTicket = (ticket) => {
     group = ticket["Group"] || ticket["group"] || "";
   }
   
+  // Set the form values first
   setEditForm({
     email: ticket["อีเมล"] || "",
     name: ticket["ชื่อ"] || "",
@@ -3341,11 +3436,34 @@ const handleEditTicket = (ticket) => {
     status: ticket["สถานะ"] === "Completed" || ticket["สถานะ"] === "Complete" ? "Closed" : ticket["สถานะ"] || "New",
   });
   
-  // Update available groups and subgroups based on initial type (without clearing existing values)
-  updateGroupOptions(type, false);
-  if (type && group) {
-    updateSubgroupOptions(type, group, false);
+  // Update available groups based on type
+  if (type && typeGroupMapping[type]) {
+    setAvailableGroups(Object.keys(typeGroupMapping[type]));
+  } else {
+    setAvailableGroups([]);
   }
+  
+  // Update available subgroups based on type and group
+  if (type && group && typeGroupMapping[type]?.[group]) {
+    const subgroupOptions = typeGroupMapping[type][group];
+    setAvailableSubgroups(subgroupOptions);
+    console.log('[App] Setting available subgroups:', subgroupOptions);
+    
+    // Force a re-render to ensure dropdown updates
+    setTimeout(() => {
+      console.log('[App] Force refreshing subgroup dropdown with value:', subgroup);
+      console.log('[App] Current editForm.subgroup:', editForm.subgroup);
+      console.log('[App] Available options:', subgroupOptions);
+      console.log('[App] Does subgroup exist in options?', subgroupOptions.includes(subgroup));
+    }, 100);
+  } else {
+    setAvailableSubgroups([]);
+    console.log('[App] No subgroup options available for', type, group);
+  }
+  
+  console.log('[App] Edit form initialized - Type:', type, 'Group:', group, 'Subgroup:', subgroup);
+  console.log('[App] TypeGroupMapping for', type, ':', typeGroupMapping[type]);
+  console.log('[App] Available subgroups for', type, group, ':', typeGroupMapping[type]?.[group]);
   
   setEditError("");
   setEditSuccess("");
@@ -3353,9 +3471,8 @@ const handleEditTicket = (ticket) => {
 
 // Update group options when type changes
 const updateGroupOptions = (type, reset = true) => {
-  const mapping = getTypeGroupSubgroup();
-  if (type && mapping[type]) {
-        setAvailableGroups(Object.keys(mapping[type]));
+  if (type && typeGroupMapping[type]) {
+        setAvailableGroups(Object.keys(typeGroupMapping[type]));
   } else {
         setAvailableGroups([]);
   }
@@ -3366,9 +3483,8 @@ const updateGroupOptions = (type, reset = true) => {
 
 // Update subgroup options when group changes
 const updateSubgroupOptions = (type, group, reset = true) => {
-  const mapping = getTypeGroupSubgroup();
-  if (type && group && mapping[type]?.[group]) {
-        setAvailableSubgroups(mapping[type][group]);
+  if (type && group && typeGroupMapping[type]?.[group]) {
+        setAvailableSubgroups(typeGroupMapping[type][group]);
   } else {
         setAvailableSubgroups([]);
   }
@@ -3441,7 +3557,9 @@ const handleSubgroupChange = (e) => {
     
     try {
       // Build the payload dynamically – include only meaningful, non-empty values
-      const isValid = (v) => v !== undefined && v !== null && v !== "" && v !== "None";
+      // Special handling for appointment fields - allow clearing them by sending empty string
+      const isValid = (v) => v !== undefined && v !== null && v !== "None";
+      const isValidOrEmpty = (v) => v !== undefined && v !== null && v !== "None";
 
       const payload = {
         ticket_id: ticketId,
@@ -3454,8 +3572,10 @@ const handleSubgroupChange = (e) => {
       if (isValid(editForm.phone)) payload.phone = editForm.phone;
       if (isValid(editForm.department)) payload.department = editForm.department;
       if (isValid(editForm.date)) payload.date = editForm.date;
-      if (isValid(editForm.appointment)) payload.appointment = editForm.appointment;
-      if (isValid(editForm.appointment_datetime)) payload.appointment_datetime = editForm.appointment_datetime;
+      
+      // Special handling for appointment fields - allow empty values to clear them
+      if (isValidOrEmpty(editForm.appointment)) payload.appointment = editForm.appointment;
+      if (isValidOrEmpty(editForm.appointment_datetime)) payload.appointment_datetime = editForm.appointment_datetime;
 
       // Request / Report mapping (SERVICE / HELPDESK logic above)
       if (isValid(requestField)) {
@@ -3467,9 +3587,24 @@ const handleSubgroupChange = (e) => {
       // Type, Group, Subgroup, Status
       if (isValid(editForm.type)) payload.type = editForm.type;
       if (isValid(editForm.group)) payload.group = editForm.group;
-      if (isValid(editForm.subgroup)) payload.subgroup = editForm.subgroup;
+      
+      // Special handling for SERVICE type - subgroup is required
+      if (editForm.type === "Service") {
+        if (!editForm.subgroup || editForm.subgroup === "") {
+          setEditError("Subgroup is required for Service type tickets");
+          setEditLoading(false);
+          return;
+        }
+        payload.subgroup = editForm.subgroup;
+      } else {
+        // For non-Service types, include subgroup only if it has a value
+        if (isValid(editForm.subgroup)) payload.subgroup = editForm.subgroup;
+      }
+      
       if (isValid(editForm.status)) payload.status = editForm.status;
   
+      console.log('[App] Sending update payload:', JSON.stringify(payload, null, 2));
+      
       const response = await axios.post(
         "https://backend-oa-pqy2.onrender.com/update-ticket",
         payload,
@@ -3509,6 +3644,16 @@ const handleSubgroupChange = (e) => {
         );
   
         setEditSuccess("บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว");
+        
+        // Refresh dashboard if appointment was updated to reflect changes
+        if (payload.appointment !== undefined || payload.appointment_datetime !== undefined) {
+          console.log('[App] Appointment updated, refreshing dashboard data...');
+          // Force refresh of dashboard data
+          setTimeout(() => {
+            fetchData();
+          }, 500);
+        }
+        
         setTimeout(() => {
           setEditingTicketId(null);
           setEditSuccess("");
@@ -3518,6 +3663,9 @@ const handleSubgroupChange = (e) => {
       }
     } catch (error) {
       console.error("Error updating ticket:", error);
+      console.error("Error response data:", error.response?.data);
+      console.error("Error status:", error.response?.status);
+      console.error("Full error response:", error.response);
       setEditError(
         error.response?.data?.error ||
         error.response?.data?.message ||
@@ -3542,10 +3690,12 @@ const handleSubgroupChange = (e) => {
   const handleMobileTabChange = (tab) => {
     setMobileActiveTab(tab);
     setActiveTab(tab);
+    
     if (tab === "dashboard") scrollToDashboard();
     if (tab === "list") scrollToList();
     if (tab === "chat") scrollToChat();
     if (tab === "logs") navigate("/logs");
+    if (tab === "email-alerts") navigate("/email-alerts");
     setSidebarMobileOpen(false);
   };
 
@@ -3614,7 +3764,8 @@ const handleSubgroupChange = (e) => {
   };
 
   return (
-    <Routes>
+    <PermissionProvider>
+      <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/pin-verification" element={<PinVerification />} />
@@ -3710,6 +3861,18 @@ const handleSubgroupChange = (e) => {
             <span>📈 Status Logs</span>
           </NavItem>
           <NavItem
+            $icon="email"
+            $active={activeTab === "email-alerts" || location.pathname === "/email-alerts"}
+            onClick={() => {
+              setActiveTab("email-alerts");
+              navigate("/email-alerts");
+            }}
+            $collapsed={!sidebarOpen}
+            data-tooltip="Email Alerts"
+          >
+            <span>📧 Email Alerts</span>
+          </NavItem>
+          <NavItem
               $icon="admin"
               $active={activeTab === "admin-type-group" || location.pathname === "/admin-type-group"}
               onClick={() => {
@@ -3760,9 +3923,20 @@ const handleSubgroupChange = (e) => {
               >
                 Logs
               </MobileNavItemBar>
+              <MobileNavItemBar 
+                onClick={() => {
+                  setActiveTab("email-alerts");
+                  navigate("/email-alerts");
+                }}
+                $active={activeTab === "email-alerts"}
+              >
+                📧 Email
+              </MobileNavItemBar>
             </div>
           )}
-          <MainContent style={{ marginLeft: sidebarOpen && !isMobile ? "240px" : "0" }}>
+
+          
+          <MainContent style={{ marginLeft: sidebarOpen && !isMobile ? '250px' : '0', transition: 'margin-left 0.3s ease' }}>
             {isUpdatingStatus && (
               <LoadingIndicator>
                 <span className="loading-icon">⚡</span>
@@ -3963,7 +4137,12 @@ const handleSubgroupChange = (e) => {
                                 scrollToList();
                               }}
                             >
-                              {user.email}
+                              <div style={{ fontWeight: '500', marginBottom: '2px' }}>
+                                {user.name !== 'ไม่ระบุชื่อ' ? user.name : 'ไม่ระบุชื่อ'}
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                {user.email}
+                              </div>
                             </UserRankingEmail>
                           </UserRankingInfo>
                           <UserTicketCount>{user.count} Tickets</UserTicketCount>
@@ -4465,9 +4644,15 @@ const handleSubgroupChange = (e) => {
                                     }}
                                   >
                                     <option value="">-- Select Type --</option>
-                                    {Object.keys(TYPE_GROUP_SUBGROUP).map(t => (
-                                      <option key={t} value={t}>{t}</option>
-                                    ))}
+                                    {(() => {
+                                      const keys = Object.keys(typeGroupMapping);
+                                      console.log('[App] 🎯 Current typeGroupMapping keys for dropdown:', keys);
+                                      console.log('[App] 🎯 Full typeGroupMapping:', typeGroupMapping);
+                                      return keys.map(t => {
+                                        console.log('[App] 🎯 Rendering Type option:', t);
+                                        return <option key={t} value={t}>{t}</option>;
+                                      });
+                                    })()}
                                   </select>
                                 ) : (row["Type"] || "None")}
                               </TableCell>
@@ -4745,19 +4930,19 @@ const handleSubgroupChange = (e) => {
                       </div>
 
                       <ModalButtonGroup>
-  <CancelButton 
-    onClick={cancelStatusChange}
-    disabled={isUpdatingStatus}
-  >
-    ยกเลิก
-  </CancelButton>
-  <ConfirmButton 
-    onClick={confirmStatusChange}
-    disabled={isUpdatingStatus}
-  >
-    {isUpdatingStatus ? 'กำลังอัปเดต...' : 'ยืนยันการเปลี่ยนสถานะ'}
-  </ConfirmButton>
-</ModalButtonGroup>
+                        <CancelButton 
+                          onClick={cancelStatusChange}
+                          disabled={isUpdatingStatus}
+                        >
+                          ยกเลิก
+                        </CancelButton>
+                        <ConfirmButton 
+                          onClick={confirmStatusChange}
+                          disabled={isUpdatingStatus}
+                        >
+                          {isUpdatingStatus ? 'กำลังอัปเดต...' : 'ยืนยันการเปลี่ยนสถานะ'}
+                        </ConfirmButton>
+                      </ModalButtonGroup>
                     </ModalContent>
                   </StatusChangeModal>
                 )}
@@ -5004,9 +5189,37 @@ const handleSubgroupChange = (e) => {
         </ProtectedRoute>
       } />
       
-      <Route path="/" element={<Navigate to="/dashboard" />} />
-    </Routes>
 
+      
+      {/* Email Alert System Routes */}
+      <Route path="/email-alerts" element={
+        <ProtectedRoute>
+          <EmailAlertHistory />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/email-templates" element={
+        <ProtectedRoute>
+          <EmailTemplateManager />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/alert-settings" element={
+        <ProtectedRoute>
+          <AlertSettings />
+        </ProtectedRoute>
+      } />
+      
+      {/* User Management Routes */}
+      <Route path="/user-management" element={
+        <ProtectedRoute>
+          <UserManagement />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/" element={<Navigate to="/dashboard" />} />
+      </Routes>
+    </PermissionProvider>
   );
 }
 
