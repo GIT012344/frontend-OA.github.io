@@ -58,20 +58,6 @@ const BackButton = styled.button`
   }
 `;
 
-const DeleteButton = styled.button`
-  background: #ef4444;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: background-color 0.2s;
-
-  &:hover {
-    background: #dc2626;
-  }
-`;
 
 const UsersTable = styled.table`
   width: 100%;
