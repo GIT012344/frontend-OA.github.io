@@ -1917,6 +1917,7 @@ function App() {
   const dashboardRef = useRef(null);
   const listRef = useRef(null);
   const chatRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
   // Add offline mode handling
   const [offlineData, setOfflineData] = useState([]);
@@ -2223,17 +2224,26 @@ const cancelStatusChange = () => {
   // Use offline data when backend is unavailable
   const displayData = isOfflineMode ? offlineData : data;
 
-  // Add these scroll functions
+  // ฟังก์ชันเลื่อนไปยังส่วนต่างๆ ตามเมนูที่กด
   const scrollToDashboard = () => {
+    // เลื่อนไปบนสุด (Dashboard)
     dashboardRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const scrollToList = () => {
+    // เลื่อนไปตรงตาราง (Ticket List)
     listRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const scrollToChat = () => {
+    // เลื่อนไปตรงแชท (Chat Section)
     chatRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // ฟังก์ชันเลื่อนแชทไปข้อความล่าสุด (เฉพาะในกรอบแชท)
+  const scrollToLatestMessage = () => {
+    // เลื่อนไปข้อความล่าสุดในกรอบแชท
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   // Health check function to test backend connectivity
@@ -2401,47 +2411,7 @@ const cancelStatusChange = () => {
     return statusObj ? statusObj.color : "";
   };
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/notifications", {
-          timeout: 5000, // 5 second timeout for notifications
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-        setNotifications(response.data);
-        // Check if there are any unread notifications
-        const unread = response.data.some((notification) => !notification.read);
-        setHasUnread(unread);
-      } catch (error) {
-        console.error("Error fetching notifications:", error);
-        
-        // Don't show error to user for notifications, but log it
-        if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
-          console.warn("Network error while fetching notifications - server may be offline");
-        } else if (error.response) {
-          console.error("Server error:", error.response.status, error.response.data);
-        } else if (error.request) {
-          console.warn("No response from server for notifications");
-        } else {
-          console.error("Request setup error:", error.message);
-        }
-        
-      }
-    };
 
-    fetchNotifications();
-    
-    // Only retry notifications if backend is connected
-    const interval = setInterval(() => {
-      if (backendStatus === 'connected') {
-        fetchNotifications();
-      }
-    }, 15000); // Check every 15 seconds
-
-    return () => clearInterval(interval);
-  }, [backendStatus]);
 
   // ---- Fetch latest Type/Group/Subgroup mapping on startup (inside component)
   useEffect(() => {
@@ -2793,18 +2763,189 @@ const cancelStatusChange = () => {
     }
   };
 
+
+
+
+
+  // Dropdown change handlers for ticket editing
+  const handleTypeChange = (e) => {
+    const newType = e.target.value;
+    console.log('[App] 🔄 Type changed to:', newType);
+    
+    setEditForm(prev => ({ ...prev, type: newType, group: '', subgroup: '' }));
+    
+    // Update available groups
+    const newGroups = Object.keys(typeGroupMapping[newType] || {});
+    console.log('[App] 📋 Available groups for', newType, ':', newGroups);
+    setAvailableGroups(newGroups);
+    setAvailableSubgroups([]);
+  };
+  
+  const handleGroupChange = (e) => {
+    const newGroup = e.target.value;
+    console.log('[App] 🔄 Group changed to:', newGroup);
+    
+    setEditForm(prev => ({ ...prev, group: newGroup, subgroup: '' }));
+    
+    // Update available subgroups
+    const newSubgroups = (typeGroupMapping[editForm.type] || {})[newGroup] || [];
+    console.log('[App] 📋 Available subgroups for', newGroup, ':', newSubgroups);
+    setAvailableSubgroups(newSubgroups);
+  };
+  
+  const handleSubgroupChange = (e) => {
+    const newSubgroup = e.target.value;
+    console.log('[App] 🔄 Subgroup changed to:', newSubgroup);
+    
+    setEditForm(prev => ({ ...prev, subgroup: newSubgroup }));
+  };
+
+  // Handle edit ticket - initialize edit form with ticket data
+  const handleEditTicket = (ticket) => {
+    console.log('[App] 🎫 ========== STARTING handleEditTicket ==========');
+    console.log('[App] 🎫 Starting handleEditTicket with ticket:', ticket["Ticket ID"]);
+    console.log('[App] 🔍 Full ticket data:', ticket);
+    
+    setEditingTicketId(ticket["Ticket ID"]);
+    
+    // Extract ticket data with proper field mapping based on backend structure
+    const type = ticket["Type"] || ticket["TYPE"] || ticket["type"] || "";
+    console.log('[App] 📝 Extracted type:', type);
+    
+    // Extract group based on ticket type
+    let group = "";
+    if (type.toUpperCase() === "HELPDESK") {
+      // For Helpdesk tickets, group is in Report field
+      group = ticket["Report"] || ticket["report"] || "";
+    } else if (type.toUpperCase() === "SERVICE") {
+      // For Service tickets, group is in requested field
+      group = ticket["requested"] || ticket["Requested"] || ticket["Requeste"] || ticket["request"] || "";
+    } else {
+      // Fallback to standard Group fields
+      group = ticket["GROUP"] || ticket["Group"] || ticket["group"] || "";
+    }
+    console.log('[App] 📝 Extracted group for', type, ':', group);
+    
+    // Backend sends Subgroup
+    const subgroup = ticket["Subgroup"] || ticket["SUBGROUP"] || ticket["subgroup"] || "";
+    console.log('[App] 📝 Extracted subgroup:', subgroup);
+    
+    console.log('[App] 📋 Extracted data:', { type, group, subgroup });
+    
+    // Set form data
+    setEditForm({
+      type,
+      group,
+      subgroup,
+      email: ticket["อีเมล"] || ticket["Email"] || "",
+      name: ticket["ชื่อ"] || ticket["Name"] || "",
+      phone: ticket["เบอร์ติดต่อ"] || ticket["เบอร์โทร"] || ticket["Phone"] || ticket["phone"] || "",
+      department: ticket["แผนก"] || ticket["Department"] || "",
+      date: ticket["วันที่แจ้ง"] || ticket["Date"] || "",
+      appointment: ticket["Appointment"] || "",
+      appointment_datetime: ticket["appointment_datetime"] || "",
+      request: ticket["requested"] || ticket["request"] || "",
+      report: ticket["Report"] || "",
+      status: ticket["สถานะ"] || ticket["Status"] || "New"
+    });
+    
+    console.log('[App] 📝 Form data set:', {
+      type, group, subgroup,
+      email: ticket["อีเมล"],
+      name: ticket["ชื่อ"],
+      phone: ticket["เบอร์ติดต่อ"] || ticket["เบอร์โทร"]
+    });
+    
+    // Set up dropdown options
+    if (type) {
+      const groups = Object.keys(typeGroupMapping[type] || {});
+      console.log('[App] 📋 Setting available groups for', type, ':', groups);
+      console.log('[App] 🔍 Current group value:', group);
+      console.log('[App] 🔍 Does group exist in available groups?', groups.includes(group));
+      console.log('[App] 🔍 typeGroupMapping for', type, ':', typeGroupMapping[type]);
+      
+      // 🔧 Clean group value to match available options
+      let cleanedGroup = group;
+      if (group && !groups.includes(group)) {
+        // Try to find a match by removing extra text (e.g., "ปริ้นเตอร์ / Printer" -> "ปริ้นเตอร์")
+        const possibleMatch = groups.find(g => {
+          return group.includes(g) || g.includes(group.split(' / ')[0]) || g.includes(group.split('/')[0].trim());
+        });
+        if (possibleMatch) {
+          cleanedGroup = possibleMatch;
+          console.log('[App] 🧩 Cleaned group from "' + group + '" to "' + cleanedGroup + '"');
+        }
+      }
+      
+      setAvailableGroups(groups);
+      
+      // Update editForm with cleaned group value
+      if (cleanedGroup !== group) {
+        setEditForm(prev => ({ ...prev, group: cleanedGroup }));
+      }
+      
+      // 🔧 Clean subgroup value using ORIGINAL group (before cleaning)
+      let cleanedSubgroup = subgroup;
+      if (group && subgroup) {
+        const originalSubgroups = (typeGroupMapping[type] || {})[group] || [];
+        console.log('[App] 📋 Original subgroups for "' + group + '":', originalSubgroups);
+        
+        if (!originalSubgroups.includes(subgroup)) {
+          console.log('[App] ⚠️ Subgroup "' + subgroup + '" not found in original subgroups:', originalSubgroups);
+          
+          // Try to find a match by removing extra text
+          const possibleSubgroupMatch = originalSubgroups.find(sg => {
+            return subgroup.includes(sg) || sg.includes(subgroup.split(' / ')[0]) || sg.includes(subgroup.split('/')[0].trim());
+          });
+          
+          if (possibleSubgroupMatch) {
+            cleanedSubgroup = possibleSubgroupMatch;
+            console.log('[App] 🧩 Cleaned subgroup from "' + subgroup + '" to "' + cleanedSubgroup + '"');
+          } else {
+            // If no match found, clear the subgroup to show "-- Select Subgroup --"
+            cleanedSubgroup = "";
+            console.log('[App] 🗑️ No matching subgroup found, clearing to show dropdown placeholder');
+          }
+        }
+      }
+      
+      // Now set available subgroups using CLEANED group
+      if (cleanedGroup && groups.includes(cleanedGroup)) {
+        const subgroups = (typeGroupMapping[type] || {})[cleanedGroup] || [];
+        console.log('[App] 📋 Setting available subgroups for cleaned group "' + cleanedGroup + '":', subgroups);
+        setAvailableSubgroups(subgroups);
+        
+        // Update editForm with cleaned subgroup value
+        if (cleanedSubgroup !== subgroup) {
+          setEditForm(prev => ({ ...prev, subgroup: cleanedSubgroup }));
+        }
+      } else {
+        console.log('[App] ⚠️ Group not found in available groups or empty, clearing subgroups');
+        setAvailableSubgroups([]);
+      }
+    } else {
+      console.log('[App] ⚠️ No type provided, clearing all dropdowns');
+      setAvailableGroups([]);
+      setAvailableSubgroups([]);
+    }
+    
+    console.log('[App] ✅ Edit form initialized successfully');
+  };
+
   const handleDeleteTicket = async (ticketId) => {
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?")) {
       try {
         // Get ticket details before deletion for logging
         const ticketToDelete = data.find(item => item["Ticket ID"] === ticketId);
         
+        const token = localStorage.getItem('access_token');
         const response = await axios.post(
           "https://backend-oa-pqy2.onrender.com/delete-ticket",
           { ticket_id: ticketId },
           {
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
             }
           }
         );
@@ -2869,10 +3010,42 @@ const cancelStatusChange = () => {
     
     setLoadingChat(true);
     try {
+      console.log("💬 Loading chat messages for user:", userId);
+      
+      // 1. ดึงข้อความจาก textbox มาใส่ในแชทก่อน
+      console.log("💬 Processing textbox messages for user:", userId);
+      try {
+        await axios.post("https://backend-oa-pqy2.onrender.com/api/process-textbox-messages", {
+          ticket_id: userId
+        }, {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000 // 10 second timeout
+        });
+        console.log("💬 Textbox messages processed successfully");
+      } catch (textboxError) {
+        console.warn("💬 Failed to process textbox messages (continuing anyway):", textboxError.message);
+        // ไม่ให้ error นี้หยุดการทำงาน - ยังคงดึงข้อความต่อไป
+      }
+      
+      // 2. แล้วค่อยดึงข้อความทั้งหมดมาแสดง
+      console.log("💬 Fetching all messages for user:", userId);
+      const token = localStorage.getItem('access_token');
       const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
-        params: { user_id: userId }
+        params: { user_id: userId },
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
+      
+      console.log("💬 Messages loaded:", response.data?.length || 0, "messages");
       setChatMessages(response.data || []);
+      
+      // เลื่อนไปข้อความล่าสุดหลังจากโหลดข้อความเสร็จ
+      setTimeout(() => {
+        scrollToLatestMessage();
+      }, 100);
     } catch (error) {
       console.error("Failed to load chat messages:", error);
       setChatMessages([]);
@@ -2880,6 +3053,44 @@ const cancelStatusChange = () => {
       setLoadingChat(false);
     }
   };
+
+  // Auto-scroll ปิดชั่วคราวเพื่อทดสอบ
+  // useEffect(() => {
+  //   if (activeTab === 'chat' && selectedChatUser && selectedChatUser !== "announcement" && messagesEndRef.current && chatMessages.length > 0) {
+  //     setTimeout(() => {
+  //       if (messagesEndRef.current && activeTab === 'chat') {
+  //         messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+  //       }
+  //     }, 100);
+  //   }
+  // }, [chatMessages, selectedChatUser, activeTab]);
+
+  // ฟังก์ชันสำหรับดึงข้อความจาก textbox ทุก ticket พร้อมกัน
+  const processAllTextboxMessages = useCallback(async () => {
+    console.log("💬 Processing textbox messages for ALL tickets...");
+    try {
+      const response = await axios.post("https://backend-oa-pqy2.onrender.com/api/process-all-textbox-messages", {}, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000 // 30 second timeout for processing all
+      });
+      
+      console.log("💬 All textbox messages processed:", response.data);
+      
+      // รีเฟรช notifications หลังจากประมวลผลเสร็จ
+      if (response.data.processed > 0) {
+        console.log("💬 Found", response.data.processed, "new messages - refreshing notifications");
+        // รีเฟรช notifications จะทำโดย polling interval ที่ตั้งไว้แล้ว
+        console.log("💬 Notifications will be refreshed by polling interval");
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error("💬 Failed to process all textbox messages:", error);
+      throw error;
+    }
+  }, []);
 
   const sendChatMessage = async () => {
     if (!selectedChatUser || !newMessage.trim() || selectedChatUser === "announcement") return;
@@ -2891,7 +3102,13 @@ const cancelStatusChange = () => {
         sender_type: 'admin', // ต้องเป็น 'admin' (ตัวเล็ก)
         message: newMessage
       };
-      const response = await axios.post("https://backend-oa-pqy2.onrender.com/api/messages", payload);
+      const token = localStorage.getItem('access_token');
+      const response = await axios.post("https://backend-oa-pqy2.onrender.com/api/messages", payload, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
       // Add new message to local state (ถ้า backend ส่งกลับ message ใหม่)
       setChatMessages(prev => [
@@ -2905,6 +3122,11 @@ const cancelStatusChange = () => {
         }
       ]);
       setNewMessage("");
+      
+      // เลื่อนไปข้อความล่าสุดหลังจากส่งข้อความใหม่
+      setTimeout(() => {
+        scrollToLatestMessage();
+      }, 100);
     } catch (error) {
       console.error("Failed to send chat message:", error);
       if (error.response && error.response.data) {
@@ -2923,8 +3145,14 @@ const cancelStatusChange = () => {
 
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบประวัติการสนทนาทั้งหมด?")) {
       try {
+        const token = localStorage.getItem('access_token');
         await axios.post("https://backend-oa-pqy2.onrender.com/api/messages/delete", {
           user_id: selectedChatUser
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
         });
         setChatMessages([]);
         alert("ลบประวัติการสนทนาสำเร็จ");
@@ -2944,10 +3172,16 @@ const cancelStatusChange = () => {
     }
 
     try {
+      const token = localStorage.getItem('access_token');
       const response = await axios.post(
         "https://backend-oa-pqy2.onrender.com/send-announcement",
         { message: announcementMessage },
-        { headers: { "Content-Type": "application/json" } }
+        { 
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          } 
+        }
       );
 
       if (response.data.success) {
@@ -3391,131 +3625,11 @@ const cancelStatusChange = () => {
 
 
 
-// ฟังก์ชันเริ่มแก้ไข
-const handleEditTicket = (ticket) => {
-  setEditingTicketId(ticket["Ticket ID"]);
-  
-  // Determine type and map group/subgroup correctly
-  const rawType = ticket["Type"] || "";
-  const typeUpper = rawType.toUpperCase();
-  const type = typeUpper === "SERVICE" ? "Service" : typeUpper === "HELPDESK" ? "Helpdesk" : rawType;
-  let group = "";
-  
-  // Try multiple possible subgroup field names
-  let subgroup = ticket["subgroup"] || ticket["Subgroup"] || ticket["SubGroup"] || ticket["sub_group"] || "";
-  
-  console.log('[App] Raw ticket data for subgroup extraction:');
-  console.log('- ticket["subgroup"]:', ticket["subgroup"]);
-  console.log('- ticket["Subgroup"]:', ticket["Subgroup"]);
-  console.log('- ticket["SubGroup"]:', ticket["SubGroup"]);
-  console.log('- Final subgroup value:', subgroup);
-  
-  // Map group based on normalized type
-  if (type === "Service") {
-    group = ticket["Requeste"] || ticket["Requested"] || "";
-  } else if (type === "Helpdesk") {
-    group = ticket["Report"] || "";
-  } else {
-    group = ticket["Group"] || ticket["group"] || "";
-  }
-  
-  // Set the form values first
-  setEditForm({
-    email: ticket["อีเมล"] || "",
-    name: ticket["ชื่อ"] || "",
-    phone: ticket["เบอร์ติดต่อ"] || "",
-    department: ticket["แผนก"] || "",
-    date: ticket["วันที่แจ้ง"] || "",
-    appointment: ticket["Appointment"] || "",
-    appointment_datetime: ticket["appointment_datetime"] ? ticket["appointment_datetime"].slice(0,16) : "",
-    request: ticket["Requeste"] || ticket["Requested"] || "",
-    report: ticket["Report"] || "",
-    type: type,
-    group: group,
-    subgroup: subgroup,
-    status: ticket["สถานะ"] === "Completed" || ticket["สถานะ"] === "Complete" ? "Closed" : ticket["สถานะ"] || "New",
-  });
-  
-  // Update available groups based on type
-  if (type && typeGroupMapping[type]) {
-    setAvailableGroups(Object.keys(typeGroupMapping[type]));
-  } else {
-    setAvailableGroups([]);
-  }
-  
-  // Update available subgroups based on type and group
-  if (type && group && typeGroupMapping[type]?.[group]) {
-    const subgroupOptions = typeGroupMapping[type][group];
-    setAvailableSubgroups(subgroupOptions);
-    console.log('[App] Setting available subgroups:', subgroupOptions);
-    
-    // Force a re-render to ensure dropdown updates
-    setTimeout(() => {
-      console.log('[App] Force refreshing subgroup dropdown with value:', subgroup);
-      console.log('[App] Current editForm.subgroup:', editForm.subgroup);
-      console.log('[App] Available options:', subgroupOptions);
-      console.log('[App] Does subgroup exist in options?', subgroupOptions.includes(subgroup));
-    }, 100);
-  } else {
-    setAvailableSubgroups([]);
-    console.log('[App] No subgroup options available for', type, group);
-  }
-  
-  console.log('[App] Edit form initialized - Type:', type, 'Group:', group, 'Subgroup:', subgroup);
-  console.log('[App] TypeGroupMapping for', type, ':', typeGroupMapping[type]);
-  console.log('[App] Available subgroups for', type, group, ':', typeGroupMapping[type]?.[group]);
-  
-  setEditError("");
-  setEditSuccess("");
-};
-
-// Update group options when type changes
-const updateGroupOptions = (type, reset = true) => {
-  if (type && typeGroupMapping[type]) {
-        setAvailableGroups(Object.keys(typeGroupMapping[type]));
-  } else {
-        setAvailableGroups([]);
-  }
-  if (reset) {
-    setEditForm(prev => ({ ...prev, group: "", subgroup: "" }));
-  }
-};
-
-// Update subgroup options when group changes
-const updateSubgroupOptions = (type, group, reset = true) => {
-  if (type && group && typeGroupMapping[type]?.[group]) {
-        setAvailableSubgroups(typeGroupMapping[type][group]);
-  } else {
-        setAvailableSubgroups([]);
-  }
-  if (reset) {
-    setEditForm(prev => ({ ...prev, subgroup: "" }));
-  }
-};
-
-// Handle type change
-// Handle type change
-const handleTypeChange = (e) => {
-  const newType = e.target.value;
-  handleEditFormChange("type", newType);
-  updateGroupOptions(newType, true);
-};
-
-// Handle group change
-// Handle group change
-const handleGroupChange = (e) => {
-  const newGroup = e.target.value;
-  handleEditFormChange("group", newGroup);
-  updateSubgroupOptions(editForm.type, newGroup, true);
-};
-
-// Handle subgroup change
-const handleSubgroupChange = (e) => {
-  handleEditFormChange("subgroup", e.target.value);
-};
+// Note: handleEditTicket, handleTypeChange, handleGroupChange, handleSubgroupChange are now defined earlier in the component
 
   // Handle form field changes
   const handleEditFormChange = (field, value) => {
+    console.log(`[App] 📝 Edit form field '${field}' changed to:`, value);
     setEditForm(prev => ({ ...prev, [field]: value }));
   };
 
@@ -3691,7 +3805,12 @@ const handleSubgroupChange = (e) => {
     setMobileActiveTab(tab);
     setActiveTab(tab);
     
-    if (tab === "dashboard") scrollToDashboard();
+    // ปิด dashboard auto-scroll ชั่วคราวเพื่อแก้ปัญหาหน้าหลักเลื่อนลง
+    // if (tab === "dashboard") {
+    //   setTimeout(() => {
+    //     scrollToDashboard();
+    //   }, 50);
+    // }
     if (tab === "list") scrollToList();
     if (tab === "chat") scrollToChat();
     if (tab === "logs") navigate("/logs");
@@ -3699,45 +3818,149 @@ const handleSubgroupChange = (e) => {
     setSidebarMobileOpen(false);
   };
 
-  // --- ฟังก์ชันเช็คข้อความใหม่ ---
+  // --- ฟังก์ชันเช็คข้อความใหม่และโหลด notifications ---
   const checkForNewMessages = useCallback(async () => {
+    console.log("🔔 ==> CHECKING FOR NEW MESSAGES - FUNCTION CALLED!");
+    console.log("🔔 Current notifications count:", notifications.length);
+    console.log("🔔 Current hasUnread:", hasUnread);
+    console.log("🔔 Current newMessageAlert:", newMessageAlert);
     try {
-      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/check-new-messages", {
-        params: { last_checked: lastMessageCheck.toISOString() }
+      // 1. โหลด notifications ทั้งหมดจาก backend
+      const notificationsResponse = await axios.get("https://backend-oa-pqy2.onrender.com/api/notifications", {
+        timeout: 5000,
+        headers: { 'Content-Type': 'application/json' }
       });
-      if (response.data.new_messages && response.data.new_messages.length > 0) {
-        // แสดง popup สำหรับทุกข้อความใหม่จาก user (queue เฉพาะล่าสุด)
-        const latestGroup = response.data.new_messages[0];
-        const latestMsg = latestGroup.messages[latestGroup.messages.length - 1];
+      
+      console.log("🔔 Notifications loaded:", notificationsResponse.data.length, "items");
+      
+      // 2. เช็คว่ามี notifications ใหม่หรือไม่
+      const currentNotifications = notifications;
+      const newNotifications = notificationsResponse.data;
+      
+      // หา notification ใหม่ที่ยังไม่มีใน current state
+      const newItems = newNotifications.filter(newItem => 
+        !currentNotifications.some(current => current.id === newItem.id)
+      );
+      
+      console.log("🔔 New notifications found:", newItems.length);
+      
+      // 3. ถ้ามี notification ใหม่ที่เป็น new_message จาก user เท่านั้น ให้แสดง popup
+      const newMessageNotifications = newItems.filter(item => {
+        // ตรวจสอบเงื่อนไขที่อ่อนกว่าเดิม
+        const isNewMessage = item.meta_data?.type === 'new_message';
+        const isUnread = !item.read;
+        const isFromUser = item.meta_data?.sender_type === 'user' || !item.meta_data?.sender_type; // รวมทั้งกรณีที่ไม่มี sender_type
+        
+        return isNewMessage && isUnread && isFromUser;
+      });
+      
+      if (newMessageNotifications.length > 0) {
+        const latestMsg = newMessageNotifications[0];
+        
+        // หาชื่อจริงจาก ticket data
+        let ticketsData = data;
+        if (data.length === 0) {
+          try {
+            const ticketsResponse = await axios.get("https://backend-oa-pqy2.onrender.com/api/tickets", {
+              timeout: 3000,
+              headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+            ticketsData = ticketsResponse.data;
+          } catch (error) {
+            ticketsData = [];
+          }
+        }
+        
+        // ค้นหา ticket ที่ตรงกับ user_id
+        const ticket = ticketsData.find(t => 
+          t.user_id === latestMsg.user_id || 
+          t.ticket_id === latestMsg.user_id ||
+          t.id === latestMsg.user_id ||
+          String(t.id) === String(latestMsg.user_id) ||
+          t.user_id?.includes(latestMsg.user_id?.substring(0, 10))
+        );
+        
+        // ลองหาชื่อจากหลายแหล่ง
+        let displayName = ticket?.name || 
+                         ticket?.display_name || 
+                         ticket?.email?.split('@')[0] || // ใช้ชื่อจาก email
+                         latestMsg.sender_name || 
+                         latestMsg.meta_data?.sender_name;
+        
+        // ถ้ายังไม่มีชื่อ หรือชื่อเป็น LINE ID ให้ใช้ชื่อเริ่มต้น
+        if (!displayName || (displayName.startsWith('U') && displayName.length > 10)) {
+          displayName = `LINE User ${latestMsg.user_id?.substring(0, 8) || 'Unknown'}`;
+        }
+        
         setNewMessageAlert({
-          user: latestGroup.name,
+          user: displayName,
           message: latestMsg.message,
           timestamp: latestMsg.timestamp,
-          user_id: latestGroup.user_id,
-          sender_name: latestGroup.name
+          user_id: latestMsg.user_id,
+          sender_name: displayName
         });
         setLastMessageCheck(new Date(latestMsg.timestamp));
-        // --- เรียก backend เพื่อบันทึก notification ลงฐานข้อมูล ---
-        await axios.post("https://backend-oa-pqy2.onrender.com/api/add-notification", {
-          message: latestMsg.message,
-          sender_name: latestGroup.name,
-          user_id: latestGroup.user_id,
-          meta_data: {
-            type: 'new_message',
-            user_id: latestGroup.user_id,
-            sender_name: latestGroup.name
-          }
-        });
-        setHasUnread(true);
       }
-    } catch (e) {
-      // ignore
+      
+      // 4. อัพเดท notifications state
+      setNotifications(newNotifications);
+      
+      // 5. เช็คว่ามี unread notifications หรือไม่
+      const hasUnreadNotifications = newNotifications.some(n => !n.read);
+      console.log("🔔 Has unread notifications:", hasUnreadNotifications);
+      setHasUnread(hasUnreadNotifications);
+      
+    } catch (error) {
+      console.error("🔔 Error checking notifications:", error);
+      // ถ้า API ไม่มี ให้ลองใช้ API เก่า
+      if (error.response?.status === 404) {
+        console.log("🔔 Trying old API endpoint...");
+        try {
+          const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/check-new-messages", {
+            params: { last_checked: lastMessageCheck.toISOString() }
+          });
+          if (response.data.new_messages && response.data.new_messages.length > 0) {
+            const latestGroup = response.data.new_messages[0];
+            const latestMsg = latestGroup.messages[latestGroup.messages.length - 1];
+            setNewMessageAlert({
+              user: latestGroup.name,
+              message: latestMsg.message,
+              timestamp: latestMsg.timestamp,
+              user_id: latestGroup.user_id,
+              sender_name: latestGroup.name
+            });
+            setLastMessageCheck(new Date(latestMsg.timestamp));
+            setHasUnread(true);
+          }
+        } catch (e) {
+          console.error("🔔 Old API also failed:", e);
+        }
+      }
     }
-  }, [lastMessageCheck]);
+  }, [lastMessageCheck, notifications, hasUnread, newMessageAlert, data]);
+  
   useEffect(() => {
+    // เรียกครั้งแรกเมื่อ component mount
+    const initializeApp = async () => {
+      console.log("🚀 Initializing app - processing textbox messages first...");
+      
+      // 1. ดึงข้อความจาก textbox ทุก ticket ก่อน
+      try {
+        await processAllTextboxMessages();
+      } catch (error) {
+        console.warn("🚀 Failed to process textbox messages during initialization:", error.message);
+      }
+      
+      // 2. แล้วค่อยเช็ค notifications
+      checkForNewMessages();
+    };
+    
+    initializeApp();
+    
+    // ตั้ง interval ให้เช็คทุก 7 วินาที
     const interval = setInterval(checkForNewMessages, 7000);
     return () => clearInterval(interval);
-  }, [checkForNewMessages]);
+  }, [checkForNewMessages, processAllTextboxMessages]);
 
   useEffect(() => {
     if (highlightMsgId && chatMessages.length > 0) {
@@ -3753,14 +3976,27 @@ const handleSubgroupChange = (e) => {
     }
   }, [highlightMsgId, chatMessages]);
 
+  // ปิด chat auto-scroll ทั้งหมด - เพราะทำให้หน้าหลักเลื่อนลง
+  // useEffect(() => {
+  //   // เลื่อนเฉพาะเมื่อ chat popup เปิดอยู่ และมี selectedChatUser
+  //   if (activeTab === 'chat' && selectedChatUser && selectedChatUser !== "announcement" && messagesEndRef.current && chatMessages.length > 0) {
+  //     setTimeout(() => {
+  //       if (messagesEndRef.current && activeTab === 'chat' && selectedChatUser) {
+  //         messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+  //       }
+  //     }, 100);
+  //   }
+  // }, [chatMessages, selectedChatUser, activeTab]);
+
   // --- เพิ่มฟังก์ชันสำหรับคลิกนัดหมาย ---
   const handleAppointmentClick = (ticketId) => {
     setSearchTerm(ticketId?.toString() || "");
     setActiveTab("list");
     setSelectedTicket(ticketId?.toString() || null);
-    setTimeout(() => {
-      listRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
+    // ปิด auto-scroll เพื่อป้องกันหน้าหลักเลื่อนลง
+    // setTimeout(() => {
+    //   listRef.current?.scrollIntoView({ behavior: "smooth" });
+    // }, 100);
   };
 
   return (
@@ -3817,7 +4053,10 @@ const handleSubgroupChange = (e) => {
               $active={activeTab === "dashboard"}
               onClick={() => {
                 setActiveTab("dashboard");
-                scrollToDashboard();
+                // เลื่อนไปยัง Dashboard เมื่อคลิกเมนู
+                setTimeout(() => {
+                  scrollToDashboard();
+                }, 50);
               }}
               $collapsed={!sidebarOpen}
               data-tooltip="Dashboard"
@@ -4537,7 +4776,15 @@ const handleSubgroupChange = (e) => {
                               <TableCell>
                                 {isEditing ? (
                                   <EditInput type="text" value={editForm.phone} onChange={e => handleEditFormChange("phone", e.target.value)} disabled={editLoading} />
-                                ) : (row["เบอร์ติดต่อ"] || "None")}
+                                ) : (
+                                  row["เบอร์ติดต่อ"] || 
+                                  row["เบอร์โทร"] || 
+                                  row["Phone"] || 
+                                  row["phone"] || 
+                                  row["PHONE"] || 
+                                  row["เบอร์"] || 
+                                  "None"
+                                )}
                               </TableCell>
                               <TableCell>
                                 {isEditing ? (
@@ -4672,9 +4919,19 @@ const handleSubgroupChange = (e) => {
                                     }}
                                   >
                                     <option value="">-- Select Group --</option>
-                                    {availableGroups.map(g => (
-                                      <option key={g} value={g}>{g}</option>
-                                    ))}
+                                     {(() => {
+                                        console.log('[App] 📝 Group dropdown rendering - availableGroups:', availableGroups);
+                                        console.log('[App] 📝 Current editForm.group:', editForm.group);
+                                        console.log('[App] 📝 Current editForm.type:', editForm.type);
+                                        console.log('[App] 📝 Group value matches options?', availableGroups.includes(editForm.group));
+                                        console.log('[App] 📝 Current typeGroupMapping:', Object.keys(typeGroupMapping));
+                                        console.log('[App] 📝 editForm.group type:', typeof editForm.group);
+                                        console.log('[App] 📝 availableGroups types:', availableGroups.map(g => typeof g));
+                                        console.log('[App] 📝 Exact match check:', availableGroups.map(g => ({ option: g, matches: g === editForm.group, groupVal: editForm.group })));
+                                        return availableGroups.map(g => (
+                                          <option key={g} value={g}>{g}</option>
+                                        ));
+                                      })()}
                                   </select>
                                 ) : (
                                   (() => {
@@ -4707,9 +4964,18 @@ const handleSubgroupChange = (e) => {
                                     }}
                                   >
                                     <option value="">-- Select Subgroup --</option>
-                                    {availableSubgroups.map(sg => (
-                                      <option key={sg} value={sg}>{sg}</option>
-                                    ))}
+                                    {(() => {
+                                       console.log('[App] 📝 Subgroup dropdown rendering - availableSubgroups:', availableSubgroups);
+                                       console.log('[App] 📝 Current editForm.subgroup:', editForm.subgroup);
+                                       console.log('[App] 📝 Current editForm.group:', editForm.group);
+                                       console.log('[App] 📝 Subgroup value matches options?', availableSubgroups.includes(editForm.subgroup));
+                                       console.log('[App] 📝 editForm.subgroup type:', typeof editForm.subgroup);
+                                       console.log('[App] 📝 availableSubgroups types:', availableSubgroups.map(sg => typeof sg));
+                                       console.log('[App] 📝 Exact subgroup match check:', availableSubgroups.map(sg => ({ option: sg, matches: sg === editForm.subgroup, subgroupVal: editForm.subgroup })));
+                                       return availableSubgroups.map(sg => (
+                                         <option key={sg} value={sg}>{sg}</option>
+                                       ));
+                                     })()}
                                   </select>
                                 ) : (row["Subgroup"] || "None")}
                               </TableCell>
@@ -5023,6 +5289,7 @@ const handleSubgroupChange = (e) => {
                             </MessageTimeStyled>
                           </MessageBubble>
                         ))}
+                        <div ref={messagesEndRef} />
                       </MessagesContainer>
                       <InputContainer>
                         <InputWrapper>
@@ -5100,8 +5367,16 @@ const handleSubgroupChange = (e) => {
                   notifications.map((notification) => {
                     const isNewMsg = notification.meta_data?.type === 'new_message';
                     let senderName = notification.sender_name || notification.meta_data?.sender_name;
-                    if (!senderName && notification.meta_data?.user_id) {
-                      senderName = userIdToNameMap[notification.meta_data.user_id] || notification.meta_data.user_id;
+                    
+                    // หาชื่อจริงจาก data array ทุกครั้ง (แม้จะมี senderName แล้ว)
+                    if (notification.meta_data?.user_id) {
+                      const ticket = data.find(t => t.user_id === notification.meta_data.user_id || t.ticket_id === notification.meta_data.user_id);
+                      
+                      if (ticket?.name) {
+                        senderName = ticket.name;
+                      } else if (!senderName) {
+                        senderName = userIdToNameMap[notification.meta_data.user_id] || `User ${notification.meta_data.user_id?.substring(0, 8) || 'Unknown'}`;
+                      }
                     }
                     senderName = senderName || '-';
                     return (
@@ -5116,6 +5391,10 @@ const handleSubgroupChange = (e) => {
                           loadChatMessages(notification.meta_data.user_id);
                           setHighlightMsgId(null);
                           markAsRead(notification.id);
+                          // เลื่อนไปข้อความล่าสุดหลังจากคลิกแจ้งเตือน
+                          setTimeout(() => {
+                            scrollToLatestMessage();
+                          }, 500); // รอสักหน่อยให้ loadChatMessages เสร็จก่อน
                         } : undefined}
                       >
                         <NotificationContent>
@@ -5171,6 +5450,7 @@ const handleSubgroupChange = (e) => {
               )}
         
             <ToastContainer />
+            
             {/* ป๊อบอัพแจ้งเตือนข้อความใหม่ */}
             {newMessageAlert && (
               <NewMessageNotification

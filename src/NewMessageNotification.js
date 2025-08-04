@@ -2,9 +2,6 @@ import React, { useEffect } from 'react';
 import styled from 'styled-components';
 
 const PopupContainer = styled.div`
-  position: fixed;
-  right: 32px;
-  bottom: 32px;
   z-index: 3000;
   min-width: 340px;
   max-width: 420px;
@@ -15,11 +12,8 @@ const PopupContainer = styled.div`
   overflow: hidden;
   animation: slideInNotif 0.3s;
   @media (max-width: 600px) {
-    right: 8px;
-    left: 8px;
     min-width: unset;
     max-width: 98vw;
-    bottom: 8px;
   }
 `;
 const PopupHeader = styled.div`
@@ -74,7 +68,15 @@ export default function NewMessageNotification({ alert, onClose, onReply }) {
   }, [alert, onClose]);
   if (!alert) return null;
   return (
-    <PopupContainer>
+    <PopupContainer style={{
+      position: 'fixed',
+      right: window.innerWidth <= 600 ? '8px' : '32px',
+      left: 'auto',
+      bottom: window.innerWidth <= 600 ? '8px' : '32px',
+      zIndex: 9999,
+      maxWidth: window.innerWidth <= 600 ? '98vw' : '420px',
+      minWidth: window.innerWidth <= 600 ? 'unset' : '340px'
+    }}>
       <PopupHeader>
         <span>📩 ข้อความใหม่จาก {alert.sender_name || alert.user}</span>
         <PopupClose onClick={onClose} title="ปิดแจ้งเตือน">&times;</PopupClose>

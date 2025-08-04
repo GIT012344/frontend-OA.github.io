@@ -65,7 +65,7 @@ export const TYPE_GROUP_SUBGROUP = {
 // Test connection function
 export const testConnection = async () => {
   try {
-    const response = await apiClient.get('/create-ticket', { timeout: 5000 });
+    const response = await apiClient.get('/api/data', { timeout: 5000 });
     return { success: true, data: response.data };
   } catch (error) {
     return { 

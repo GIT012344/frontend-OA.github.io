@@ -215,7 +215,7 @@ function StatusLogsPage() {
 
   
   useEffect(() => {
-    axios.get('https://backend-oa-pqy2.onrender.com/create-ticket')
+    axios.get('https://backend-oa-pqy2.onrender.com/api/data')
       .then(res => {
         if (!Array.isArray(res.data)) return;
         const m = {};
@@ -279,10 +279,6 @@ function StatusLogsPage() {
   if (endBoundary) endBoundary.setHours(23, 59, 59, 999);
 
   const filteredLogs = logs.filter(log => {
-    
-    if (!statusFilter && log?.new_status === 'Closed') {
-      return false;
-    }
     if (!log) return false;
     
     const ticketIdMatch = !filterTicketId || 

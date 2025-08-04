@@ -58,15 +58,46 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
   useEffect(() => {
     if (!initialTicket) return;
 
-        const rawType = initialTicket.type || "";
+    console.log('[TicketEditForm] 🎯 Initializing with ticket data:', initialTicket);
+    
+    // Extract type with proper field mapping
+    const rawType = initialTicket["Type"] || initialTicket["TYPE"] || initialTicket.type || "";
     const typeUpper = rawType.toUpperCase();
-    const type = typeUpper === "Service" ? "Service" : typeUpper === "HELPDESK" ? "Helpdesk" : rawType;
-    const group = type === "Service" ? initialTicket.request : type === "Helpdesk" ? initialTicket.report : initialTicket.group || "";
-    const subgroup = initialTicket.subgroup || "";
+    const type = typeUpper === "SERVICE" ? "Service" : typeUpper === "HELPDESK" ? "Helpdesk" : rawType;
+    console.log('[TicketEditForm] 📝 Extracted type:', type);
+    
+    // Extract group based on ticket type (same logic as App.js)
+    let group = "";
+    if (type.toUpperCase() === "HELPDESK") {
+      // For Helpdesk tickets, group is in Report field
+      group = initialTicket["Report"] || initialTicket["report"] || initialTicket.report || "";
+    } else if (type.toUpperCase() === "SERVICE") {
+      // For Service tickets, group is in requested field
+      group = initialTicket["requested"] || initialTicket["Requested"] || initialTicket["Requeste"] || initialTicket["request"] || initialTicket.requested || "";
+    } else {
+      // Fallback to standard Group fields
+      group = initialTicket["GROUP"] || initialTicket["Group"] || initialTicket["group"] || initialTicket.group || "";
+    }
+    console.log('[TicketEditForm] 📝 Extracted group for', type, ':', group);
+    
+    // Extract subgroup
+    const subgroup = initialTicket["Subgroup"] || initialTicket["SUBGROUP"] || initialTicket["subgroup"] || initialTicket.subgroup || initialTicket.sub_group || initialTicket.subGroup || "";
+    console.log('[TicketEditForm] 📝 Extracted subgroup:', subgroup);
 
+    console.log('[TicketEditForm] 📋 Setting form data:', { type, group, subgroup });
     setForm({ type, group, subgroup });
-    if (type) setGroupOptions(Object.keys(typeGroupMapping[type] || {}));
-    if (type && group) setSubgroupOptions((typeGroupMapping[type] || {})[group] || []);
+    
+    if (type) {
+      const groups = Object.keys(typeGroupMapping[type] || {});
+      console.log('[TicketEditForm] 📋 Setting group options for', type, ':', groups);
+      setGroupOptions(groups);
+    }
+    
+    if (type && group) {
+      const subgroups = (typeGroupMapping[type] || {})[group] || [];
+      console.log('[TicketEditForm] 📋 Setting subgroup options for', group, ':', subgroups);
+      setSubgroupOptions(subgroups);
+    }
   }, [initialTicket, typeGroupMapping]);
 
   // --- Helpers -----------------------------------------------------------

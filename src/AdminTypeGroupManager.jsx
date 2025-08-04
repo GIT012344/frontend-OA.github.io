@@ -151,6 +151,14 @@ useEffect(() => {
   };
   
   const startEditType = (type) => {
+    setSelectedType(type); // Ensure type is selected so Group/Subgroup cards show
+    
+    // Auto-select first available group when editing a type
+    const availableGroups = Object.keys(data[type] || {});
+    if (availableGroups.length > 0) {
+      setSelectedGroup(availableGroups[0]);
+    }
+    
     setEditingType(type);
     setEditTypeInput(type);
   };
@@ -348,9 +356,21 @@ useEffect(() => {
                     </div>
                   ) : (
                     <>
-                      <span style={{ fontWeight: 700, color: '#2563eb', cursor: 'pointer', flex: 1 }} onClick={() => { setSelectedType(type); setSelectedGroup(''); }}>{type}</span>
+                      <span style={{ fontWeight: 700, color: '#2563eb', cursor: 'pointer', flex: 1 }} onClick={() => { 
+                        // Only reset selectedGroup if switching to a different type
+                        if (selectedType !== type) {
+                          setSelectedType(type); 
+                          setSelectedGroup(''); 
+                        } else {
+                          setSelectedType(type);
+                        }
+                      }}>{type}</span>
                       <button 
-                        onClick={() => startEditType(type)}
+                        onClick={() => {
+                          // Ensure this type is selected before editing
+                          setSelectedType(type);
+                          startEditType(type);
+                        }}
                         style={{
                           ...addBtn,
                           background: 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)',
