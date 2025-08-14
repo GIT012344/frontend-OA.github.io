@@ -1,7 +1,7 @@
 import AuthManager from './auth';
 
 // API Base URL
-const API_BASE_URL = process.env.REACT_APP_API_BASE || 'https://backend-oa-pqy2.onrender.com';
+const API_BASE_URL = process.env.REACT_APP_API_BASE || 'http://127.0.0.1:5004';
 
 // API Utilities
 class ApiUtils {
@@ -77,8 +77,6 @@ export const authAPI = {
         role: 'user'
       };
       
-      console.log('API Register request:', requestData);
-      
       const response = await fetch(`${API_BASE_URL}/api/register`, {
         method: 'POST',
         headers: {
@@ -87,11 +85,8 @@ export const authAPI = {
         body: JSON.stringify(requestData)
       });
       
-      console.log('API Register response status:', response.status);
-      
       // Handle response manually to get better error details
       const responseText = await response.text();
-      console.log('API Register response text:', responseText);
       
       let result;
       try {
@@ -127,8 +122,6 @@ export const authAPI = {
         password: password
       };
       
-      console.log('API Login request:', requestData);
-      
       const response = await fetch(`${API_BASE_URL}/api/login`, {
         method: 'POST',
         headers: {
@@ -137,11 +130,8 @@ export const authAPI = {
         body: JSON.stringify(requestData)
       });
       
-      console.log('API Login response status:', response.status);
-      
       // Handle response manually to get better error details
       const responseText = await response.text();
-      console.log('API Login response text:', responseText);
       
       let result;
       try {
@@ -199,8 +189,7 @@ export const authAPI = {
         pin: pinData.pin || '000000' // Always use fixed PIN
       };
       
-      console.log('API PIN Verification request:', requestData);
-      console.log('Token present:', token ? 'Yes' : 'No');
+
       
       const response = await fetch(`${API_BASE_URL}/api/verify-pin`, {
         method: 'POST',
@@ -211,11 +200,10 @@ export const authAPI = {
         body: JSON.stringify(requestData)
       });
       
-      console.log('API PIN Verification response status:', response.status);
+
       
       // Handle response manually to get better error details
       const responseText = await response.text();
-      console.log('API PIN Verification response text:', responseText);
       
       let result;
       try {
@@ -262,7 +250,7 @@ export const authAPI = {
     const token = localStorage.getItem('access_token');
     
     try {
-      console.log('API Logout request with token:', token ? 'Present' : 'Missing');
+
       
       const response = await fetch(`${API_BASE_URL}/api/logout`, {
         method: 'POST',
@@ -272,11 +260,10 @@ export const authAPI = {
         // No body needed for logout
       });
       
-      console.log('API Logout response status:', response.status);
+
       
       // Handle response manually
       const responseText = await response.text();
-      console.log('API Logout response text:', responseText);
       
       // ✅ Clear auth data และ PIN verification regardless of API response
       AuthManager.clearAuth();

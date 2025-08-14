@@ -72,7 +72,7 @@ const Login = () => {
   return (
     <AuthContainer>
       <AuthCard>
-        <AuthTitle>เข้าสู่ระบบ Helpdesk</AuthTitle>
+        <AuthTitle>Ticket Management System</AuthTitle>
         <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '32px' }}>
           กรุณาเข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่าน
         </p>

@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE || 'http://127.0.0.1:5004';
+
 const Container = styled.div`
   padding: 20px;
   max-width: 1200px;
@@ -207,7 +209,7 @@ const UserManagement = () => {
       setError(null);
       
       const token = localStorage.getItem('token');
-      const response = await axios.get('https://backend-oa-pqy2.onrender.com/api/users', {
+      const response = await axios.get(`${API_BASE_URL}/api/users`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -225,15 +227,15 @@ const UserManagement = () => {
   }, []);
 
   const handleAdd = () => {
-    console.log('Add new user');
+
   };
 
   const handleEdit = (user) => {
-    console.log('Edit user:', user);
+
   };
 
   const handlePermissions = (user) => {
-    console.log('Manage permissions for user:', user);
+
   };
 
   const handleDelete = async (userId) => {
@@ -241,7 +243,7 @@ const UserManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`https://backend-oa-pqy2.onrender.com/api/users/${userId}`, {
+      await axios.delete(`${API_BASE_URL}/api/users/${userId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       await fetchUsers();

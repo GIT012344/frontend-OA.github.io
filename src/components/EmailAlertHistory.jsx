@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE || 'http://127.0.0.1:5004';
+
 const Container = styled.div`
   padding: 20px;
   max-width: 1200px;
@@ -220,7 +222,7 @@ const EmailAlertHistory = () => {
         ...(filters.dateTo && { dateTo: filters.dateTo })
       });
 
-      const response = await axios.get(`https://backend-oa-pqy2.onrender.com/api/simple-email-alerts?${params}`);
+      const response = await axios.get(`${API_BASE_URL}/api/simple-email-alerts?${params}`);
 
       setAlerts(response.data.alerts || []);
     } catch (err) {

@@ -22,7 +22,6 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
   // --- Listen for type/group data updates from AdminTypeGroupManager -----
   useEffect(() => {
     const handleTypeGroupUpdate = (event) => {
-      console.log('[TicketEditForm] Type/Group data updated, refreshing...', event.detail);
       const newMapping = getTypeGroupSubgroup(); // Re-read from localStorage
       setTypeGroupMapping(newMapping);
       
@@ -58,13 +57,10 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
   useEffect(() => {
     if (!initialTicket) return;
 
-    console.log('[TicketEditForm] 🎯 Initializing with ticket data:', initialTicket);
-    
     // Extract type with proper field mapping
     const rawType = initialTicket["Type"] || initialTicket["TYPE"] || initialTicket.type || "";
     const typeUpper = rawType.toUpperCase();
     const type = typeUpper === "SERVICE" ? "Service" : typeUpper === "HELPDESK" ? "Helpdesk" : rawType;
-    console.log('[TicketEditForm] 📝 Extracted type:', type);
     
     // Extract group based on ticket type (same logic as App.js)
     let group = "";
@@ -78,24 +74,19 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
       // Fallback to standard Group fields
       group = initialTicket["GROUP"] || initialTicket["Group"] || initialTicket["group"] || initialTicket.group || "";
     }
-    console.log('[TicketEditForm] 📝 Extracted group for', type, ':', group);
     
     // Extract subgroup
     const subgroup = initialTicket["Subgroup"] || initialTicket["SUBGROUP"] || initialTicket["subgroup"] || initialTicket.subgroup || initialTicket.sub_group || initialTicket.subGroup || "";
-    console.log('[TicketEditForm] 📝 Extracted subgroup:', subgroup);
 
-    console.log('[TicketEditForm] 📋 Setting form data:', { type, group, subgroup });
     setForm({ type, group, subgroup });
     
     if (type) {
       const groups = Object.keys(typeGroupMapping[type] || {});
-      console.log('[TicketEditForm] 📋 Setting group options for', type, ':', groups);
       setGroupOptions(groups);
     }
     
     if (type && group) {
       const subgroups = (typeGroupMapping[type] || {})[group] || [];
-      console.log('[TicketEditForm] 📋 Setting subgroup options for', group, ':', subgroups);
       setSubgroupOptions(subgroups);
     }
   }, [initialTicket, typeGroupMapping]);
@@ -107,7 +98,6 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
   const onTypeChange = e => {
     const newType = e.target.value;
     handleChange("type", newType);
-    console.log('[TicketEditForm] mapping for type', newType, typeGroupMapping[newType]);
     setGroupOptions(newType ? Object.keys(typeGroupMapping[newType] || {}) : []);
     setSubgroupOptions([]);
     handleChange("group", "");
@@ -140,7 +130,8 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
         payload.requested = form.group;
         payload.request = form.group; // legacy fallback
       }
-      await axios.post("https://backend-oa-pqy2.onrender.com/update-ticket", payload);
+      const API_BASE_URL = process.env.REACT_APP_API_BASE || 'http://127.0.0.1:5004';
+      await axios.post(`${API_BASE_URL}/update-ticket`, payload);
       setSaving(false);
       onSave?.();
     } catch (err) {
@@ -153,16 +144,16 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: 420 }}>
       {/* TYPE */}
-      <label>Type</label>
+      <label>Type {form.type && <span style={{ color: '#059669', fontWeight: 'bold' }}>: {form.type}</span>}</label>
       <select value={form.type} onChange={onTypeChange} required style={{ width: "100%", marginBottom: 8 }}>
-        <option value="">--เลือก Type--</option>
+        <option value="">{form.type ? `ปัจจุบัน: ${form.type} (คลิกเพื่อเปลี่ยน)` : '--เลือก Type--'}</option>
         {Object.keys(getTypeGroupSubgroup()).map(t => (
           <option key={t} value={t}>{t}</option>
         ))}
       </select>
 
       {/* GROUP */}
-      <label>Group</label>
+      <label>Group {form.group && <span style={{ color: '#059669', fontWeight: 'bold' }}>: {form.group}</span>}</label>
       <select
         value={form.group}
         onChange={onGroupChange}
@@ -170,14 +161,14 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
         required
         style={{ width: "100%", marginBottom: 8 }}
       >
-        <option value="">--เลือก Group--</option>
+        <option value="">{form.group ? `ปัจจุบัน: ${form.group} (คลิกเพื่อเปลี่ยน)` : '--เลือก Group--'}</option>
         {groupOptions.map(g => (
           <option key={g} value={g}>{g}</option>
         ))}
       </select>
 
       {/* SUBGROUP */}
-      <label>Subgroup</label>
+      <label>Subgroup {form.subgroup && <span style={{ color: '#059669', fontWeight: 'bold' }}>: {form.subgroup}</span>}</label>
       <select
         value={form.subgroup}
         onChange={onSubgroupChange}
@@ -185,7 +176,7 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
         required
         style={{ width: "100%", marginBottom: 12 }}
       >
-        <option value="">--เลือก Subgroup--</option>
+        <option value="">{form.subgroup ? `ปัจจุบัน: ${form.subgroup} (คลิกเพื่อเปลี่ยน)` : '--เลือก Subgroup--'}</option>
         {subgroupOptions.map(s => (
           <option key={s} value={s}>{s}</option>
         ))}

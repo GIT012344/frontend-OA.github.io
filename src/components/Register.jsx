@@ -94,9 +94,7 @@ const Register = () => {
     setIsLoading(true);
     
     try {
-      console.log('Sending registration data:', formData);
       const result = await authAPI.register(formData);
-      console.log('Registration result:', result);
       
       if (result.success) {
         setSuccessMessage('สมัครสมาชิกสำเร็จ! กำลังนำไปหน้าเข้าสู่ระบบ...');

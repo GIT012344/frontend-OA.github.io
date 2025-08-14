@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 const LOCAL_KEY = 'oa_type_group_subgroup';
 // Backend API base (change if backend runs elsewhere)
-const API_BASE = process.env.REACT_APP_API_BASE || 'https://backend-oa-pqy2.onrender.com';
+const API_BASE = process.env.REACT_APP_API_BASE || 'http://127.0.0.1:5004';
 
 function getInitialData() {
   const raw = localStorage.getItem(LOCAL_KEY);
@@ -18,16 +18,20 @@ function getInitialData() {
   return { Service: {}, Helpdesk: {} };
 }
 
-function Toast({ message, onClose }) {
+function Toast({ message, type = 'success', onClose }) {
   if (!message) return null;
+  const isError = type === 'error';
   return (
     <div style={{
       position: 'fixed', top: 32, right: 32, zIndex: 9999,
-      background: 'rgba(34,197,94,0.95)', color: 'white', padding: '16px 32px', borderRadius: 16,
-      fontWeight: 600, fontSize: '1.1rem', boxShadow: '0 4px 24px #22c55e55', display: 'flex', alignItems: 'center', gap: 12,
+      background: isError ? 'rgba(239,68,68,0.95)' : 'rgba(34,197,94,0.95)', 
+      color: 'white', padding: '16px 32px', borderRadius: 16,
+      fontWeight: 600, fontSize: '1.1rem', 
+      boxShadow: isError ? '0 4px 24px #ef444455' : '0 4px 24px #22c55e55', 
+      display: 'flex', alignItems: 'center', gap: 12,
       animation: 'slideIn 0.5s',
     }}>
-      <span style={{fontSize:24}}>✅</span> {message}
+      <span style={{fontSize:24}}>{isError ? '❌' : '✅'}</span> {message}
       <button onClick={onClose} style={{marginLeft:16, background:'none', border:'none', color:'white', fontSize:20, cursor:'pointer'}}>×</button>
       <style>{`@keyframes slideIn{from{transform:translateY(-40px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
     </div>
@@ -118,6 +122,43 @@ export default function AdminTypeGroupManager() {
   const [editingGroup, setEditingGroup] = useState('');
   const [editGroupInput, setEditGroupInput] = useState('');
 
+  // Load data from backend on mount, fallback to localStorage
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          // Try to fetch from backend first with increased timeout
+          const response = await axios.get(`${API_BASE}/api/type-group-subgroup`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            timeout: 15000 // Increase timeout to 15 seconds
+          });
+          
+          if (response.data && typeof response.data === 'object') {
+            setData(response.data);
+            // Update localStorage with backend data
+            localStorage.setItem(LOCAL_KEY, JSON.stringify(response.data));
+            console.log('[AdminTypeGroupManager] Data loaded from backend successfully');
+            return;
+          }
+        }
+      } catch (error) {
+        if (error.code === 'ECONNABORTED') {
+          console.warn('[AdminTypeGroupManager] Backend request timeout, using localStorage fallback');
+        } else {
+          console.warn('Failed to load from backend, using localStorage:', error.message);
+        }
+      }
+      
+      // Fallback to localStorage (already loaded in getInitialData)
+      console.log('[AdminTypeGroupManager] Using localStorage data as fallback');
+    };
+    
+    loadData();
+  }, []);
+
   // Persist to localStorage and notify other components
 useEffect(() => {
   localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
@@ -129,11 +170,83 @@ useEffect(() => {
   }, 0);
 }, [data]);
 
-// Persist to backend
+// Backend sync - now enabled with secure API endpoints
 useEffect(() => {
-  axios.post(`${API_BASE}/type-group-subgroup`, data).catch(err => console.warn('Failed to sync type/group data:', err));
+  const syncToBackend = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await axios.post(`${API_BASE}/api/type-group-subgroup`, data, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 15000 // Increase timeout to 15 seconds
+        });
+        console.log('[AdminTypeGroupManager] Successfully synced to backend');
+      }
+    } catch (err) {
+      if (err.code === 'ECONNABORTED') {
+        console.warn('[AdminTypeGroupManager] Backend sync timeout, data saved locally');
+        showToast('การซิงค์ข้อมูลใช้เวลานาน ข้อมูลถูกบันทึกในเครื่องแล้ว', 'error');
+      } else if (err.response?.status === 403) {
+        showToast('ต้องเป็น Admin เท่านั้นที่สามารถแก้ไข Type/Group/Subgroup ได้', 'error');
+      } else {
+        console.warn('Failed to sync type/group data to backend:', err.message);
+      }
+    }
+  };
+  
+  // Only sync if data is not empty (avoid syncing initial empty state)
+  if (Object.keys(data).length > 0) {
+    syncToBackend();
+  }
 }, [data]);
-  const showToast = msg => { setToast(msg); setTimeout(() => setToast(""), 2000); };
+
+// Periodic sync mechanism - fetch latest data from backend
+useEffect(() => {
+  const periodicSync = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const response = await axios.get(`${API_BASE}/api/type-group-subgroup`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          timeout: 10000 // 10 seconds timeout for periodic sync
+        });
+        
+        if (response.data && typeof response.data === 'object') {
+          // Only update if data is different
+          const currentDataStr = JSON.stringify(data);
+          const newDataStr = JSON.stringify(response.data);
+          
+          if (currentDataStr !== newDataStr) {
+            setData(response.data);
+            localStorage.setItem(LOCAL_KEY, JSON.stringify(response.data));
+            console.log('[AdminTypeGroupManager] Periodic sync: Data updated from backend');
+            showToast('ข้อมูล Type/Group/Subgroup ได้รับการอัปเดตจากเซิร์ฟเวอร์', 'success');
+          }
+        }
+      }
+    } catch (error) {
+      if (error.code === 'ECONNABORTED') {
+        console.warn('[AdminTypeGroupManager] Periodic sync timeout - skipping this cycle');
+      } else {
+        console.warn('Periodic sync failed:', error.message);
+      }
+    }
+  };
+
+  // Reduce frequency to 2 minutes to prevent too many API calls
+  const intervalId = setInterval(periodicSync, 120000); // 2 minutes interval
+  return () => clearInterval(intervalId);
+}, [data]);
+
+  const showToast = (msg, type = 'success') => { 
+    setToast({ message: msg, type }); 
+    setTimeout(() => setToast(""), 3000); 
+  };
 
   // --- CRUD ---
   const addType = () => {
@@ -264,7 +377,7 @@ useEffect(() => {
   // --- UI ---
   return (
     <div style={{ maxWidth: 1100, margin: '40px auto', padding: 36, background: 'linear-gradient(135deg, #e0e7ff 0%, #f0f9ff 100%)', borderRadius: 32, boxShadow: '0 12px 48px #6366f122', minHeight: 600 }}>
-      <Toast message={toast} onClose={() => setToast("")} />
+      <Toast message={toast?.message || toast} type={toast?.type} onClose={() => setToast("")} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
         <button 
           onClick={() => navigate('/dashboard')}

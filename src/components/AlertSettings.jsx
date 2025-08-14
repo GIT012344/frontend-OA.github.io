@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE || 'http://127.0.0.1:5004';
+
 const Container = styled.div`
   padding: 20px;
   max-width: 800px;
@@ -201,7 +203,7 @@ const AlertSettings = () => {
   const fetchSettings = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('https://backend-oa-pqy2.onrender.com/api/alert-settings', {
+      const response = await axios.get(`${API_BASE_URL}/api/alert-settings`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -228,11 +230,11 @@ const AlertSettings = () => {
       const token = localStorage.getItem('token');
       
       try {
-        await axios.put('https://backend-oa-pqy2.onrender.com/api/alert-settings', settings, {
+        await axios.put(`${API_BASE_URL}/api/alert-settings`, settings, {
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         });
       } catch {
-        await axios.post('https://backend-oa-pqy2.onrender.com/api/alert-settings', settings, {
+        await axios.post(`${API_BASE_URL}/api/alert-settings`, settings, {
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         });
       }
@@ -250,7 +252,7 @@ const AlertSettings = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      await axios.post('https://backend-oa-pqy2.onrender.com/api/test-overdue-alerts', {}, {
+      await axios.post(`${API_BASE_URL}/api/test-overdue-alerts`, {}, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

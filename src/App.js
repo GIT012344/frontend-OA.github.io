@@ -30,7 +30,7 @@ import UserManagement from './components/UserManagement';
 import PermissionProvider from './contexts/PermissionContext';
 
 // Base API URL configuration
-const API_BASE_URL = process.env.REACT_APP_API_BASE || "https://backend-oa-pqy2.onrender.com";
+const API_BASE_URL = process.env.REACT_APP_API_BASE || "http://127.0.0.1:5004";
 
 // Standardized date formatting functions
 const formatDate = {
@@ -1957,7 +1957,7 @@ function App() {
   const [availableSubgroups, setAvailableSubgroups] = useState([]);
   const [typeGroupMapping, setTypeGroupMapping] = useState(() => {
     const mapping = getTypeGroupSubgroup();
-    console.log('[App] 🏗️ Initial typeGroupMapping:', Object.keys(mapping));
+
     return mapping;
   });
 
@@ -1989,13 +1989,6 @@ function App() {
   useEffect(() => {
     // Check if date filtering is currently in progress (immediate check)
     const isCurrentlyFiltering = window.isDateFilteringInProgress || isDateFilterActive;
-    console.log('🔍 Offline data effect check:', {
-      backendStatus,
-      isDateFilterActive,
-      isFilteringInProgress: window.isDateFilteringInProgress,
-      isCurrentlyFiltering,
-      willLoadCachedData: (backendStatus === 'offline' || backendStatus === 'error') && !isCurrentlyFiltering
-    });
     if ((backendStatus === 'offline' || backendStatus === 'error') && !isCurrentlyFiltering) {
       const cachedData = localStorage.getItem('cachedTicketData');
       if (cachedData) {
@@ -2003,7 +1996,7 @@ function App() {
           const parsedData = JSON.parse(cachedData);
           setOfflineData(parsedData);
           setIsOfflineMode(true);
-          console.log("📱 Using cached data in offline mode");
+
         } catch (error) {
           console.error("Error parsing cached data:", error);
           setOfflineData([]);
@@ -2099,7 +2092,7 @@ function App() {
     try {
       // 3. ส่งข้อมูลไป backend
       const response = await axios.post(
-        "https://backend-oa-pqy2.onrender.com/update-status",
+        `${API_BASE_URL}/update-status`,
         {
           ticket_id: tempTicketId,
           status: tempNewStatus,
@@ -2248,17 +2241,136 @@ const cancelStatusChange = () => {
 
   // Health check function to test backend connectivity
   
+  // ฟังก์ชันสำหรับดึงข้อมูล notifications จาก backend
+  const fetchNotifications = useCallback(async () => {
+    try {
+      console.log('🔄 Fetching notifications...');
+      const token = localStorage.getItem('access_token');
+      const response = await axios.get(`${API_BASE_URL}/api/notifications`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      
+      console.log('📥 Raw notifications response:', response.data);
+      
+      if (response.data && Array.isArray(response.data)) {
+        // Parse meta_data if it's a string
+        const parsedNotifications = response.data.map(n => ({
+          ...n,
+          meta_data: typeof n.meta_data === 'string' ? JSON.parse(n.meta_data) : n.meta_data
+        }));
+        
+        console.log('📋 Parsed notifications:', parsedNotifications);
+        
+        // Use setNotifications with callback to get previous state properly
+        setNotifications(prevNotifications => {
+          console.log('📊 Previous notifications count:', prevNotifications.length);
+          console.log('📊 New notifications count:', parsedNotifications.length);
+          
+          // Debug: Show all unread notifications
+          const allUnread = parsedNotifications.filter(n => !n.read);
+          console.log('📌 All unread notifications:', allUnread);
+          
+          // Debug: Show notifications with new_message type
+          const messageTypeNotifs = parsedNotifications.filter(n => n.meta_data?.type === 'new_message');
+          console.log('💬 Notifications with type=new_message:', messageTypeNotifs);
+          
+          // Check for new unread messages and trigger popup
+          const newUnreadMessages = parsedNotifications.filter(n => {
+            const isUnread = !n.read;
+            const isNewMessage = n.meta_data?.type === 'new_message' || n.meta_data?.type === 'textbox_message';
+            const isFromUser = n.meta_data?.sender_type === 'user' || n.meta_data?.type === 'textbox_message';
+            const isNew = !prevNotifications.some(prev => prev.id === n.id);
+            
+            console.log(`🔍 Checking notification ${n.id}:`, {
+              isUnread,
+              isNewMessage,
+              isFromUser,
+              isNew,
+              meta_data: n.meta_data
+            });
+            
+            return isUnread && isNewMessage && isFromUser && isNew;
+          });
+          
+          console.log('🆕 New unread messages found:', newUnreadMessages.length);
+          
+          // Trigger popup for the latest new message
+          if (newUnreadMessages.length > 0) {
+            const latestMessage = newUnreadMessages[0];
+            console.log('🔔 TRIGGERING POPUP for message:', latestMessage);
+            
+            const alertData = {
+              user_id: latestMessage.meta_data.user_id,
+              user: latestMessage.sender_name || latestMessage.meta_data?.sender_name || 'User',
+              message: latestMessage.message,
+              timestamp: latestMessage.timestamp
+            };
+            
+            console.log('📢 Setting newMessageAlert with:', alertData);
+            setNewMessageAlert(alertData);
+            
+            // Play notification sound
+            try {
+              const audio = new Audio('/notification.mp3');
+              audio.play().catch(e => console.log('🔇 Could not play sound:', e));
+            } catch (e) {
+              console.log('🔇 Audio error:', e);
+            }
+          } else {
+            console.log('ℹ️ No new messages to show popup for');
+          }
+          
+          return parsedNotifications;
+        });
+        
+        // Check if there are unread notifications
+        const hasUnreadNotifications = parsedNotifications.some(n => !n.read);
+        console.log('🔴 Has unread notifications:', hasUnreadNotifications);
+        setHasUnread(hasUnreadNotifications);
+      }
+    } catch (error) {
+      console.error("❌ Failed to fetch notifications:", error);
+    }
+  }, []);
+
+  // ฟังก์ชันสำหรับดึงข้อความจาก textbox ทุก ticket พร้อมกัน
+  const processAllTextboxMessages = useCallback(async () => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/process-all-textbox-messages`, {}, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000 // 30 second timeout for processing all
+      });
+      
+      // รีเฟรช notifications หลังจากประมวลผลเสร็จ
+      if (response.data.processed > 0) {
+        // Trigger notification refresh
+        await fetchNotifications();
+        // Also refresh chat messages if a user is selected
+        if (selectedChatUser && selectedChatUser !== "announcement") {
+          loadChatMessages(selectedChatUser);
+        }
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error("Failed to process textbox messages:", error.message);
+      throw error;
+    }
+  }, [fetchNotifications, selectedChatUser]);
+  
   // Updated fetchData function with loading state and date filter protection
   const fetchData = useCallback(async () => {
     // Don't fetch if date filtering is active to avoid overwriting filtered data
     if (isDateFilterActive) {
-      console.log('🚫 Skipping fetchData - date filtering is active');
+
       return;
     }
     
     setLoading(true);
     try {
-      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
+      const response = await axios.get(`${API_BASE_URL}/api/data`, {
         params: { ts: Date.now() },
         headers: { 'Cache-Control': 'no-cache' }
       });
@@ -2291,7 +2403,7 @@ const cancelStatusChange = () => {
   const controller = new AbortController();
   pollControllerRef.current = controller;
       try {
-        const response = await fetch(`https://backend-oa-pqy2.onrender.com/api/data?ts=${Date.now()}`, {
+        const response = await fetch(`${API_BASE_URL}/api/data?ts=${Date.now()}`, {
           signal: controller.signal,
           cache: "no-store",
           headers: {
@@ -2326,6 +2438,19 @@ const cancelStatusChange = () => {
     }, 5000);
     return () => clearInterval(interval);
   }, [isPollingPaused, isDateFilterActive]);
+
+  // Polling for notifications
+  useEffect(() => {
+    // Fetch notifications immediately
+    fetchNotifications();
+    
+    // Poll notifications every 10 seconds
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 10000);
+    
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
 
   const handleMouseMove = useCallback(
     (e) => {
@@ -2423,7 +2548,7 @@ const cancelStatusChange = () => {
           if (!localStr || localStr !== backendStr) {
             localStorage.setItem(LOCAL_TYPE_GROUP_KEY, backendStr);
             setTypeGroupMapping(res.data);
-            console.log('[App] Refreshed type/group mapping from backend');
+
           }
         }
       })
@@ -2433,29 +2558,27 @@ const cancelStatusChange = () => {
   // --- Listen for type/group data updates from AdminTypeGroupManager -----
   useEffect(() => {
     const handleTypeGroupUpdate = (event) => {
-      console.log('[App] 🔄 Type/Group data updated event received!', event.detail);
+
       const oldMapping = typeGroupMapping;
       const newMapping = getTypeGroupSubgroup(); // Re-read from localStorage
-      console.log('[App] 📊 Old mapping:', Object.keys(oldMapping));
-      console.log('[App] 📊 New mapping:', Object.keys(newMapping));
-      console.log('[App] 📊 localStorage content:', localStorage.getItem('oa_type_group_subgroup'));
+
       
       // Force re-render by creating new object reference
       setTypeGroupMapping({ ...newMapping });
-      console.log('[App] ✅ typeGroupMapping state updated with force re-render');
+
       
       // Force component re-render
       setCurrentPage(prev => prev); // This will trigger a re-render
       
       // Update current dropdown options if editing a ticket
       if (editingTicketId && editForm.type) {
-        console.log('[App] 🎯 Updating dropdown options for editing ticket:', editingTicketId, 'type:', editForm.type);
+
         const newGroupOptions = Object.keys(newMapping[editForm.type] || {});
         setAvailableGroups(newGroupOptions);
         
         // If current group is no longer valid, reset it
         if (editForm.group && !newGroupOptions.includes(editForm.group)) {
-          console.log('[App] ⚠️ Current group no longer valid, resetting:', editForm.group);
+
           setEditForm(prev => ({ ...prev, group: '', subgroup: '' }));
           setAvailableSubgroups([]);
         } else if (editForm.group) {
@@ -2464,19 +2587,19 @@ const cancelStatusChange = () => {
           
           // If current subgroup is no longer valid, reset it
           if (editForm.subgroup && !newSubgroupOptions.includes(editForm.subgroup)) {
-            console.log('[App] ⚠️ Current subgroup no longer valid, resetting:', editForm.subgroup);
+
             setEditForm(prev => ({ ...prev, subgroup: '' }));
           }
         }
       } else {
-        console.log('[App] 💡 No ticket being edited, skipping dropdown update');
+
       }
     };
     
-    console.log('[App] 🎧 Adding event listener for typeGroupDataUpdated');
+
     window.addEventListener('typeGroupDataUpdated', handleTypeGroupUpdate);
     return () => {
-      console.log('[App] 🔇 Removing event listener for typeGroupDataUpdated');
+
       window.removeEventListener('typeGroupDataUpdated', handleTypeGroupUpdate);
     };
   }, [editingTicketId, editForm.type, editForm.group, editForm.subgroup, typeGroupMapping]);
@@ -2485,7 +2608,7 @@ const cancelStatusChange = () => {
     if (!startDate) return;
 
     axios
-      .get("https://backend-oa-pqy2.onrender.com/api/data-by-date", {
+      .get(`${API_BASE_URL}/api/data-by-date`, {
         params: { date: startDate },
       })
       .then((res) => {
@@ -2511,7 +2634,7 @@ const cancelStatusChange = () => {
       return;
     }
 
-    console.log('📅 Starting date filter process:', { startDate, endDate });
+
     
     // CRITICAL: Set date filter active FIRST and stop all polling immediately
     setIsDateFilterActive(true);
@@ -2522,33 +2645,33 @@ const cancelStatusChange = () => {
     // Cancel any ongoing polling
     if (pollControllerRef.current) {
       pollControllerRef.current.abort();
-      console.log('🛑 Cancelled ongoing polling for date filter');
+
     }
 
     // Use the existing data API to get all data, then filter by date range
     axios
-      .get("https://backend-oa-pqy2.onrender.com/api/data", {
+      .get(`${API_BASE_URL}/api/data`, {
         params: { ts: Date.now() },
         headers: { 'Cache-Control': 'no-cache' }
       })
       .then((res) => {
         // Double-check filter is still active (in case of race condition)
-        console.log('🔍 Checking if date filter is still active:', isDateFilterActive);
+
         
         const rawData = Array.isArray(res.data) ? res.data : [];
-        console.log('📊 Raw data from backend:', rawData.length, 'items');
+
 
         // Filter by created_at (วันที่แจ้ง) instead of appointment
         const filteredData = rawData.filter((item) => {
           const createdAtField = item['วันที่แจ้ง'] || item.created_at;
           if (!createdAtField) {
-            console.log('⚠️ No created_at field for:', item['Ticket ID']);
+
             return false;
           }
           
           const createdDate = new Date(createdAtField);
           if (isNaN(createdDate.getTime())) {
-            console.log('⚠️ Invalid date for:', item['Ticket ID'], createdAtField);
+
             return false;
           }
           
@@ -2563,27 +2686,18 @@ const cancelStatusChange = () => {
           const createdTimeStr = createdDate.toTimeString().split(' ')[0].substring(0, 5);
           
           if (inRange) {
-            console.log('✅ Including:', item['Ticket ID'], `${createdDateStr} ${createdTimeStr}`);
+
           } else {
-            console.log('❌ Excluding:', item['Ticket ID'], `${createdDateStr} ${createdTimeStr}`, 'outside range');
+
           }
           
           return inRange;
         });
         
-        console.log('🎯 Final filtered data:', filteredData.length, 'items in date range');
-        console.log('📋 Filtered tickets:', filteredData.map(item => ({ 
-          id: item['Ticket ID'], 
-          date: item['วันที่แจ้ง'] || item.created_at 
-        })));
+
         
         // Set the filtered data and count
-        console.log('💾 setData in fetchDataByDateRange:', {
-          from: 'fetchDataByDateRange',
-          newLength: filteredData.length,
-          currentLength: data.length,
-          isDateFilterActive
-        });
+
         // Store filtered data in ref to prevent overwriting
         filteredDataRef.current = filteredData;
         setData(filteredData);
@@ -2596,7 +2710,7 @@ const cancelStatusChange = () => {
         
         // Force re-render and confirm filter status
         setTimeout(() => {
-          console.log('🔒 Date filter confirmed active, polling blocked');
+
           setIsDateFilterActive(true); // Ensure it stays active
         }, 100);
       })
@@ -2632,7 +2746,7 @@ const cancelStatusChange = () => {
     setTypeFilter("all");
 
     axios
-      .get("https://backend-oa-pqy2.onrender.com/api/data")
+      .get(`${API_BASE_URL}/api/data`)
       .then((res) => setData(Array.isArray(res.data) ? res.data : []))
       .catch((err) => {
         console.error(err);
@@ -2644,7 +2758,7 @@ const cancelStatusChange = () => {
     if (id) {
       // Mark single notification as read
       axios
-        .post("https://backend-oa-pqy2.onrender.com/mark-notification-read", { id })
+        .post(`${API_BASE_URL}/mark-notification-read`, { id })
         .then(() => {
           setNotifications((prev) =>
             prev.map((n) => (n.id === id ? { ...n, read: true } : n))
@@ -2654,7 +2768,7 @@ const cancelStatusChange = () => {
     } else {
       // Mark all notifications as read
       axios
-        .post("https://backend-oa-pqy2.onrender.com/mark-all-notifications-read")
+        .post(`${API_BASE_URL}/mark-all-notifications-read`)
         .then(() => {
           setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
           setHasUnread(false);
@@ -2702,13 +2816,7 @@ const cancelStatusChange = () => {
       : [];
   }, [data, searchTerm, statusFilter, typeFilter, isDateFilterActive]);
 
-  // Debug logging for filteredData changes
-  console.log('🔄 filteredData updated:', {
-    total: filteredData.length,
-    isDateFilterActive,
-    statusFilter,
-    dataLength: data.length
-  });
+
 
   // Pagination logic
   const sortedFilteredData = [...filteredData].sort((a, b) => {
@@ -2756,7 +2864,7 @@ const cancelStatusChange = () => {
 
   const deleteNotification = async (id) => {
     try {
-      await axios.post("https://backend-oa-pqy2.onrender.com/delete-notification", { id });
+      await axios.post(`${API_BASE_URL}/delete-notification`, { id });
       setNotifications(notifications.filter((n) => n.id !== id));
     } catch (err) {
       console.error("Error deleting notification:", err);
@@ -2770,73 +2878,114 @@ const cancelStatusChange = () => {
   // Dropdown change handlers for ticket editing
   const handleTypeChange = (e) => {
     const newType = e.target.value;
-    console.log('[App] 🔄 Type changed to:', newType);
+
     
     setEditForm(prev => ({ ...prev, type: newType, group: '', subgroup: '' }));
     
     // Update available groups
     const newGroups = Object.keys(typeGroupMapping[newType] || {});
-    console.log('[App] 📋 Available groups for', newType, ':', newGroups);
+
     setAvailableGroups(newGroups);
     setAvailableSubgroups([]);
   };
   
   const handleGroupChange = (e) => {
     const newGroup = e.target.value;
-    console.log('[App] 🔄 Group changed to:', newGroup);
+
     
     setEditForm(prev => ({ ...prev, group: newGroup, subgroup: '' }));
     
     // Update available subgroups
     const newSubgroups = (typeGroupMapping[editForm.type] || {})[newGroup] || [];
-    console.log('[App] 📋 Available subgroups for', newGroup, ':', newSubgroups);
+
     setAvailableSubgroups(newSubgroups);
   };
   
   const handleSubgroupChange = (e) => {
     const newSubgroup = e.target.value;
-    console.log('[App] 🔄 Subgroup changed to:', newSubgroup);
+
     
     setEditForm(prev => ({ ...prev, subgroup: newSubgroup }));
   };
 
   // Handle edit ticket - initialize edit form with ticket data
   const handleEditTicket = (ticket) => {
-    console.log('[App] 🎫 ========== STARTING handleEditTicket ==========');
-    console.log('[App] 🎫 Starting handleEditTicket with ticket:', ticket["Ticket ID"]);
-    console.log('[App] 🔍 Full ticket data:', ticket);
-    
     setEditingTicketId(ticket["Ticket ID"]);
     
     // Extract ticket data with proper field mapping based on backend structure
     const type = ticket["Type"] || ticket["TYPE"] || ticket["type"] || "";
-    console.log('[App] 📝 Extracted type:', type);
     
     // Extract group based on ticket type
-    let group = "";
+    let rawGroup = "";
     if (type.toUpperCase() === "HELPDESK") {
       // For Helpdesk tickets, group is in Report field
-      group = ticket["Report"] || ticket["report"] || "";
+      rawGroup = ticket["Report"] || ticket["report"] || "";
     } else if (type.toUpperCase() === "SERVICE") {
       // For Service tickets, group is in requested field
-      group = ticket["requested"] || ticket["Requested"] || ticket["Requeste"] || ticket["request"] || "";
+      rawGroup = ticket["requested"] || ticket["Requested"] || ticket["Requeste"] || ticket["request"] || "";
     } else {
       // Fallback to standard Group fields
-      group = ticket["GROUP"] || ticket["Group"] || ticket["group"] || "";
+      rawGroup = ticket["GROUP"] || ticket["Group"] || ticket["group"] || "";
     }
-    console.log('[App] 📝 Extracted group for', type, ':', group);
     
     // Backend sends Subgroup
-    const subgroup = ticket["Subgroup"] || ticket["SUBGROUP"] || ticket["subgroup"] || "";
-    console.log('[App] 📝 Extracted subgroup:', subgroup);
+    const rawSubgroup = ticket["Subgroup"] || ticket["SUBGROUP"] || ticket["subgroup"] || "";
     
-    console.log('[App] 📋 Extracted data:', { type, group, subgroup });
+    // Get current status - IMPORTANT: Use actual value, not "SELECT"
+    const currentStatus = ticket["สถานะ"] || ticket["Status"] || ticket["status"] || "New";
     
-    // Set form data
+    // Clean values BEFORE setting state
+    let cleanedGroup = rawGroup;
+    let cleanedSubgroup = rawSubgroup;
+    
+    if (type) {
+      const groups = Object.keys(typeGroupMapping[type] || {});
+      
+      // Clean group value to match available options
+      if (rawGroup && !groups.includes(rawGroup)) {
+        // Try to find a match by removing extra text (e.g., "ปริ้นเตอร์ / Printer" -> "ปริ้นเตอร์")
+        const possibleMatch = groups.find(g => {
+          return rawGroup.includes(g) || g.includes(rawGroup.split(' / ')[0]) || g.includes(rawGroup.split('/')[0].trim());
+        });
+        if (possibleMatch) {
+          cleanedGroup = possibleMatch;
+        }
+      }
+      
+      // Clean subgroup value
+      if (cleanedGroup) {
+        const subgroups = (typeGroupMapping[type] || {})[cleanedGroup] || [];
+        
+        if (rawSubgroup && !subgroups.includes(rawSubgroup)) {
+          // Try to find a match by removing extra text
+          const possibleSubgroupMatch = subgroups.find(sg => {
+            return rawSubgroup.includes(sg) || sg.includes(rawSubgroup.split(' / ')[0]) || sg.includes(rawSubgroup.split('/')[0].trim());
+          });
+          
+          if (possibleSubgroupMatch) {
+            cleanedSubgroup = possibleSubgroupMatch;
+          } else {
+            // If no match found, clear the subgroup
+            cleanedSubgroup = "";
+          }
+        }
+        
+        setAvailableGroups(groups);
+        setAvailableSubgroups(subgroups);
+      } else {
+        setAvailableGroups(groups);
+        setAvailableSubgroups([]);
+      }
+    } else {
+      setAvailableGroups([]);
+      setAvailableSubgroups([]);
+    }
+    
+    // Set form data with ALL cleaned values in a SINGLE update
     setEditForm({
       type,
-      group,
-      subgroup,
+      group: cleanedGroup,
+      subgroup: cleanedSubgroup,
       email: ticket["อีเมล"] || ticket["Email"] || "",
       name: ticket["ชื่อ"] || ticket["Name"] || "",
       phone: ticket["เบอร์ติดต่อ"] || ticket["เบอร์โทร"] || ticket["Phone"] || ticket["phone"] || "",
@@ -2846,90 +2995,8 @@ const cancelStatusChange = () => {
       appointment_datetime: ticket["appointment_datetime"] || "",
       request: ticket["requested"] || ticket["request"] || "",
       report: ticket["Report"] || "",
-      status: ticket["สถานะ"] || ticket["Status"] || "New"
+      status: currentStatus  // Use the actual current status value
     });
-    
-    console.log('[App] 📝 Form data set:', {
-      type, group, subgroup,
-      email: ticket["อีเมล"],
-      name: ticket["ชื่อ"],
-      phone: ticket["เบอร์ติดต่อ"] || ticket["เบอร์โทร"]
-    });
-    
-    // Set up dropdown options
-    if (type) {
-      const groups = Object.keys(typeGroupMapping[type] || {});
-      console.log('[App] 📋 Setting available groups for', type, ':', groups);
-      console.log('[App] 🔍 Current group value:', group);
-      console.log('[App] 🔍 Does group exist in available groups?', groups.includes(group));
-      console.log('[App] 🔍 typeGroupMapping for', type, ':', typeGroupMapping[type]);
-      
-      // 🔧 Clean group value to match available options
-      let cleanedGroup = group;
-      if (group && !groups.includes(group)) {
-        // Try to find a match by removing extra text (e.g., "ปริ้นเตอร์ / Printer" -> "ปริ้นเตอร์")
-        const possibleMatch = groups.find(g => {
-          return group.includes(g) || g.includes(group.split(' / ')[0]) || g.includes(group.split('/')[0].trim());
-        });
-        if (possibleMatch) {
-          cleanedGroup = possibleMatch;
-          console.log('[App] 🧩 Cleaned group from "' + group + '" to "' + cleanedGroup + '"');
-        }
-      }
-      
-      setAvailableGroups(groups);
-      
-      // Update editForm with cleaned group value
-      if (cleanedGroup !== group) {
-        setEditForm(prev => ({ ...prev, group: cleanedGroup }));
-      }
-      
-      // 🔧 Clean subgroup value using ORIGINAL group (before cleaning)
-      let cleanedSubgroup = subgroup;
-      if (group && subgroup) {
-        const originalSubgroups = (typeGroupMapping[type] || {})[group] || [];
-        console.log('[App] 📋 Original subgroups for "' + group + '":', originalSubgroups);
-        
-        if (!originalSubgroups.includes(subgroup)) {
-          console.log('[App] ⚠️ Subgroup "' + subgroup + '" not found in original subgroups:', originalSubgroups);
-          
-          // Try to find a match by removing extra text
-          const possibleSubgroupMatch = originalSubgroups.find(sg => {
-            return subgroup.includes(sg) || sg.includes(subgroup.split(' / ')[0]) || sg.includes(subgroup.split('/')[0].trim());
-          });
-          
-          if (possibleSubgroupMatch) {
-            cleanedSubgroup = possibleSubgroupMatch;
-            console.log('[App] 🧩 Cleaned subgroup from "' + subgroup + '" to "' + cleanedSubgroup + '"');
-          } else {
-            // If no match found, clear the subgroup to show "-- Select Subgroup --"
-            cleanedSubgroup = "";
-            console.log('[App] 🗑️ No matching subgroup found, clearing to show dropdown placeholder');
-          }
-        }
-      }
-      
-      // Now set available subgroups using CLEANED group
-      if (cleanedGroup && groups.includes(cleanedGroup)) {
-        const subgroups = (typeGroupMapping[type] || {})[cleanedGroup] || [];
-        console.log('[App] 📋 Setting available subgroups for cleaned group "' + cleanedGroup + '":', subgroups);
-        setAvailableSubgroups(subgroups);
-        
-        // Update editForm with cleaned subgroup value
-        if (cleanedSubgroup !== subgroup) {
-          setEditForm(prev => ({ ...prev, subgroup: cleanedSubgroup }));
-        }
-      } else {
-        console.log('[App] ⚠️ Group not found in available groups or empty, clearing subgroups');
-        setAvailableSubgroups([]);
-      }
-    } else {
-      console.log('[App] ⚠️ No type provided, clearing all dropdowns');
-      setAvailableGroups([]);
-      setAvailableSubgroups([]);
-    }
-    
-    console.log('[App] ✅ Edit form initialized successfully');
   };
 
   const handleDeleteTicket = async (ticketId) => {
@@ -2940,7 +3007,7 @@ const cancelStatusChange = () => {
         
         const token = localStorage.getItem('access_token');
         const response = await axios.post(
-          "https://backend-oa-pqy2.onrender.com/delete-ticket",
+          `${API_BASE_URL}/delete-ticket`,
           { ticket_id: ticketId },
           {
             headers: {
@@ -2951,7 +3018,7 @@ const cancelStatusChange = () => {
         );
 
         if (response.data.success) {
-          console.log("✅ Ticket deleted");
+
           
           // Log the ticket deletion activity with user info
           try {
@@ -2960,7 +3027,7 @@ const cancelStatusChange = () => {
             const deletedBy = currentUser.username || currentUser.display_name || 'Unknown User';
             
             await axios.post(
-              "https://backend-oa-pqy2.onrender.com/api/activity-log",
+              `${API_BASE_URL}/api/activity-log`,
               {
                 action: 'delete_ticket',
                 details: {
@@ -3004,141 +3071,118 @@ const cancelStatusChange = () => {
     }
   };
 
-  // New Chat Functions
-  const loadChatMessages = async (userId) => {
-    if (!userId || userId === "announcement") return;
-    
-    setLoadingChat(true);
-    try {
-      console.log("💬 Loading chat messages for user:", userId);
-      
-      // 1. ดึงข้อความจาก textbox มาใส่ในแชทก่อน
-      console.log("💬 Processing textbox messages for user:", userId);
-      try {
-        await axios.post("https://backend-oa-pqy2.onrender.com/api/process-textbox-messages", {
-          ticket_id: userId
-        }, {
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          timeout: 10000 // 10 second timeout
-        });
-        console.log("💬 Textbox messages processed successfully");
-      } catch (textboxError) {
-        console.warn("💬 Failed to process textbox messages (continuing anyway):", textboxError.message);
-        // ไม่ให้ error นี้หยุดการทำงาน - ยังคงดึงข้อความต่อไป
-      }
-      
-      // 2. แล้วค่อยดึงข้อความทั้งหมดมาแสดง
-      console.log("💬 Fetching all messages for user:", userId);
-      const token = localStorage.getItem('access_token');
-      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
-        params: { user_id: userId },
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      console.log("💬 Messages loaded:", response.data?.length || 0, "messages");
-      setChatMessages(response.data || []);
-      
-      // เลื่อนไปข้อความล่าสุดหลังจากโหลดข้อความเสร็จ
-      setTimeout(() => {
-        scrollToLatestMessage();
-      }, 100);
-    } catch (error) {
-      console.error("Failed to load chat messages:", error);
-      setChatMessages([]);
-    } finally {
-      setLoadingChat(false);
-    }
-  };
+  // Removed stray edit-form initialization block (moved code belongs inside the edit handler)
 
-  // Auto-scroll ปิดชั่วคราวเพื่อทดสอบ
-  // useEffect(() => {
-  //   if (activeTab === 'chat' && selectedChatUser && selectedChatUser !== "announcement" && messagesEndRef.current && chatMessages.length > 0) {
-  //     setTimeout(() => {
-  //       if (messagesEndRef.current && activeTab === 'chat') {
-  //         messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-  //       }
-  //     }, 100);
-  //   }
-  // }, [chatMessages, selectedChatUser, activeTab]);
+// New Chat Functions
+const loadChatMessages = async (userId) => {
+  if (!userId || userId === "announcement") return;
 
-  // ฟังก์ชันสำหรับดึงข้อความจาก textbox ทุก ticket พร้อมกัน
-  const processAllTextboxMessages = useCallback(async () => {
-    console.log("💬 Processing textbox messages for ALL tickets...");
+  setLoadingChat(true);
+  
+  // Store current messages to prevent disappearing
+  const currentMessages = chatMessages;
+  
+  try {
+    // 1. ดึงข้อความจาก textbox มาใส่ในแชทก่อน
     try {
-      const response = await axios.post("https://backend-oa-pqy2.onrender.com/api/process-all-textbox-messages", {}, {
+      await axios.post(`${API_BASE_URL}/api/process-textbox-messages`, {
+        ticket_id: userId
+      }, {
         headers: {
           'Content-Type': 'application/json'
         },
-        timeout: 30000 // 30 second timeout for processing all
+        timeout: 10000 // 10 second timeout
       });
-      
-      console.log("💬 All textbox messages processed:", response.data);
-      
-      // รีเฟรช notifications หลังจากประมวลผลเสร็จ
-      if (response.data.processed > 0) {
-        console.log("💬 Found", response.data.processed, "new messages - refreshing notifications");
-        // รีเฟรช notifications จะทำโดย polling interval ที่ตั้งไว้แล้ว
-        console.log("💬 Notifications will be refreshed by polling interval");
-      }
-      
-      return response.data;
-    } catch (error) {
-      console.error("💬 Failed to process all textbox messages:", error);
-      throw error;
+    } catch (textboxError) {
+      // ไม่ให้ error นี้หยุดการทำงาน - ยังคงดึงข้อความต่อไป
+
     }
-  }, []);
 
-  const sendChatMessage = async () => {
-    if (!selectedChatUser || !newMessage.trim() || selectedChatUser === "announcement") return;
+    // 2. แล้วค่อยดึงข้อความทั้งหมดมาแสดง
+    const token = localStorage.getItem('access_token');
+    const response = await axios.get(`${API_BASE_URL}/api/messages`, {
+      params: { user_id: userId },
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
 
-    try {
-      setLoadingChat(true);
-      const payload = {
+    // Only update if we got valid data, otherwise keep current messages
+    if (response.data && Array.isArray(response.data)) {
+      setChatMessages(response.data);
+    } else {
+      // Keep current messages if response is invalid
+      setChatMessages(currentMessages);
+    }
+
+    // เลื่อนไปข้อความล่าสุดหลังจากโหลดข้อความเสร็จ
+    setTimeout(() => {
+      scrollToLatestMessage();
+    }, 100);
+  } catch (error) {
+    console.error("Failed to load chat messages:", error);
+    // Keep current messages on error instead of clearing
+    setChatMessages(currentMessages);
+  } finally {
+    setLoadingChat(false);
+  }
+};
+
+// Function removed - duplicate declaration exists above
+
+const sendChatMessage = async () => {
+  if (!selectedChatUser || !newMessage.trim() || selectedChatUser === "announcement") return;
+
+  try {
+    setLoadingChat(true);
+    const payload = {
+      user_id: selectedChatUser,
+      sender_type: 'admin', // ต้องเป็น 'admin' (ตัวเล็ก)
+      message: newMessage
+    };
+    const token = localStorage.getItem('access_token');
+    const response = await axios.post(`${API_BASE_URL}/api/messages`, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    // Add new message to local state (ถ้า backend ส่งกลับ message ใหม่)
+    setChatMessages(prev => [
+      ...prev,
+      response.data || {
+        id: Date.now(),
         user_id: selectedChatUser,
-        sender_type: 'admin', // ต้องเป็น 'admin' (ตัวเล็ก)
-        message: newMessage
-      };
-      const token = localStorage.getItem('access_token');
-      const response = await axios.post("https://backend-oa-pqy2.onrender.com/api/messages", payload, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      // Add new message to local state (ถ้า backend ส่งกลับ message ใหม่)
-      setChatMessages(prev => [
-        ...prev,
-        response.data || {
-          id: Date.now(),
-          user_id: selectedChatUser,
-          sender_type: 'admin',
-          message: newMessage,
-          timestamp: new Date().toISOString()
-        }
-      ]);
-      setNewMessage("");
-      
-      // เลื่อนไปข้อความล่าสุดหลังจากส่งข้อความใหม่
-      setTimeout(() => {
-        scrollToLatestMessage();
-      }, 100);
-    } catch (error) {
-      console.error("Failed to send chat message:", error);
-      if (error.response && error.response.data) {
-        console.error("Backend error message:", error.response.data);
-        alert("Error: " + (error.response.data.error || JSON.stringify(error.response.data)));
-      } else {
-        alert("Failed to send message. Please try again.");
+        sender_type: 'admin',
+        message: newMessage,
+        timestamp: new Date().toISOString()
       }
-    } finally {
-      setLoadingChat(false);
+    ]);
+    setNewMessage("");
+    
+    // เลื่อนไปข้อความล่าสุดหลังจากส่งข้อความใหม่
+    setTimeout(() => {
+      scrollToLatestMessage();
+    }, 100);
+    
+    // Trigger notification check immediately after sending message
+    // This ensures other admins get notified right away
+    setTimeout(() => {
+      checkForNewMessages();
+    }, 500);
+  } catch (error) {
+    console.error("Failed to send chat message:", error);
+    if (error.response && error.response.data) {
+      console.error("Backend error message:", error.response.data);
+      alert("Error: " + (error.response.data.error || JSON.stringify(error.response.data)));
+    } else {
+      alert("Failed to send message. Please try again.");
     }
-  };
+  } finally {
+    setLoadingChat(false);
+  }
+};
 
   const clearChatHistory = async () => {
     if (!selectedChatUser || selectedChatUser === "announcement") return;
@@ -3146,7 +3190,7 @@ const cancelStatusChange = () => {
     if (window.confirm("คุณแน่ใจหรือไม่ว่าต้องการลบประวัติการสนทนาทั้งหมด?")) {
       try {
         const token = localStorage.getItem('access_token');
-        await axios.post("https://backend-oa-pqy2.onrender.com/api/messages/delete", {
+        await axios.post(`${API_BASE_URL}/api/messages/delete`, {
           user_id: selectedChatUser
         }, {
           headers: {
@@ -3174,7 +3218,7 @@ const cancelStatusChange = () => {
     try {
       const token = localStorage.getItem('access_token');
       const response = await axios.post(
-        "https://backend-oa-pqy2.onrender.com/send-announcement",
+        `${API_BASE_URL}/send-announcement`,
         { message: announcementMessage },
         { 
           headers: { 
@@ -3211,7 +3255,7 @@ const cancelStatusChange = () => {
   useEffect(() => {
     const fetchChatUsers = async () => {
       try {
-        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/chat-users");
+        const response = await axios.get(`${API_BASE_URL}/api/chat-users`);
         // response.data should be an array of { user_id, name }
         setChatUsers(Array.isArray(response.data) ? response.data : []);
       } catch (error) {
@@ -3228,15 +3272,39 @@ const cancelStatusChange = () => {
 
     const pollMessages = async () => {
       try {
-        const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/messages", {
-          params: { user_id: selectedChatUser }
+        const token = localStorage.getItem('access_token');
+        const response = await axios.get(`${API_BASE_URL}/api/messages`, {
+          params: { user_id: selectedChatUser },
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
         
         if (response.data && Array.isArray(response.data)) {
+          // Check for new messages and trigger notification
+          const prevMessages = chatMessages;
+          const newMessages = response.data.filter(msg => 
+            msg.sender_type === 'user' &&
+            !prevMessages.some(prev => prev.id === msg.id)
+          );
+          
+          // Trigger popup for new user messages
+          if (newMessages.length > 0 && selectedChatUser !== newMessages[0].user_id) {
+            const latestNewMsg = newMessages[newMessages.length - 1];
+            const userName = chatUsers.find(u => u.user_id === latestNewMsg.user_id)?.name || 'User';
+            
+            setNewMessageAlert({
+              user_id: latestNewMsg.user_id,
+              user: userName,
+              message: latestNewMsg.message,
+              timestamp: latestNewMsg.timestamp
+            });
+          }
+          
           setChatMessages(response.data);
         }
       } catch (error) {
-        console.error("Failed to poll messages:", error);
+        // Don't log error to reduce console spam
       }
     };
 
@@ -3279,7 +3347,7 @@ const cancelStatusChange = () => {
     setRetryCount(prev => prev + 1);
     
     try {
-      const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/data", {
+      const response = await axios.get(`${API_BASE_URL}/api/data`, {
         timeout: 15000, // 15 second timeout for manual retry
         headers: {
           'Content-Type': 'application/json',
@@ -3293,7 +3361,7 @@ const cancelStatusChange = () => {
       setLastSync(new Date());
       
       // Show success message
-      console.log("✅ Manual retry successful - backend reconnected");
+
       
     } catch (error) {
       console.error("❌ Manual retry failed:", error);
@@ -3622,14 +3690,11 @@ const cancelStatusChange = () => {
     return showAllRankings ? rankings : rankings.slice(0, 5);
   };
 
-
-
-
 // Note: handleEditTicket, handleTypeChange, handleGroupChange, handleSubgroupChange are now defined earlier in the component
 
   // Handle form field changes
   const handleEditFormChange = (field, value) => {
-    console.log(`[App] 📝 Edit form field '${field}' changed to:`, value);
+
     setEditForm(prev => ({ ...prev, [field]: value }));
   };
 
@@ -3717,10 +3782,10 @@ const cancelStatusChange = () => {
       
       if (isValid(editForm.status)) payload.status = editForm.status;
   
-      console.log('[App] Sending update payload:', JSON.stringify(payload, null, 2));
+
       
       const response = await axios.post(
-        "https://backend-oa-pqy2.onrender.com/update-ticket",
+        `${API_BASE_URL}/update-ticket`,
         payload,
         {
           headers: {
@@ -3761,7 +3826,7 @@ const cancelStatusChange = () => {
         
         // Refresh dashboard if appointment was updated to reflect changes
         if (payload.appointment !== undefined || payload.appointment_datetime !== undefined) {
-          console.log('[App] Appointment updated, refreshing dashboard data...');
+
           // Force refresh of dashboard data
           setTimeout(() => {
             fetchData();
@@ -3820,18 +3885,15 @@ const cancelStatusChange = () => {
 
   // --- ฟังก์ชันเช็คข้อความใหม่และโหลด notifications ---
   const checkForNewMessages = useCallback(async () => {
-    console.log("🔔 ==> CHECKING FOR NEW MESSAGES - FUNCTION CALLED!");
-    console.log("🔔 Current notifications count:", notifications.length);
-    console.log("🔔 Current hasUnread:", hasUnread);
-    console.log("🔔 Current newMessageAlert:", newMessageAlert);
+
     try {
       // 1. โหลด notifications ทั้งหมดจาก backend
-      const notificationsResponse = await axios.get("https://backend-oa-pqy2.onrender.com/api/notifications", {
+      const notificationsResponse = await axios.get(`${API_BASE_URL}/api/notifications`, {
         timeout: 5000,
         headers: { 'Content-Type': 'application/json' }
       });
       
-      console.log("🔔 Notifications loaded:", notificationsResponse.data.length, "items");
+
       
       // 2. เช็คว่ามี notifications ใหม่หรือไม่
       const currentNotifications = notifications;
@@ -3842,26 +3904,64 @@ const cancelStatusChange = () => {
         !currentNotifications.some(current => current.id === newItem.id)
       );
       
-      console.log("🔔 New notifications found:", newItems.length);
+      console.log('🔔 Notification check:', {
+        totalNotifications: newNotifications.length,
+        currentNotifications: currentNotifications.length,
+        newItems: newItems.length,
+        newItemsData: newItems
+      });
       
-      // 3. ถ้ามี notification ใหม่ที่เป็น new_message จาก user เท่านั้น ให้แสดง popup
+      // 3. ถ้ามี notification ใหม่ที่เป็น new_message ให้แสดง popup (ทั้งจาก user และ admin)
       const newMessageNotifications = newItems.filter(item => {
+        // Parse meta_data if it's a string
+        let metaData = item.meta_data;
+        if (typeof metaData === 'string') {
+          try {
+            metaData = JSON.parse(metaData);
+          } catch (e) {
+            metaData = {};
+          }
+        }
+        
         // ตรวจสอบเงื่อนไขที่อ่อนกว่าเดิม
-        const isNewMessage = item.meta_data?.type === 'new_message';
+        const isNewMessage = metaData?.type === 'new_message' || item.type === 'new_message';
         const isUnread = !item.read;
-        const isFromUser = item.meta_data?.sender_type === 'user' || !item.meta_data?.sender_type; // รวมทั้งกรณีที่ไม่มี sender_type
+        // แสดง notification สำหรับข้อความจาก user เท่านั้น (ตามที่ user ต้องการ)
+        const isFromUser = metaData?.sender_type === 'user';
+        
+        console.log('🔔 Checking notification item:', {
+          id: item.id,
+          isNewMessage,
+          isUnread,
+          isFromUser,
+          meta_data: metaData,
+          sender_type: metaData?.sender_type
+        });
         
         return isNewMessage && isUnread && isFromUser;
       });
       
+      console.log('🔔 New message notifications found:', newMessageNotifications.length);
+      
       if (newMessageNotifications.length > 0) {
         const latestMsg = newMessageNotifications[0];
+        console.log('🔔 Setting new message alert for:', latestMsg);
+        
+        // Parse meta_data if needed
+        let metaData = latestMsg.meta_data;
+        if (typeof metaData === 'string') {
+          try {
+            metaData = JSON.parse(metaData);
+          } catch (e) {
+            metaData = {};
+          }
+        }
         
         // หาชื่อจริงจาก ticket data
         let ticketsData = data;
         if (data.length === 0) {
           try {
-            const ticketsResponse = await axios.get("https://backend-oa-pqy2.onrender.com/api/tickets", {
+            const ticketsResponse = await axios.get(`${API_BASE_URL}/api/tickets`, {
               timeout: 3000,
               headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
@@ -3885,13 +3985,14 @@ const cancelStatusChange = () => {
                          ticket?.display_name || 
                          ticket?.email?.split('@')[0] || // ใช้ชื่อจาก email
                          latestMsg.sender_name || 
-                         latestMsg.meta_data?.sender_name;
+                         metaData?.sender_name;
         
         // ถ้ายังไม่มีชื่อ หรือชื่อเป็น LINE ID ให้ใช้ชื่อเริ่มต้น
         if (!displayName || (displayName.startsWith('U') && displayName.length > 10)) {
           displayName = `LINE User ${latestMsg.user_id?.substring(0, 8) || 'Unknown'}`;
         }
         
+        // แสดง popup notification
         setNewMessageAlert({
           user: displayName,
           message: latestMsg.message,
@@ -3906,17 +4007,17 @@ const cancelStatusChange = () => {
       setNotifications(newNotifications);
       
       // 5. เช็คว่ามี unread notifications หรือไม่
-      const hasUnreadNotifications = newNotifications.some(n => !n.read);
-      console.log("🔔 Has unread notifications:", hasUnreadNotifications);
+      const hasUnreadNotifications = notificationsResponse.data.some(n => !n.read);
+
       setHasUnread(hasUnreadNotifications);
       
     } catch (error) {
       console.error("🔔 Error checking notifications:", error);
       // ถ้า API ไม่มี ให้ลองใช้ API เก่า
       if (error.response?.status === 404) {
-        console.log("🔔 Trying old API endpoint...");
+
         try {
-          const response = await axios.get("https://backend-oa-pqy2.onrender.com/api/check-new-messages", {
+          const response = await axios.get(`${API_BASE_URL}/api/check-new-messages`, {
             params: { last_checked: lastMessageCheck.toISOString() }
           });
           if (response.data.new_messages && response.data.new_messages.length > 0) {
@@ -3942,7 +4043,7 @@ const cancelStatusChange = () => {
   useEffect(() => {
     // เรียกครั้งแรกเมื่อ component mount
     const initializeApp = async () => {
-      console.log("🚀 Initializing app - processing textbox messages first...");
+
       
       // 1. ดึงข้อความจาก textbox ทุก ticket ก่อน
       try {
@@ -3957,8 +4058,8 @@ const cancelStatusChange = () => {
     
     initializeApp();
     
-    // ตั้ง interval ให้เช็คทุก 7 วินาที
-    const interval = setInterval(checkForNewMessages, 7000);
+    // ตั้ง interval ให้เช็คทุก 5 วินาที (ลดเวลาลงเพื่อให้ได้ notification เร็วขึ้น)
+    const interval = setInterval(checkForNewMessages, 5000);
     return () => clearInterval(interval);
   }, [checkForNewMessages, processAllTextboxMessages]);
 
@@ -4878,7 +4979,7 @@ const cancelStatusChange = () => {
                               <TableCell>
                                 {isEditing ? (
                                   <select
-                                    value={editForm.type}
+                                    value={editForm.type || ""}
                                     onChange={handleTypeChange}
                                     disabled={editLoading}
                                     style={{
@@ -4893,12 +4994,9 @@ const cancelStatusChange = () => {
                                     <option value="">-- Select Type --</option>
                                     {(() => {
                                       const keys = Object.keys(typeGroupMapping);
-                                      console.log('[App] 🎯 Current typeGroupMapping keys for dropdown:', keys);
-                                      console.log('[App] 🎯 Full typeGroupMapping:', typeGroupMapping);
-                                      return keys.map(t => {
-                                        console.log('[App] 🎯 Rendering Type option:', t);
-                                        return <option key={t} value={t}>{t}</option>;
-                                      });
+                                      return keys.map(t => (
+                                        <option key={t} value={t}>{t}</option>
+                                      ));
                                     })()}
                                   </select>
                                 ) : (row["Type"] || "None")}
@@ -4920,14 +5018,6 @@ const cancelStatusChange = () => {
                                   >
                                     <option value="">-- Select Group --</option>
                                      {(() => {
-                                        console.log('[App] 📝 Group dropdown rendering - availableGroups:', availableGroups);
-                                        console.log('[App] 📝 Current editForm.group:', editForm.group);
-                                        console.log('[App] 📝 Current editForm.type:', editForm.type);
-                                        console.log('[App] 📝 Group value matches options?', availableGroups.includes(editForm.group));
-                                        console.log('[App] 📝 Current typeGroupMapping:', Object.keys(typeGroupMapping));
-                                        console.log('[App] 📝 editForm.group type:', typeof editForm.group);
-                                        console.log('[App] 📝 availableGroups types:', availableGroups.map(g => typeof g));
-                                        console.log('[App] 📝 Exact match check:', availableGroups.map(g => ({ option: g, matches: g === editForm.group, groupVal: editForm.group })));
                                         return availableGroups.map(g => (
                                           <option key={g} value={g}>{g}</option>
                                         ));
@@ -4965,13 +5055,6 @@ const cancelStatusChange = () => {
                                   >
                                     <option value="">-- Select Subgroup --</option>
                                     {(() => {
-                                       console.log('[App] 📝 Subgroup dropdown rendering - availableSubgroups:', availableSubgroups);
-                                       console.log('[App] 📝 Current editForm.subgroup:', editForm.subgroup);
-                                       console.log('[App] 📝 Current editForm.group:', editForm.group);
-                                       console.log('[App] 📝 Subgroup value matches options?', availableSubgroups.includes(editForm.subgroup));
-                                       console.log('[App] 📝 editForm.subgroup type:', typeof editForm.subgroup);
-                                       console.log('[App] 📝 availableSubgroups types:', availableSubgroups.map(sg => typeof sg));
-                                       console.log('[App] 📝 Exact subgroup match check:', availableSubgroups.map(sg => ({ option: sg, matches: sg === editForm.subgroup, subgroupVal: editForm.subgroup })));
                                        return availableSubgroups.map(sg => (
                                          <option key={sg} value={sg}>{sg}</option>
                                        ));
@@ -5454,12 +5537,49 @@ const cancelStatusChange = () => {
             {/* ป๊อบอัพแจ้งเตือนข้อความใหม่ */}
             {newMessageAlert && (
               <NewMessageNotification
-                alert={{ ...newMessageAlert, sender_name: newMessageAlert.sender_name || newMessageAlert.user }}
+                alert={newMessageAlert}
                 onClose={() => setNewMessageAlert(null)}
                 onReply={(user_id) => {
-                  setSelectedChatUser(user_id);
+                  console.log('🎯 onReply called with user_id:', user_id);
+                  
+                  // Ensure user exists in chatUsers list
+                  const userExists = chatUsers.find(u => u.user_id === user_id);
+                  if (!userExists && user_id && user_id !== "announcement") {
+                    const userName = newMessageAlert?.user || 
+                                   newMessageAlert?.sender_name || 
+                                   `User ${user_id.substring(0, 8)}`;
+                    const newUser = {
+                      user_id: user_id,
+                      name: userName,
+                      last_message_time: new Date().toISOString()
+                    };
+                    setChatUsers(prev => [...prev, newUser]);
+                    console.log('➕ Added new user to chatUsers:', newUser);
+                  }
+                  
+                  // Navigate to chat tab and select user
                   setActiveTab('chat');
-                  scrollToChat();
+                  setSelectedChatUser(user_id);
+                  
+                  // Load messages for the user
+                  if (user_id && user_id !== "announcement") {
+                    loadChatMessages(user_id);
+                  }
+                  
+                  // Close the notification popup
+                  setNewMessageAlert(null);
+                  
+                  // Focus on chat input after a short delay to ensure UI is updated
+                  setTimeout(() => {
+                    const chatInput = document.querySelector('textarea[placeholder="Type your message here..."]');
+                    if (chatInput) {
+                      chatInput.focus();
+                      console.log('✅ Chat input focused');
+                    }
+                    scrollToLatestMessage();
+                  }, 200);
+                  
+                  console.log('✅ Navigation to chat completed for user:', user_id);
                 }}
               />
             )}
@@ -5499,6 +5619,8 @@ const cancelStatusChange = () => {
       
       <Route path="/" element={<Navigate to="/dashboard" />} />
       </Routes>
+      
+
     </PermissionProvider>
   );
 }

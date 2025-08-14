@@ -3,15 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@eslint/eslintrc": "^1.4.1",
     "@heroicons/react": "^2.2.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
+    "ajv": "^8.12.0",
     "axios": "^1.10.0",
     "chart.js": "^4.5.0",
     "chartjs-plugin-datalabels": "^2.2.0",
+    "eslint": "^8.56.0",
     "lucide-react": "^0.513.0",
+    "postcss-selector-parser": "^6.0.10",
     "react": "^19.1.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.1.0",
@@ -20,6 +24,7 @@
     "react-toastify": "^11.0.5",
     "socket.io-client": "^4.8.1",
     "styled-components": "^6.1.19",
+    "typescript": "^5.9.2",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
