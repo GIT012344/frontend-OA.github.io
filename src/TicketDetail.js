@@ -9,7 +9,7 @@ const TicketDetail = ({ ticketId }) => {
     const fetchTicket = async () => {
       try {
         setLoading(true);
-        const API_BASE_URL = process.env.REACT_APP_API_BASE || 'http://127.0.0.1:5004';
+        const API_BASE_URL = process.env.REACT_APP_API_BASE || '';
         const response = await axios.get(`${API_BASE_URL}/api/ticket/${ticketId}`);
         setTicket(response.data);
       } catch (error) {

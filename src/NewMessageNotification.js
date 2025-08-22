@@ -91,9 +91,7 @@ export default function NewMessageNotification({ alert, onClose, onReply }) {
           minute: '2-digit',
           hour12: false
         })}</PopupTime>
-        <PopupButton onClick={() => { onReply(alert.user_id); onClose(); }}>
-          ไปที่แชท
-        </PopupButton>
+        
       </PopupBody>
       <style>{`@keyframes slideInNotif { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
     </PopupContainer>

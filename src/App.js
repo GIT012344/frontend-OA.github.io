@@ -30,7 +30,7 @@ import UserManagement from './components/UserManagement';
 import PermissionProvider from './contexts/PermissionContext';
 
 // Base API URL configuration
-const API_BASE_URL = process.env.REACT_APP_API_BASE || "http://127.0.0.1:5004";
+const API_BASE_URL = process.env.REACT_APP_API_BASE !== undefined ? process.env.REACT_APP_API_BASE : "";
 
 // Standardized date formatting functions
 const formatDate = {
@@ -1969,6 +1969,7 @@ function App() {
   // --- แจ้งเตือนข้อความใหม่ ---
   const [newMessageAlert, setNewMessageAlert] = useState(null);
   const [lastMessageCheck, setLastMessageCheck] = useState(new Date());
+  const [shownPopupIds, setShownPopupIds] = useState(new Set()); // Track notification IDs that already showed popup
 
   // --- เพิ่ม state สำหรับ highlight ข้อความล่าสุด ---
   const [highlightMsgId, setHighlightMsgId] = useState(null);
@@ -2280,16 +2281,19 @@ const cancelStatusChange = () => {
             const isNewMessage = n.meta_data?.type === 'new_message' || n.meta_data?.type === 'textbox_message';
             const isFromUser = n.meta_data?.sender_type === 'user' || n.meta_data?.type === 'textbox_message';
             const isNew = !prevNotifications.some(prev => prev.id === n.id);
+            const notShownPopup = !shownPopupIds.has(n.id); // Check if popup was NOT already shown for this notification
             
             console.log(`🔍 Checking notification ${n.id}:`, {
               isUnread,
               isNewMessage,
               isFromUser,
               isNew,
+              notShownPopup,
               meta_data: n.meta_data
             });
             
-            return isUnread && isNewMessage && isFromUser && isNew;
+            // Only show popup for truly new messages that haven't been shown before
+            return isUnread && isNewMessage && isFromUser && isNew && notShownPopup;
           });
           
           console.log('🆕 New unread messages found:', newUnreadMessages.length);
@@ -2299,11 +2303,19 @@ const cancelStatusChange = () => {
             const latestMessage = newUnreadMessages[0];
             console.log('🔔 TRIGGERING POPUP for message:', latestMessage);
             
+            // Mark this notification as shown
+            setShownPopupIds(prev => {
+              const newSet = new Set(prev);
+              newSet.add(latestMessage.id);
+              return newSet;
+            });
+            
             const alertData = {
               user_id: latestMessage.meta_data.user_id,
               user: latestMessage.sender_name || latestMessage.meta_data?.sender_name || 'User',
               message: latestMessage.message,
-              timestamp: latestMessage.timestamp
+              timestamp: latestMessage.timestamp,
+              notificationId: latestMessage.id // Add notification ID to track it
             };
             
             console.log('📢 Setting newMessageAlert with:', alertData);
@@ -2768,7 +2780,7 @@ const cancelStatusChange = () => {
     } else {
       // Mark all notifications as read
       axios
-        .post(`${API_BASE_URL}/mark-all-notifications-read`)
+        .post(`${API_BASE_URL}/api/mark-all-notifications-read`)
         .then(() => {
           setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
           setHasUnread(false);
@@ -2864,7 +2876,7 @@ const cancelStatusChange = () => {
 
   const deleteNotification = async (id) => {
     try {
-      await axios.post(`${API_BASE_URL}/delete-notification`, { id });
+      await axios.post(`${API_BASE_URL}/api/delete-notification`, { id });
       setNotifications(notifications.filter((n) => n.id !== id));
     } catch (err) {
       console.error("Error deleting notification:", err);
@@ -3217,8 +3229,17 @@ const sendChatMessage = async () => {
 
     try {
       const token = localStorage.getItem('access_token');
+      
+      // Check if token exists
+      if (!token) {
+        alert("กรุณาเข้าสู่ระบบใหม่เพื่อส่งประกาศ");
+        // Redirect to login page
+        window.location.href = '/login';
+        return;
+      }
+      
       const response = await axios.post(
-        `${API_BASE_URL}/send-announcement`,
+        `${API_BASE_URL}/api/send-announcement`,
         { message: announcementMessage },
         { 
           headers: { 
@@ -3229,7 +3250,7 @@ const sendChatMessage = async () => {
       );
 
       if (response.data.success) {
-        alert(`ส่งประกาศสำเร็จไปยัง ${response.data.recipient_count} คน`);
+        alert(`ส่งประกาศสำเร็จไปยัง ${response.data.recipients} คน`);
         setAnnouncementMessage("");
 
         setNotifications((prev) => [
@@ -3247,7 +3268,19 @@ const sendChatMessage = async () => {
       }
     } catch (err) {
       console.error("❌ Failed to send announcement:", err);
-      alert("เกิดข้อผิดพลาดในการส่งประกาศ");
+      
+      // Check if error is due to expired token (401 Unauthorized)
+      if (err.response && err.response.status === 401) {
+        // Clear expired token
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        
+        alert("เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่");
+        // Redirect to login page
+        window.location.href = '/login';
+      } else {
+        alert("เกิดข้อผิดพลาดในการส่งประกาศ");
+      }
     }
   };
 
@@ -3904,12 +3937,7 @@ const sendChatMessage = async () => {
         !currentNotifications.some(current => current.id === newItem.id)
       );
       
-      console.log('🔔 Notification check:', {
-        totalNotifications: newNotifications.length,
-        currentNotifications: currentNotifications.length,
-        newItems: newItems.length,
-        newItemsData: newItems
-      });
+    
       
       // 3. ถ้ามี notification ใหม่ที่เป็น new_message ให้แสดง popup (ทั้งจาก user และ admin)
       const newMessageNotifications = newItems.filter(item => {
@@ -3941,11 +3969,11 @@ const sendChatMessage = async () => {
         return isNewMessage && isUnread && isFromUser;
       });
       
-      console.log('🔔 New message notifications found:', newMessageNotifications.length);
+      
       
       if (newMessageNotifications.length > 0) {
         const latestMsg = newMessageNotifications[0];
-        console.log('🔔 Setting new message alert for:', latestMsg);
+        
         
         // Parse meta_data if needed
         let metaData = latestMsg.meta_data;

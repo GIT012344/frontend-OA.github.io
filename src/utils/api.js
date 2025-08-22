@@ -1,7 +1,7 @@
 import AuthManager from './auth';
 
-// API Base URL
-const API_BASE_URL = process.env.REACT_APP_API_BASE || 'http://127.0.0.1:5004';
+// API Base URL - use empty string for relative path (works with IIS proxy)
+const API_BASE_URL = process.env.REACT_APP_API_BASE || '';
 
 // API Utilities
 class ApiUtils {

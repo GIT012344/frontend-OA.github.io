@@ -130,7 +130,7 @@ export default function TicketEditForm({ initialTicket = {}, onSave, onCancel })
         payload.requested = form.group;
         payload.request = form.group; // legacy fallback
       }
-      const API_BASE_URL = process.env.REACT_APP_API_BASE || 'http://127.0.0.1:5004';
+      const API_BASE_URL = process.env.REACT_APP_API_BASE || '';
       await axios.post(`${API_BASE_URL}/update-ticket`, payload);
       setSaving(false);
       onSave?.();

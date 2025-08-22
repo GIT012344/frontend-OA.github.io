@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE || 'http://127.0.0.1:5004';
+const API_BASE_URL = process.env.REACT_APP_API_BASE || '';
 
 const Container = styled.div`
   padding: 20px;

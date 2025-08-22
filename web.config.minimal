@@ -3,21 +3,31 @@
   <system.webServer>
     <rewrite>
       <rules>
-        <!-- Simple API Proxy -->
+        <!-- Comprehensive API Proxy - Covers all /api/* endpoints -->
         <rule name="API" stopProcessing="true">
           <match url="^api/(.*)" />
           <action type="Rewrite" url="http://127.0.0.1:5004/api/{R:1}" />
         </rule>
         
-        <!-- Individual Endpoints -->
+        <!-- Individual Non-API Endpoints -->
         <rule name="DeleteTicket" stopProcessing="true">
           <match url="^delete-ticket$" />
           <action type="Rewrite" url="http://127.0.0.1:5004/delete-ticket" />
         </rule>
         
+        <rule name="DeleteNotification" stopProcessing="true">
+          <match url="^delete-notification$" />
+          <action type="Rewrite" url="http://127.0.0.1:5004/delete-notification" />
+        </rule>
+        
         <rule name="UpdateStatus" stopProcessing="true">
           <match url="^update-status$" />
           <action type="Rewrite" url="http://127.0.0.1:5004/update-status" />
+        </rule>
+        
+        <rule name="UpdateTicket" stopProcessing="true">
+          <match url="^update-ticket$" />
+          <action type="Rewrite" url="http://127.0.0.1:5004/update-ticket" />
         </rule>
         
         <rule name="TypeGroupSubgroup" stopProcessing="true">
@@ -40,9 +50,9 @@
           <action type="Rewrite" url="http://127.0.0.1:5004/process-all-textbox-messages" />
         </rule>
         
-        <rule name="UpdateTicket" stopProcessing="true">
-          <match url="^update-ticket$" />
-          <action type="Rewrite" url="http://127.0.0.1:5004/update-ticket" />
+        <rule name="ProcessTextboxMessagesShort" stopProcessing="true">
+          <match url="^process-textbox-messages$" />
+          <action type="Rewrite" url="http://127.0.0.1:5004/process-textbox-messages" />
         </rule>
         
         <!-- React SPA -->
