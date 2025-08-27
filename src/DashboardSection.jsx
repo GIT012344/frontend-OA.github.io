@@ -103,24 +103,62 @@ const statusMeta = {
   "In Process": { color: "#f59e0b", gradient: "linear-gradient(135deg,#fbbf24,#f59e0b)", icon: <ClockIcon /> }, // Yellow/Orange
   Pending: { color: "#ea580c", gradient: "linear-gradient(135deg,#fb923c,#ea580c)", icon: <CalendarDaysIcon /> }, // Dark Orange/Red-Orange
   Closed: { color: "#10b981", gradient: "linear-gradient(135deg,#6ee7b7,#10b981)", icon: <CheckCircleIcon /> }, // Green
+  "Daily Closed": { color: "#8b5cf6", gradient: "linear-gradient(135deg,#c084fc,#8b5cf6)", icon: <CalendarDaysIcon /> }, // Purple
   Cancelled: { color: "#ef4444", gradient: "linear-gradient(135deg,#fca5a5,#ef4444)", icon: <XCircleIcon /> }, // Red
   Reject: { color: "#dc2626", gradient: "linear-gradient(135deg,#f87171,#dc2626)", icon: <XCircleIcon /> }, // Dark Red
 };
 
 // ---------- Helper ----------
 function buildBarData(dailyRaw) {
-  const daily = [...dailyRaw].sort((a,b)=> a.date - b.date);
-  const labels = daily.map((d) => d.date.toLocaleDateString('th-TH', {
-    month: '2-digit',
-    day: '2-digit'
-  }));
+  // Handle both Object and Array formats
+  if (!dailyRaw) {
+    return { labels: [], datasets: [] };
+  }
+  
+  let labels = [];
+  let dataByStatus = {};
+  
+  // Initialize data structure for each status
+  Object.keys(statusMeta).forEach(status => {
+    dataByStatus[status] = [];
+  });
+  
+  // Check if dailyRaw is an Object (from App.js) or Array
+  if (typeof dailyRaw === 'object' && !Array.isArray(dailyRaw)) {
+    // Handle Object format: { "27/08": { New: 0, ... }, "26/08": { ... } }
+    labels = Object.keys(dailyRaw).sort((a, b) => {
+      // Sort by date (DD/MM format)
+      const [dayA, monthA] = a.split('/').map(Number);
+      const [dayB, monthB] = b.split('/').map(Number);
+      if (monthA !== monthB) return monthA - monthB;
+      return dayA - dayB;
+    });
+    
+    labels.forEach(date => {
+      Object.keys(statusMeta).forEach(status => {
+        dataByStatus[status].push(dailyRaw[date][status] || 0);
+      });
+    });
+  } else if (Array.isArray(dailyRaw)) {
+    // Handle Array format (legacy)
+    const daily = [...dailyRaw].sort((a,b)=> a.date - b.date);
+    labels = daily.map((d) => d.date.toLocaleDateString('th-TH', {
+      month: '2-digit',
+      day: '2-digit'
+    }));
+    Object.keys(statusMeta).forEach(status => {
+      dataByStatus[status] = daily.map((d) => d[status] || 0);
+    });
+  }
+  
   const datasets = Object.keys(statusMeta).map((status) => ({
     label: status,
     backgroundColor: statusMeta[status].color + "AA",
-    data: daily.map((d) => d[status] || 0),
+    data: dataByStatus[status],
     stack: "stack1",
     borderWidth: 0,
   }));
+  
   return { labels, datasets };
 }
 // ลบ DashboardWrapper ออกเนื่องจากมี Sidebar อยู่แล้วใน App.js

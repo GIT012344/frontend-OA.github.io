@@ -1908,6 +1908,7 @@ function App() {
   const [statusChangeRemarks, setStatusChangeRemarks] = useState("");
   const [tempNewStatus, setTempNewStatus] = useState("");
   const [tempTicketId, setTempTicketId] = useState("");
+  const [chatUserSearchTerm, setChatUserSearchTerm] = useState("");
 
   // Announcement System State (preserved)
   const [announcementMessage, setAnnouncementMessage] = useState("");
@@ -2156,7 +2157,7 @@ function App() {
         );
         
         // แสดง toast หรือ notification
-        showErrorToast(`ไม่สามารถอัพเดทสถานะได้: ${response.data.error}`);
+        showErrorToast(`ไม่สามารถอัพเดตสถานะได้: ${response.data.error}`);
       }
     } catch (error) {
       // 6. จัดการกรณีเกิด error ในการเชื่อมต่อ
@@ -2586,9 +2587,8 @@ const cancelStatusChange = () => {
       if (editingTicketId && editForm.type) {
 
         const newGroupOptions = Object.keys(newMapping[editForm.type] || {});
-        setAvailableGroups(newGroupOptions);
         
-        // If current group is no longer valid, reset it
+        // Clean group value to match available options
         if (editForm.group && !newGroupOptions.includes(editForm.group)) {
 
           setEditForm(prev => ({ ...prev, group: '', subgroup: '' }));
@@ -3123,7 +3123,7 @@ const loadChatMessages = async (userId) => {
     if (response.data && Array.isArray(response.data)) {
       setChatMessages(response.data);
     } else {
-      // Keep current messages if response is invalid
+      // Keep current messages on error instead of clearing
       setChatMessages(currentMessages);
     }
 
@@ -4318,10 +4318,156 @@ const sendChatMessage = async () => {
               <div ref={dashboardRef}>
                 <Title>Ticket Management System</Title>
                 <DashboardSection
-                  stats={getBasicStats()}
-                  daily={getDailySummary()}
-                  upcoming={getUpcomingAppointments()}
-                  overdue={getOverdueAppointments()}
+                  stats={(() => {
+                    // คำนวณ stats พื้นฐาน - ต้องมีทุก field ที่ DashboardSection คาดหวัง
+                    const stats = {
+                      New: 0,
+                      "In Process": 0,
+                      Pending: 0,
+                      Closed: 0,
+                      "Daily Closed": 0,
+                      Cancelled: 0,
+                      Reject: 0
+                    };
+                    
+                    // นับจำนวนตามสถานะ
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    
+                    data.forEach(item => {
+                      const status = item["สถานะ"];
+                      // นับเฉพาะสถานะที่มีจริงๆ ไม่เปลี่ยน None เป็น New
+                      if (status === "New") {
+                        stats.New++;
+                      }
+                      else if (status === "Pending") {
+                        stats.Pending++;
+                      }
+                      else if (status === "In Process") {
+                        stats["In Process"]++;
+                      }
+                      else if (status === "Closed") {
+                        stats.Closed++;
+                        
+                        // นับ Daily Closed - tickets ที่ถูก close วันนี้
+                        const closedDate = item["วันที่แจ้ง"];
+                        if (closedDate && status === "Closed") {
+                          const ticketDate = new Date(closedDate);
+                          ticketDate.setHours(0, 0, 0, 0);
+                          if (ticketDate.getTime() === today.getTime()) {
+                            stats["Daily Closed"]++;
+                          }
+                        }
+                      }
+                      else if (status === "Cancelled") {
+                        stats.Cancelled++;
+                      }
+                      else if (status === "Reject") {
+                        stats.Reject++;
+                      }
+                    });
+                    
+                    return stats;
+                  })()}
+                  daily={(() => {
+                    // สร้าง daily summary
+                    const dailyData = {};
+                    const last7Days = [];
+                    const today = new Date();
+                    
+                    // สร้างรายการ 7 วันย้อนหลัง
+                    for (let i = 6; i >= 0; i--) {
+                      const date = new Date();
+                      date.setDate(today.getDate() - i);
+                      // ใช้ format MM/DD แทน
+                      const month = String(date.getMonth() + 1).padStart(2, '0');
+                      const day = String(date.getDate()).padStart(2, '0');
+                      const dateStr = `${day}/${month}`;
+                      last7Days.push(dateStr);
+                      dailyData[dateStr] = {
+                        New: 0,
+                        "In Process": 0,
+                        Pending: 0,
+                        Closed: 0
+                      };
+                    }
+                    
+                    // นับจำนวนตามวันที่
+                    data.forEach(item => {
+                      const createdAt = item["วันที่แจ้ง"] || item.created_at;
+                      if (createdAt) {
+                        const date = new Date(createdAt);
+                        // ใช้ format เดียวกับที่สร้าง dailyData
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const dateStr = `${day}/${month}`;
+                        
+                        if (dailyData[dateStr]) {
+                          const status = item["สถานะ"] || item.status;
+                          if (status === "New") dailyData[dateStr].New++;
+                          else if (status === "In Process") dailyData[dateStr]["In Process"]++;
+                          else if (status === "Pending") dailyData[dateStr].Pending++;
+                          else if (status === "Closed") dailyData[dateStr].Closed++;
+                        }
+                      }
+                    });
+                    
+                    return dailyData;
+                  })()}
+                  upcoming={(() => {
+                    // รายการนัดหมายที่กำลังจะมาถึง
+                    const upcoming = [];
+                    const now = new Date();
+                    
+                    data.forEach(item => {
+                      const appointment = item.Appointment || item.appointment || item.appointment_datetime;
+                      if (appointment && appointment !== "N/A" && appointment !== "") {
+                        const appointmentDate = new Date(appointment);
+                        if (appointmentDate > now) {
+                          upcoming.push({
+                            ticketId: item["Ticket ID"],
+                            name: item["ชื่อ"] || item.name,
+                            date: appointmentDate,
+                            status: item["สถานะ"] || item.status
+                          });
+                        }
+                      }
+                    });
+                    
+                    // เรียงลำดับตามวันที่
+                    upcoming.sort((a, b) => a.date - b.date);
+                    
+                    // คืนค่าแค่ 5 รายการแรก
+                    return upcoming.slice(0, 5);
+                  })()}
+                  overdue={(() => {
+                    // รายการที่ค้างนาน
+                    const overdue = [];
+                    const now = new Date();
+                    const threeDaysAgo = new Date(now.getTime() - (3 * 24 * 60 * 60 * 1000));
+                    
+                    data.forEach(item => {
+                      const status = item["สถานะ"] || item.status;
+                      if (status === "New" || status === "Pending") {
+                        const createdAt = new Date(item["วันที่แจ้ง"] || item.created_at);
+                        if (createdAt < threeDaysAgo) {
+                          const daysOverdue = Math.floor((now - createdAt) / (24 * 60 * 60 * 1000));
+                          overdue.push({
+                            ticketId: item["Ticket ID"],
+                            name: item["ชื่อ"] || item.name,
+                            daysOverdue: daysOverdue,
+                            status: status
+                          });
+                        }
+                      }
+                    });
+                    
+                    // เรียงลำดับตามจำนวนวันที่ค้าง (มากไปน้อย)
+                    overdue.sort((a, b) => b.daysOverdue - a.daysOverdue);
+                    
+                    // คืนค่าแค่ 5 รายการแรก
+                    return overdue.slice(0, 5);
+                  })()}
                   onAppointmentClick={handleAppointmentClick}
                 />
                 <SyncIndicator>{formatLastSync()}</SyncIndicator>
@@ -5336,17 +5482,157 @@ const sendChatMessage = async () => {
                   </ChatHeader>
 
                   <UserSelectContainer>
+                    {/* Search Box for Users */}
+                    <div style={{
+                      marginBottom: "12px",
+                      position: "relative"
+                    }}>
+                      <input
+                        type="text"
+                        placeholder="🔍 ค้นหาชื่อผู้ใช้..."
+                        value={chatUserSearchTerm}
+                        onChange={(e) => setChatUserSearchTerm(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "10px 40px 10px 12px",
+                          borderRadius: "8px",
+                          border: "1px solid #e2e8f0",
+                          fontSize: "0.95rem",
+                          outline: "none",
+                          transition: "border-color 0.2s",
+                          backgroundColor: "#fff"
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = "#3b82f6";
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = "#e2e8f0";
+                        }}
+                      />
+                      {chatUserSearchTerm && (
+                        <button
+                          onClick={() => setChatUserSearchTerm("")}
+                          style={{
+                            position: "absolute",
+                            right: "8px",
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            background: "none",
+                            border: "none",
+                            color: "#94a3b8",
+                            cursor: "pointer",
+                            padding: "4px 8px",
+                            fontSize: "1.2rem",
+                            lineHeight: "1"
+                          }}
+                          title="Clear search"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Filtered User Dropdown */}
                     <UserSelect value={selectedChatUser || ""} onChange={handleUserSelect}>
                       <option value="">-- Select User to Chat --</option>
                       <option value="announcement">
                         📢 Announcement to All Members
                       </option>
-                      {chatUsers.map((chatUser) => (
-                        <option key={chatUser.user_id} value={chatUser.user_id}>
-                          {chatUser.name}
-                        </option>
-                      ))}
+                      {(() => {
+                        // Filter users based on search term
+                        const filteredUsers = chatUsers.filter(chatUser => {
+                          if (!chatUserSearchTerm) return true;
+                          const searchLower = chatUserSearchTerm.toLowerCase();
+                          const nameLower = (chatUser.name || "").toLowerCase();
+                          return nameLower.includes(searchLower);
+                        });
+
+                        // Show message if no users found
+                        if (chatUserSearchTerm && filteredUsers.length === 0) {
+                          return (
+                            <option value="" disabled>
+                              ไม่พบผู้ใช้ที่ค้นหา
+                            </option>
+                          );
+                        }
+
+                        // Show filtered users
+                        return filteredUsers.map((chatUser) => (
+                          <option key={chatUser.user_id} value={chatUser.user_id}>
+                            {chatUser.name}
+                          </option>
+                        ));
+                      })()}
                     </UserSelect>
+
+                    {/* Quick Search Results */}
+                    {chatUserSearchTerm && (() => {
+                      const filteredUsers = chatUsers.filter(chatUser => {
+                        const searchLower = chatUserSearchTerm.toLowerCase();
+                        const nameLower = (chatUser.name || "").toLowerCase();
+                        return nameLower.includes(searchLower);
+                      });
+
+                      if (filteredUsers.length > 0 && filteredUsers.length <= 5) {
+                        return (
+                          <div style={{
+                            marginTop: "8px",
+                            padding: "8px",
+                            backgroundColor: "#f8fafc",
+                            borderRadius: "8px",
+                            border: "1px solid #e2e8f0"
+                          }}>
+                            <div style={{
+                              fontSize: "0.85rem",
+                              color: "#64748b",
+                              marginBottom: "8px"
+                            }}>
+                              พบ {filteredUsers.length} ผู้ใช้:
+                            </div>
+                            <div style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "4px"
+                            }}>
+                              {filteredUsers.map(chatUser => (
+                                <button
+                                  key={chatUser.user_id}
+                                  onClick={() => {
+                                    setSelectedChatUser(chatUser.user_id);
+                                    setChatUserSearchTerm("");
+                                    loadChatMessages(chatUser.user_id);
+                                  }}
+                                  style={{
+                                    padding: "8px 12px",
+                                    backgroundColor: selectedChatUser === chatUser.user_id ? "#3b82f6" : "#fff",
+                                    color: selectedChatUser === chatUser.user_id ? "#fff" : "#334155",
+                                    border: "1px solid #e2e8f0",
+                                    borderRadius: "6px",
+                                    textAlign: "left",
+                                    cursor: "pointer",
+                                    fontSize: "0.9rem",
+                                    transition: "all 0.2s"
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (selectedChatUser !== chatUser.user_id) {
+                                      e.target.style.backgroundColor = "#f1f5f9";
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (selectedChatUser !== chatUser.user_id) {
+                                      e.target.style.backgroundColor = "#fff";
+                                    }
+                                  }}
+                                >
+                                  💬 {chatUser.name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </UserSelectContainer>
                   
                   {selectedChatUser === "announcement" ? (

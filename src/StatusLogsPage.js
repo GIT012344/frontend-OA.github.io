@@ -325,11 +325,12 @@ function StatusLogsPage() {
       return;
     }
     
-    // Use Thai headers for better readability
-    const headers = ['รหัส Ticket', 'สถานะเดิม', 'สถานะใหม่', 'ผู้เปลี่ยน', 'วันที่เปลี่ยน', 'หมายเหตุ', 'รายละเอียดเพิ่มเติม'];
+    // Use Thai headers for better readability (including department)
+    const headers = ['รหัส Ticket', 'แผนก', 'สถานะเดิม', 'สถานะใหม่', 'ผู้เปลี่ยน', 'วันที่เปลี่ยน', 'หมายเหตุ', 'รายละเอียดเพิ่มเติม'];
     
     const rows = sortedLogs.map(l => [
       l.ticket_id || '',
+      l.department || '',
       l.old_status || '',
       l.new_status || '',
       l.changed_by || '',
@@ -441,6 +442,7 @@ function StatusLogsPage() {
           <thead>
             <tr>
               <Th>Ticket ID</Th>
+              <Th>แผนก</Th>
               <Th>สถานะเดิม</Th>
               <Th>สถานะใหม่</Th>
               <Th>ผู้ดำเนินการ</Th>
@@ -453,6 +455,7 @@ function StatusLogsPage() {
             {sortedLogs.map((log, idx) => (
               <tr key={log.id || idx}>
                 <Td>{log.ticket_id}</Td>
+                <Td>{log.department || '-'}</Td>
                 <Td>
                   <StatusBadge status={log.old_status}>
                     {log.old_status || '-'}
