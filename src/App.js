@@ -1909,6 +1909,8 @@ function App() {
   const [tempNewStatus, setTempNewStatus] = useState("");
   const [tempTicketId, setTempTicketId] = useState("");
   const [chatUserSearchTerm, setChatUserSearchTerm] = useState("");
+  // Track unread messages per user
+  const [unreadMessagesPerUser, setUnreadMessagesPerUser] = useState({});
 
   // Announcement System State (preserved)
   const [announcementMessage, setAnnouncementMessage] = useState("");
@@ -2076,7 +2078,7 @@ function App() {
     });
   };
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const [setErrorDetails] = useState(null);
+  const [errorDetails, setErrorDetails] = useState(null);
   const errorTimeoutRef = useRef(null);
   // Confirm change – simplified (no polling pause / rollback handled inline)
   const confirmStatusChange = async () => {
@@ -2094,7 +2096,7 @@ function App() {
     try {
       // 3. ส่งข้อมูลไป backend
       const response = await axios.post(
-        `${API_BASE_URL}/update-status`,
+        `/api/update-status`,
         {
           ticket_id: tempTicketId,
           status: tempNewStatus,
@@ -2276,6 +2278,21 @@ const cancelStatusChange = () => {
           const messageTypeNotifs = parsedNotifications.filter(n => n.meta_data?.type === 'new_message');
           console.log('💬 Notifications with type=new_message:', messageTypeNotifs);
           
+          // Track unread messages per user
+          const unreadCounts = {};
+          parsedNotifications.forEach(n => {
+            if (!n.read && (n.meta_data?.type === 'new_message' || n.meta_data?.type === 'textbox_message')) {
+              const userId = n.meta_data?.user_id || n.meta_data?.sender_id;
+              if (userId && userId !== selectedChatUser) {
+                unreadCounts[userId] = (unreadCounts[userId] || 0) + 1;
+              }
+            }
+          });
+          
+          // Update unread messages per user state
+          setUnreadMessagesPerUser(unreadCounts);
+          console.log('📊 Unread messages per user:', unreadCounts);
+          
           // Check for new unread messages and trigger popup
           const newUnreadMessages = parsedNotifications.filter(n => {
             const isUnread = !n.read;
@@ -2344,7 +2361,7 @@ const cancelStatusChange = () => {
     } catch (error) {
       console.error("❌ Failed to fetch notifications:", error);
     }
-  }, []);
+  }, [selectedChatUser]); // Re-fetch when selected user changes to update unread counts
 
   // ฟังก์ชันสำหรับดึงข้อความจาก textbox ทุก ticket พร้อมกัน
   const processAllTextboxMessages = useCallback(async () => {
@@ -2867,6 +2884,16 @@ const cancelStatusChange = () => {
     } else {
       setSelectedChatUser(selectedValue);
       setNewMessage("");
+      
+      // Clear unread messages for this user when selected
+      if (selectedValue && selectedValue !== "announcement") {
+        setUnreadMessagesPerUser(prev => {
+          const updated = { ...prev };
+          delete updated[selectedValue];
+          return updated;
+        });
+      }
+      
       // Load chat messages for selected user
       if (selectedValue) {
         loadChatMessages(selectedValue);
@@ -5556,12 +5583,15 @@ const sendChatMessage = async () => {
                           );
                         }
 
-                        // Show filtered users
-                        return filteredUsers.map((chatUser) => (
-                          <option key={chatUser.user_id} value={chatUser.user_id}>
-                            {chatUser.name}
-                          </option>
-                        ));
+                        // Show filtered users with unread message indicator
+                        return filteredUsers.map((chatUser) => {
+                          const unreadCount = unreadMessagesPerUser[chatUser.user_id] || 0;
+                          return (
+                            <option key={chatUser.user_id} value={chatUser.user_id}>
+                              {unreadCount > 0 ? `🔴 ` : ''}{chatUser.name} {unreadCount > 0 ? `(${unreadCount} ข้อความใหม่)` : ''}
+                            </option>
+                          );
+                        });
                       })()}
                     </UserSelect>
 

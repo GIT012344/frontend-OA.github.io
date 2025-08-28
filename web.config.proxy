@@ -2,9 +2,15 @@
 <configuration>
   <system.webServer>
     <!-- React SPA Routing -->
+    <!-- Last updated: 2025-01-27 16:42:00 -->
     <rewrite>
       <rules>
         <!-- Reverse Proxy for Backend API -->
+        <!-- Specific rules must come before general rules -->
+        <rule name="UpdateStatusRule" stopProcessing="true">
+          <match url="^api/update-status" />
+          <action type="Rewrite" url="http://localhost:5004/update-status" />
+        </rule>
         <rule name="ReverseProxyInboundRule1" stopProcessing="true">
           <match url="^api/(.*)" />
           <action type="Rewrite" url="http://localhost:5004/api/{R:1}" />
@@ -24,6 +30,22 @@
         <rule name="ReverseProxyInboundRule5" stopProcessing="true">
           <match url="^check-new-messages" />
           <action type="Rewrite" url="http://localhost:5004/api/check-new-messages" />
+        </rule>
+        <rule name="ReverseProxyInboundRule7" stopProcessing="true">
+          <match url="^tickets" />
+          <action type="Rewrite" url="http://localhost:5004/api/tickets" />
+        </rule>
+        <rule name="ReverseProxyInboundRule8" stopProcessing="true">
+          <match url="^chat-messages" />
+          <action type="Rewrite" url="http://localhost:5004/api/chat-messages" />
+        </rule>
+        <rule name="ReverseProxyInboundRule9" stopProcessing="true">
+          <match url="^chat-users" />
+          <action type="Rewrite" url="http://localhost:5004/api/chat-users" />
+        </rule>
+        <rule name="ReverseProxyInboundRule10" stopProcessing="true">
+          <match url="^send-message" />
+          <action type="Rewrite" url="http://localhost:5004/api/send-message" />
         </rule>
         
         <!-- React SPA - All other routes go to index.html -->
